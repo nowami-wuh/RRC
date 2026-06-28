@@ -1,0 +1,859 @@
+.login-page {
+  min-height: 100vh;
+}
+
+.container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.left-panel {
+  flex: 1;
+  background-color: #F2EFE9;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.logo-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 0;
+}
+
+.light-icon {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+}
+
+.rrc-logo {
+  height: 70px;
+  width: 70px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.brand-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 600px;
+  text-align: center;
+}
+
+.brand-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  margin-bottom: 20px;
+}
+
+.rrc-text,
+.lights-text {
+  font-size: 60px;
+  font-weight: 900;
+  color: #38629B;
+  line-height: 0.95;
+  letter-spacing: -2px;
+  font-family: 'Garet Heavy', sans-serif;
+  text-align: left;
+}
+
+.booking-badge {
+  background-color: #1E3F9E;
+  color: white;
+  padding: 4px 12px;
+  font-size: 24px;
+  font-weight: 900;
+  display: inline-block;
+  align-self: flex-end;
+  margin-top: 5px;
+  font-family: 'Garet Heavy', sans-serif;
+  letter-spacing: 0.5px;
+}
+
+.tagline {
+  font-size: 22px;
+  font-style: italic;
+  color: #000000;
+  margin-top: 40px;
+  font-family: 'Playfair Display', serif;
+  text-align: center;
+}
+
+.tagline-line {
+  width: 90px;
+  height: 3px;
+  background-color: #38629B;
+  margin: 15px auto 0 auto;
+}
+
+.right-panel {
+  flex: 1;
+  background-color: #4C74B2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 500px;
+  display: none;
+  animation: fadeIn 0.5s ease-in;
+}
+
+.form-container.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-title {
+  font-size: 36px;
+  font-weight: 900;
+  color: #000000;
+  text-align: center;
+  margin-bottom: 40px;
+  letter-spacing: 2px;
+  font-family: 'Garet Heavy', sans-serif;
+  text-transform: uppercase;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border-radius: 50px;
+  padding: 16px 28px;
+  transition: all 0.3s ease;
+  border: 2px solid white;
+}
+
+.input-group:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.input-group.error {
+  border-color: #dc3545;
+  background-color: #fff5f5;
+}
+
+.input-group.success {
+  border-color: #28a745;
+}
+
+.input-icon {
+  width: 24px;
+  height: 24px;
+  fill: #000000;
+  margin-right: 18px;
+  flex-shrink: 0;
+}
+
+.input-group input {
+  border: none;
+  outline: none;
+  font-size: 18px;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  color: #333;
+  font-family: 'Garet', sans-serif;
+}
+
+.input-group input::placeholder {
+  color: #777777;
+  font-family: 'Garet', sans-serif;
+}
+
+.toggle-password {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.3s ease, transform 0.2s ease;
+  opacity: 0.55;
+  color: #000000;
+}
+
+.toggle-password:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+.toggle-password:active {
+  transform: scale(0.92);
+}
+
+.eye-icon {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 13px;
+  padding-left: 25px;
+  min-height: 18px;
+  display: block;
+  animation: slideDown 0.3s ease;
+  font-family: 'Garet', sans-serif;
+}
+
+.field-status {
+  font-size: 12px;
+  padding-left: 25px;
+  min-height: 16px;
+  display: block;
+  margin-top: 4px;
+  font-family: 'Garet', sans-serif;
+}
+
+.field-status.idle {
+  color: #d9e4ff;
+}
+
+.field-status.checking {
+  color: #fff4c7;
+}
+
+.field-status.available {
+  color: #d4f5dd;
+}
+
+.field-status.taken {
+  color: #ffd2d8;
+}
+
+.password-strength {
+  padding-left: 25px;
+  margin-top: 4px;
+  display: grid;
+  gap: 6px;
+  font-family: 'Garet', sans-serif;
+}
+
+.password-strength-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.password-strength-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.25s ease;
+}
+
+.password-strength.idle .password-strength-bar span {
+  background: #d9e4ff;
+}
+
+.password-strength.weak .password-strength-bar span {
+  background: #ff8a8a;
+}
+
+.password-strength.warning .password-strength-bar span {
+  background: #ffd36b;
+}
+
+.password-strength.strong .password-strength-bar span {
+  background: #8ff0a8;
+}
+
+.password-strength-text {
+  color: #fff;
+  font-size: 12px;
+}
+
+.password-strength-rules {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+}
+
+.form-title + form {
+  display: flex;
+  flex-direction: column;
+}
+
+.forgot-password,
+.toggle-link {
+  color: #000000;
+  text-decoration: underline;
+  font-weight: 600;
+  font-size: 16px;
+  transition: opacity 0.3s ease;
+}
+
+.forgot-password {
+  align-self: flex-end;
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+
+.forgot-password:hover,
+.toggle-link:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+.toggle-form {
+  margin-top: 25px;
+  font-size: 16px;
+  color: #000000;
+  text-align: center;
+  font-weight: 500;
+}
+
+.toggle-form .toggle-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.submit-btn {
+  margin-top: 25px;
+  width: 100%;
+  padding: 18px 24px;
+  background-color: #000000;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: 900;
+  font-family: 'Garet Heavy', sans-serif;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+}
+
+.submit-btn:hover {
+  background-color: #1a1a1a;
+  transform: translateY(-2px);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 1024px) {
+  .left-panel {
+    padding: 40px 30px;
+  }
+
+  .right-panel {
+    padding: 30px;
+  }
+
+  .rrc-text,
+  .lights-text {
+    font-size: 48px;
+  }
+
+  .booking-badge {
+    font-size: 22px;
+  }
+
+  .tagline {
+    font-size: 18px;
+    max-width: 350px;
+  }
+
+  .logo-icons {
+    gap: 15px;
+  }
+
+  .light-icon {
+    height: 50px;
+  }
+
+  .rrc-logo {
+    height: 70px;
+    width: 70px;
+  }
+
+  .form-container {
+    max-width: 450px;
+  }
+
+  .form-title {
+    font-size: 28px;
+    margin-bottom: 35px;
+  }
+
+  .input-group {
+    padding: 13px 22px;
+  }
+
+  .input-icon {
+    width: 22px;
+    height: 22px;
+    margin-right: 12px;
+  }
+
+  .input-group input {
+    font-size: 15px;
+  }
+
+  .error-message,
+  .field-status {
+    font-size: 12px;
+    padding-left: 22px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .left-panel {
+    padding: 30px 20px;
+    min-height: auto;
+    justify-content: center;
+  }
+
+  .right-panel {
+    padding: 20px 16px;
+    min-height: auto;
+  }
+
+  .logo-icons {
+    position: static;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .light-icon {
+    height: 45px;
+  }
+
+  .rrc-logo {
+    height: 60px;
+    width: 60px;
+  }
+
+  .brand-content {
+    max-width: 100%;
+  }
+
+  .brand-title {
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .rrc-text,
+  .lights-text {
+    font-size: 36px;
+  }
+
+  .booking-badge {
+    font-size: 18px;
+    padding: 2px 8px;
+  }
+
+  .tagline {
+    font-size: 16px;
+    padding: 12px 0;
+    max-width: 100%;
+    border-bottom: none;
+  }
+
+  .form-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .form-title {
+    font-size: 24px;
+    margin-bottom: 28px;
+    letter-spacing: 1px;
+  }
+
+  form {
+    gap: 8px;
+  }
+
+  .input-group {
+    padding: 12px 18px;
+    border-radius: 35px;
+  }
+
+  .input-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+  }
+
+  .input-group input {
+    font-size: 14px;
+  }
+
+  .input-group input::placeholder {
+    font-size: 14px;
+  }
+
+  .error-message,
+  .field-status {
+    font-size: 11px;
+    padding-left: 18px;
+  }
+
+  .password-strength {
+    padding-left: 18px;
+    gap: 5px;
+  }
+
+  .password-strength-text,
+  .password-strength-rules {
+    font-size: 11px;
+  }
+
+  .submit-btn {
+    margin-top: 16px;
+    padding: 14px 18px;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+
+  .forgot-password,
+  .toggle-link {
+    font-size: 13px;
+  }
+
+  .toggle-form {
+    margin-top: 14px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .left-panel,
+  .right-panel {
+    padding: 16px 12px;
+  }
+
+  .logo-icons {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .light-icon {
+    height: 35px;
+  }
+
+  .rrc-logo {
+    height: 50px;
+    width: 50px;
+  }
+
+  .brand-title {
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .rrc-text,
+  .lights-text {
+    font-size: 28px;
+    line-height: 0.85;
+  }
+
+  .booking-badge {
+    font-size: 14px;
+    padding: 2px 6px;
+    margin-top: -3px;
+  }
+
+  .tagline {
+    font-size: 14px;
+    padding: 10px 0;
+    border-bottom: none;
+    max-width: 100%;
+  }
+
+  .form-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .form-title {
+    font-size: 20px;
+    margin-bottom: 24px;
+    letter-spacing: 0.5px;
+  }
+
+  form {
+    gap: 6px;
+  }
+
+  .input-wrapper {
+    margin-bottom: 4px;
+  }
+
+  .input-group {
+    padding: 10px 14px;
+    border-radius: 30px;
+  }
+
+  .input-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+  }
+
+  .input-group input {
+    font-size: 13px;
+  }
+
+  .input-group input::placeholder {
+    font-size: 13px;
+  }
+
+  .error-message,
+  .field-status {
+    font-size: 10px;
+    padding-left: 14px;
+    min-height: 16px;
+  }
+
+  .password-strength {
+    padding-left: 14px;
+    gap: 4px;
+  }
+
+  .password-strength-bar {
+    height: 5px;
+  }
+
+  .password-strength-text {
+    font-size: 10px;
+  }
+
+  .password-strength-rules {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .submit-btn {
+    margin-top: 14px;
+    padding: 12px 16px;
+    font-size: 12px;
+    border-radius: 25px;
+    letter-spacing: 0.5px;
+  }
+
+  .forgot-password,
+  .toggle-link {
+    font-size: 12px;
+  }
+
+  .toggle-form {
+    margin-top: 12px;
+    font-size: 11px;
+  }
+}
+
+.social-divider {
+  display: flex;
+  align-items: center;
+  margin: 25px 0;
+  width: 100%;
+}
+
+.social-divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.social-divider-text {
+  padding: 0 15px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-family: 'Garet', sans-serif;
+  letter-spacing: 0.5px;
+}
+
+/* ══════════════════════════════════
+   360px – Ultra-narrow login
+══════════════════════════════════ */
+@media (max-width: 400px) {
+  .container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  /* Keep the left panel visible on mobile and make it compact */
+  .left-panel {
+    display: flex;
+    padding: 12px 12px 6px 12px;
+    justify-content: center;
+  }
+
+  .left-panel .logo-icons {
+    margin-bottom: 8px;
+  }
+
+  .left-panel .brand-title {
+    margin-bottom: 8px;
+  }
+
+  .left-panel .tagline {
+    margin-top: 8px;
+    padding: 2px 0;
+  }
+
+  .left-panel .tagline-line {
+    margin: 8px auto 0 auto;
+  }
+
+  /* Full-width right panel (form) */
+  .right-panel {
+    flex: 1;
+    padding: 28px 16px 24px;
+    min-height: auto;
+  }
+
+  .form-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .form-title {
+    font-size: 18px;
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  form {
+    gap: 8px;
+  }
+
+  .input-group {
+    padding: 10px 14px;
+    border-radius: 28px;
+  }
+
+  .input-icon {
+    width: 17px;
+    height: 17px;
+    margin-right: 8px;
+  }
+
+  .input-group input {
+    font-size: 13px;
+  }
+
+  .input-group input::placeholder {
+    font-size: 13px;
+  }
+
+  .error-message,
+  .field-status {
+    font-size: 10px;
+    padding-left: 14px;
+    min-height: 14px;
+  }
+
+  .password-strength {
+    padding-left: 14px;
+    gap: 4px;
+  }
+
+  .password-strength-bar {
+    height: 4px;
+  }
+
+  .password-strength-text,
+  .password-strength-rules {
+    font-size: 10px;
+  }
+
+  .submit-btn {
+    margin-top: 14px;
+    padding: 12px 16px;
+    font-size: 13px;
+    border-radius: 28px;
+    letter-spacing: 0.5px;
+  }
+
+  .forgot-password,
+  .toggle-link {
+    font-size: 11px;
+  }
+
+  .toggle-form {
+    margin-top: 12px;
+    font-size: 11px;
+  }
+
+  .social-divider {
+    margin: 16px 0;
+  }
+
+  .social-divider-text {
+    font-size: 11px;
+    padding: 0 10px;
+  }
+}

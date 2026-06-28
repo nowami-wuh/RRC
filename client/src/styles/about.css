@@ -1,0 +1,407 @@
+.brand-banner {
+    background-color: var(--bg-beige);
+    border: 1.5px solid #ccc;
+    border-radius: 12px;
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.brand-logo-area {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.brand-icons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+}
+
+.light-icon {
+    height: 60px;
+    width: auto;
+    object-fit: contain;
+}
+
+.rrc-logo {
+    height: 80px;
+    width: 80px;
+    object-fit: contain;
+    border-radius: 50%;
+}
+
+.brand-name-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.brand-name-rrc {
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--dark-blue);
+    line-height: 1;
+}
+
+.brand-name-ls {
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--dark-blue);
+    line-height: 1;
+}
+
+.brand-badge {
+    background-color: #364FAB;
+    color: white;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 900;
+    display: inline-block;
+    align-self: flex-end;
+    font-family: 'Garet Heavy', sans-serif;
+    margin-top: 4px;
+}
+
+.brand-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    border-left: 3px solid #ccc;
+    padding-left: 24px;
+}
+
+.cta-item {
+    font-style: italic;
+    font-size: 17px;
+    color: var(--text-dark);
+    font-weight: 600;
+    font-family: 'Playfair Display', serif;
+}
+
+.about-content {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    padding: 30px 40px;
+}
+
+.about-text-card {
+    flex: 1;
+    background: white;
+    border: 1.5px solid var(--dark-blue);
+    border-radius: 12px;
+    padding: 28px 32px;
+}
+
+.about-description {
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--text-dark);
+    text-align: justify;
+}
+
+.contact-card {
+    width: 380px;
+    flex-shrink: 0;
+    border: 2px dashed var(--primary-blue);
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+}
+
+.contact-title {
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--text-dark);
+    padding: 18px 24px 10px;
+}
+
+.contact-divider {
+    height: 1.5px;
+    background: #ddd;
+    margin: 0 24px 16px;
+}
+
+.contact-list {
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 20px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 24px;
+}
+
+.contact-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background-color: var(--dark-blue);
+}
+
+.contact-text {
+    font-size: 14px;
+    color: var(--text-dark);
+}
+
+@media (max-width: 1100px) {
+    .about-content {
+        flex-direction: column;
+    }
+
+    .contact-card {
+        width: 100%;
+    }
+
+    .brand-banner {
+        padding: 20px 28px;
+        gap: 18px;
+    }
+
+    .rrc-logo {
+        height: 70px;
+        width: 70px;
+    }
+
+    .light-icon {
+        height: 55px;
+    }
+
+    .brand-name-rrc {
+        font-size: 26px;
+    }
+
+    .brand-name-ls {
+        font-size: 20px;
+    }
+
+    .about-text-card {
+        padding: 24px 28px;
+    }
+
+    .about-description {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 768px) {
+    .about-content {
+        padding: 16px 12px;
+        gap: 18px;
+    }
+
+    .brand-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 18px 20px;
+        gap: 14px;
+    }
+
+    .brand-logo-area {
+        gap: 12px;
+        width: 100%;
+    }
+
+    .brand-icons {
+        gap: 12px;
+    }
+
+    .light-icon {
+        height: 45px;
+    }
+
+    .rrc-logo {
+        height: 60px;
+        width: 60px;
+    }
+
+    .brand-name-rrc {
+        font-size: 22px;
+    }
+
+    .brand-name-ls {
+        font-size: 18px;
+    }
+
+    .brand-badge {
+        font-size: 11px;
+        padding: 2px 8px;
+    }
+
+    .brand-cta {
+        border-left: none;
+        padding-left: 0;
+        border-top: 2px solid #ccc;
+        padding-top: 12px;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .cta-item {
+        font-size: 15px;
+    }
+
+    .about-text-card {
+        padding: 18px 20px;
+    }
+
+    .about-description {
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .contact-card {
+        width: 100%;
+    }
+
+    .contact-title {
+        font-size: 15px;
+        padding: 16px 18px 8px;
+    }
+
+    .contact-divider {
+        margin: 0 18px 12px;
+    }
+
+    .contact-list {
+        padding: 0 0 16px;
+    }
+
+    .contact-item {
+        gap: 12px;
+        padding: 8px 18px;
+    }
+
+    .contact-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .contact-text {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-content {
+        padding: 12px 10px;
+        gap: 14px;
+    }
+
+    .brand-banner {
+        flex-direction: column;
+        padding: 14px 16px;
+        gap: 12px;
+    }
+
+    .brand-logo-area {
+        gap: 10px;
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .brand-icons {
+        gap: 10px;
+    }
+
+    .light-icon {
+        height: 35px;
+    }
+
+    .rrc-logo {
+        height: 50px;
+        width: 50px;
+    }
+
+    .brand-name-block {
+        gap: 2px;
+    }
+
+    .brand-name-rrc {
+        font-size: 18px;
+    }
+
+    .brand-name-ls {
+        font-size: 14px;
+    }
+
+    .brand-badge {
+        font-size: 9px;
+        padding: 2px 6px;
+        margin-top: 2px;
+    }
+
+    .brand-cta {
+        border: none;
+        padding: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .cta-item {
+        font-size: 13px;
+    }
+
+    .about-text-card {
+        padding: 16px 16px;
+    }
+
+    .about-description {
+        font-size: 13px;
+        line-height: 1.5;
+        text-align: left;
+    }
+
+    .contact-card {
+        width: 100%;
+        border: 1px dashed var(--primary-blue);
+    }
+
+    .contact-title {
+        font-size: 13px;
+        padding: 12px 14px 6px;
+    }
+
+    .contact-divider {
+        margin: 0 14px 10px;
+    }
+
+    .contact-list {
+        padding: 0 0 12px;
+    }
+
+    .contact-item {
+        gap: 10px;
+        padding: 6px 14px;
+    }
+
+    .contact-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .contact-text {
+        font-size: 12px;
+        line-height: 1.4;
+    }
+}
