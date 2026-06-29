@@ -131,6 +131,7 @@ export default function LoginSignup() {
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     if (isAdminMode) setMode('login');
@@ -243,10 +244,17 @@ export default function LoginSignup() {
     if (Object.keys(errors).length > 0) return;
     setIsSubmitting(true);
     try {
-      await signupInitiate(formData.signupUsername.trim(), formData.signupEmail.trim(), formData.signupContact.trim(), formData.signupPassword);
+      const result = await signupInitiate(formData.signupUsername.trim(), formData.signupEmail.trim(), formData.signupContact.trim(), formData.signupPassword);
+      if (result?.user) {
+        signIn(result.user);
+        navigate('/');
+        return;
+      }
+
       setOtpEmail(formData.signupEmail.trim());
       setOtpCode(['', '', '', '', '', '']);
       setOtpError('');
+      setSuccessMessage('Verification code queued for delivery. Please check your email soon.');
       setResendCooldown(60);
       setMode('verify_otp');
     } catch (err) {
@@ -258,6 +266,7 @@ export default function LoginSignup() {
       } else {
         setError(err.message);
       }
+      setSuccessMessage('');
     } finally {
       setIsSubmitting(false);
     }
@@ -307,6 +316,7 @@ export default function LoginSignup() {
     setOtpError('');
     try {
       await signupInitiate(formData.signupUsername.trim(), formData.signupEmail.trim(), formData.signupContact.trim(), formData.signupPassword);
+      setSuccessMessage('Verification code queued for delivery. Please check your email soon.');
       setResendCooldown(60);
       setOtpCode(['', '', '', '', '', '']);
       signupOtpRefs.current[0]?.focus();
@@ -705,6 +715,11 @@ export default function LoginSignup() {
                     </div>
                   </div>
                   {error && <div className="form-error" style={{ color: '#dc3545', textAlign: 'center', fontSize: '14px', fontFamily: 'Garet' }}>{error}</div>}
+                  {successMessage && !error && (
+                    <div className="form-success" style={{ color: '#16a34a', textAlign: 'center', fontSize: '14px', fontFamily: 'Garet', marginBottom: '10px' }}>
+                      {successMessage}
+                    </div>
+                  )}
                   <button type="submit" className="submit-btn" disabled={isSubmitting}>
                     {isSubmitting ? 'Sending Code...' : 'SIGN UP'}
                   </button>

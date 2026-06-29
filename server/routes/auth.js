@@ -61,7 +61,17 @@ async function isEmailTaken(email) {
   return rows.length > 0;
 }
 
-
+function queueVerificationEmail(email, code) {
+  setImmediate(() => {
+    void sendVerificationEmail(email, code)
+      .then(() => {
+        console.log(`Verification email queued for ${email}`);
+      })
+      .catch((error) => {
+        console.error('Background verification email failed:', error);
+      });
+  });
+}
 
 router.get('/username-availability', async (req, res) => {
   const username = String(req.query.username || '').trim();
@@ -211,15 +221,36 @@ router.post('/signup-initiate', async (req, res) => {
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const passwordHash = await bcrypt.hash(password, 10);
+    const skipVerification = String(process.env.SKIP_EMAIL_VERIFICATION).toLowerCase() === 'true';
+
+    if (skipVerification) {
+      const publicId = `RRC-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 10)}`;
+      await execute(
+        'INSERT INTO customers (public_id, username, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)',
+        [publicId, username, email, contact, passwordHash]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Account created successfully.',
+        user: {
+          id: publicId,
+          username,
+          email,
+          phone: contact,
+          role: 'customer',
+        },
+      });
+    }
 
     await execute(
       'INSERT INTO pending_registrations (email, username, phone, password_hash, code) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE username = ?, phone = ?, password_hash = ?, code = ?',
       [email, username, contact, passwordHash, code, username, contact, passwordHash, code]
     );
 
-    await sendVerificationEmail(email, code);
+    queueVerificationEmail(email, code);
 
-    return res.json({ success: true, message: 'Verification code sent to email.' });
+    return res.json({ success: true, message: 'Verification code queued for delivery.' });
   } catch (error) {
     console.error('Signup Initiate Error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
@@ -285,9 +316,9 @@ router.post('/reset-initiate', async (req, res) => {
       [email, code, code]
     );
 
-    await sendVerificationEmail(email, code);
+    queueVerificationEmail(email, code);
 
-    return res.json({ success: true, message: 'Verification code sent to email.' });
+    return res.json({ success: true, message: 'Verification code queued for delivery.' });
   } catch (error) {
     console.error('Reset Initiate Error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });

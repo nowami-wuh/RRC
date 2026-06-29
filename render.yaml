@@ -27,5 +27,7 @@ services:
         sync: false
       - key: EMAIL_PASS
         sync: false
+      - key: SKIP_EMAIL_VERIFICATION
+        value: "true"
       - key: CORS_ORIGINS
         value: https://rrc-client.vercel.app
