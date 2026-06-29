@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "build": "echo 'Server dependencies are ready'",
     "start": "node index.js",
     "dev": "nodemon --watch . --ext js,env --exec node index.js"
   },
