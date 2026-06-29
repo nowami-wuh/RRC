@@ -8,8 +8,15 @@ function createTransporter() {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     return null; // mock mode
   }
+
+  const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
+  const port = Number(process.env.EMAIL_PORT || 587);
+  const secure = String(process.env.EMAIL_SECURE || 'false').toLowerCase() === 'true';
+
   return nodemailer.createTransport({
-    service: 'gmail',
+    host,
+    port,
+    secure,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
