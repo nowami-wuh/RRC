@@ -10,22 +10,22 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 4000
       - key: MYSQL_HOST
-        sync: false
+        value: rrc-lights-sounds-rrc.l.aivencloud.com
       - key: MYSQL_PORT
-        value: 3306
+        value: "28839"
       - key: MYSQL_USER
-        sync: false
+        value: avnadmin
       - key: MYSQL_PASSWORD
         sync: false
       - key: MYSQL_DATABASE
-        sync: false
+        value: defaultdb
       - key: MYSQL_SSL
-        value: true
+        value: "true"
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASS
         sync: false
       - key: CORS_ORIGINS
-        sync: false
+        value: https://rrc-client.vercel.app
