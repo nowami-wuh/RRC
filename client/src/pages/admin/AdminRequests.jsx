@@ -107,9 +107,12 @@ export default function AdminRequests() {
   };
 
   const STATUS_LABELS = {
+    pending: 'PENDING',
+    approved: 'APPROVED',
     awaitingpayment: 'AWAITING PAYMENT',
     upcoming: 'UPCOMING',
     completed: 'COMPLETED',
+    denied: 'DENIED',
     cancelled: 'CANCELLED',
   };
 
@@ -117,6 +120,7 @@ export default function AdminRequests() {
     if (!status) return '';
     if (['approved', 'awaitingpayment', 'upcoming', 'completed'].includes(status)) return 'approved';
     if (['denied', 'cancelled'].includes(status)) return 'denied';
+    if (status === 'pending') return 'pending';
     return '';
   };
 
@@ -124,6 +128,9 @@ export default function AdminRequests() {
     if (!status) return 'N/A';
     return STATUS_LABELS[status] || status.toUpperCase();
   };
+
+  const getIdLabel = (type) => (type === 'book' ? 'BOOKING ID' : 'REQUEST ID');
+  const getTypePill = (type) => (type === 'book' ? 'BOOKING' : 'RENT');
 
   // Filter requests based on selected tab and search ID
   const filteredRequests = requests.filter((r) => {
@@ -415,24 +422,27 @@ export default function AdminRequests() {
                 >
                   <div className="bc-top">
                     <div>
-                      <span className="bc-id-label">Request ID:</span>
-                      <span className="bc-id-value">{req.id}</span>
+                      <div className="bc-title-row">
+                        <span className="bc-id-label">{getIdLabel(req.type)}</span>
+                        <span className="bc-id-value">{req.id}</span>
+                      </div>
                     </div>
-                    <button className="bc-view-link">View Details</button>
+                    <div className="bc-actions">
+                      <span className={`type-pill ${req.type === 'book' ? 'booking' : 'rent'}`}>
+                        {getTypePill(req.type)}
+                      </span>
+                      <button className="bc-view-link">View Details</button>
+                    </div>
                   </div>
                   <div className="bc-cols">
+                    <span>EVENT</span>
                     <span>EVENT DATE</span>
-                    <span>VENUE</span>
-                    <span>STATUS</span>
+                    <span>EVENT TIME</span>
                   </div>
                   <div className="bc-vals">
-                    <span>{req.event?.date}</span>
-                    <span>{req.event?.venue}</span>
-                    <span>
-                      <span className={`status-badge ${getStatusBadgeClass(req.status)}`}>
-                        {formatStatusLabel(req.status)}
-                      </span>
-                    </span>
+                    <span>{req.event?.title || 'N/A'}</span>
+                    <span>{req.event?.date || 'N/A'}</span>
+                    <span>{req.event?.timeStart || '-'}{req.event?.timeEnd ? ` - ${req.event.timeEnd}` : ''}</span>
                   </div>
                 </div>
               ))
@@ -457,29 +467,32 @@ export default function AdminRequests() {
           </button>
 
           <div className="detail-card">
-            {/* Meta Row */}
-            <div className="detail-meta">
-              <div className="meta-row">
-                <span className="meta-label">Request Details</span>
-                <span className="meta-value bold">Request ID: {selectedRequest.id}</span>
+            <div className="detail-meta-grid">
+              <div className="detail-meta-left">
+                <div className="meta-row">
+                  <span className="meta-label">{getIdLabel(selectedRequest.type)}</span>
+                </div>
+                <div className="meta-row">
+                  <span className="meta-label">Request Status</span>
+                </div>
+                <div className="meta-row">
+                  <span className="meta-label">Date of Request</span>
+                </div>
               </div>
-              <div className="meta-row">
-                <span className="meta-label" style={{ fontSize: '13px', color: 'var(--text-gray)' }}>
-                  Date Requested: {selectedRequest.dateRequested || new Date(selectedRequest.createdAt).toLocaleDateString()}
-                </span>
-                <span className="meta-value">
-                  Status:{' '}
-                  <span
-                    className={`status-badge ${selectedRequest.status === 'approved' || selectedRequest.status === 'awaitingpayment' || selectedRequest.status === 'completed' || selectedRequest.status === 'upcoming'
-                        ? 'approved'
-                        : selectedRequest.status === 'denied' || selectedRequest.status === 'cancelled'
-                          ? 'denied'
-                          : ''
-                      }`}
-                  >
-                    {selectedRequest.status}
+              <div className="detail-meta-right">
+                <div className="meta-row">
+                  <span className="meta-value bold">{selectedRequest.id}</span>
+                </div>
+                <div className="meta-row">
+                  <span className={`status-pill ${getStatusBadgeClass(selectedRequest.status)}`}>
+                    {formatStatusLabel(selectedRequest.status)}
                   </span>
-                </span>
+                </div>
+                <div className="meta-row">
+                  <span className="meta-value" style={{ color: 'var(--text-gray)' }}>
+                    {selectedRequest.dateRequested || new Date(selectedRequest.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
             </div>
 

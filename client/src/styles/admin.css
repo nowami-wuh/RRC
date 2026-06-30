@@ -2356,87 +2356,115 @@ body {
     gap: 10px;
 }
 .status-tab {
-    background: #f4f6fb;
-    border: 1.5px solid #d8dbe4;
-    border-radius: 10px;
+    background: transparent;
+    border: none;
     font-family: 'Garet Heavy', sans-serif;
     font-size: 14px; font-weight: 900;
-    color: #4a4a4a; letter-spacing: 0.5px;
-    padding: 10px 0;
+    color: rgba(0,0,0,0.4);
+    letter-spacing: 1px;
+    padding: 14px 0;
     cursor: pointer;
-    transition: all 0.2s;
+    position: relative;
+    transition: color 0.2s ease;
 }
-.status-tab:hover {
-    background: #edf2ff;
-    color: var(--text-dark);
+.status-tab::after {
+    content: '';
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    bottom: 8px;
+    height: 4px;
+    background: transparent;
+    border-radius: 999px;
+    transition: background 0.2s ease, transform 0.2s ease;
 }
 .status-tab.active {
+    color: var(--text-dark);
+}
+.status-tab.active::after {
     background: var(--dark-blue);
-    color: white;
-    border-color: var(--dark-blue);
+    transform: scaleX(1);
 }
+.status-tab:hover { color: var(--text-dark); }
 
-.progress-track {
-    position: relative;
-    height: 8px;
-    background: white;
-    border: 1.5px solid #ccc;
-    border-radius: 20px;
-    overflow: hidden;
-}
-.progress-fill {
-    position: absolute;
-    top: 0; left: 0; height: 100%;
-    width: 33.333%;
-    background: var(--dark-blue);
-    border-radius: 20px;
-    transition: left 0.3s ease, width 0.3s ease;
-}
-
-.booking-list { display: flex; flex-direction: column; gap: 16px; padding: 20px 0; }
+.booking-list { display: flex; flex-direction: column; gap: 16px; padding: 24px 0; }
 
 .booking-card {
     background: white;
-    border: 2px solid var(--dark-blue);
-    border-radius: 12px;
-    padding: 18px 22px;
-    box-shadow: var(--shadow-sm);
-    animation: cardIn 0.25s ease;
+    border: 1.5px solid #2f4f8e;
+    border-radius: 16px;
+    padding: 24px 28px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.06);
     cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.booking-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.08);
 }
 
 .bc-top {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 10px;
+    gap: 18px;
+    margin-bottom: 14px;
+}
+.bc-title-row {
+    display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap;
 }
 .bc-id-label {
     font-family: 'Garet Heavy', sans-serif;
-    font-size: 15px; font-weight: 900;
+    font-size: 16px; font-weight: 900;
     color: var(--text-dark);
 }
 .bc-id-value {
-    font-style: italic; font-size: 15px;
-    color: var(--text-dark); margin-left: 8px;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 15px;
+    color: #4a4a4a;
+}
+.bc-actions {
+    display: flex; align-items: center; gap: 14px;
 }
 .bc-view-link {
-    color: var(--dark-blue);
-    font-style: italic; font-size: 14px;
+    color: #2f4f8e;
+    font-style: normal;
+    font-size: 13px;
     text-decoration: underline;
-    background: none; border: none;
+    background: none;
+    border: none;
     cursor: pointer;
-    font-family: 'Garet', sans-serif;
-    transition: color 0.2s;
 }
-.bc-view-link:hover { color: #2d4a73; }
+.bc-view-link:hover { color: #1c3662; }
+
+.type-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+.type-pill.booking {
+    background: #dbe7f8;
+    color: #2f4f8e;
+}
+.type-pill.rent {
+    background: #f6e6cd;
+    color: #8d5a04;
+}
 
 .bc-cols {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     font-family: 'Garet Heavy', sans-serif;
-    font-size: 12px; color: var(--text-dark);
-    letter-spacing: 0.5px;
-    padding-bottom: 8px;
-    border-bottom: 1.5px solid #eee;
+    font-size: 12px;
+    color: #4a4a4a;
+    letter-spacing: 1px;
+    padding-bottom: 10px;
+    border-bottom: 1.5px solid #e8ecf7;
 }
 .bc-cols span:nth-child(2) { text-align: center; }
 .bc-cols span:nth-child(3) { text-align: right; }
@@ -2444,8 +2472,10 @@ body {
 .bc-vals {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    font-size: 14px; color: var(--text-dark);
-    padding-top: 10px;
+    font-size: 15px;
+    color: #191f2b;
+    padding-top: 14px;
+    gap: 6px;
 }
 .bc-vals span:nth-child(2) { text-align: center; }
 .bc-vals span:nth-child(3) { text-align: right; }
@@ -2465,38 +2495,69 @@ body {
 
 .detail-card {
     background: white;
-    border: 2px solid var(--dark-blue);
-    border-radius: 16px;
-    padding: 26px 30px;
-    box-shadow: var(--shadow-md);
+    border: 1.5px solid #2f4f8e;
+    border-radius: 22px;
+    padding: 28px 30px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.08);
     display: flex;
     flex-direction: column;
+    gap: 22px;
+}
+
+.detail-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
     gap: 18px;
+    align-items: center;
 }
-
-.detail-meta {
+.detail-meta-left,
+.detail-meta-right {
+    display: grid;
+    gap: 12px;
+}
+.detail-meta-left .meta-row,
+.detail-meta-right .meta-row {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    border-bottom: 1.5px solid #eee;
-    padding-bottom: 14px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
-.meta-row { display: flex; align-items: center; justify-content: space-between; }
-.meta-label { font-size: 15px; color: var(--text-dark); }
-.meta-value { font-size: 15px; color: var(--text-dark); }
-.meta-value.bold { font-family: 'Garet Heavy', sans-serif; font-weight: 900; }
-
-.status-badge {
-    background: var(--primary-blue);
-    color: var(--text-dark);
+.meta-label {
+    font-size: 14px;
+    color: #4a4a4a;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
     font-family: 'Garet Heavy', sans-serif;
-    font-size: 12px; font-weight: 900;
-    padding: 5px 16px;
-    border-radius: 20px;
-    letter-spacing: 0.5px;
 }
-.status-badge.approved { background: #A8D4A8; }
-.status-badge.denied { background: #E8A8A8; }
+.meta-value {
+    font-size: 16px;
+    color: #191f2b;
+}
+.meta-value.bold {
+    font-family: 'Garet Heavy', sans-serif;
+    font-weight: 900;
+}
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.8px;
+    color: #191f2b;
+}
+.status-pill.approved { background: #d4f2d5; }
+.status-pill.denied { background: #ffe2e2; }
+.status-pill.pending { background: #e6edff; }
+.status-pill.upcoming { background: #f3e8ff; }
+.status-pill.completed { background: #d7f1ec; }
+.status-pill.cancelled { background: #f3f3f3; }
+
+.detail-meta-right .meta-row:last-child {
+    justify-content: flex-end;
+}
 
 .details-grid {
     display: grid;
