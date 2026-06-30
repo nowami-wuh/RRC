@@ -126,10 +126,8 @@ export default function AdminInquiries() {
       return;
     }
 
-    if (selectCustomerId && activeConv) {
-      setShowChatView(true);
-    }
-  }, [activeConv, isMobile, selectCustomerId]);
+    setShowChatView(Boolean(activeConv));
+  }, [activeConv, isMobile]);
 
   // Auto-select first conversation only if no selectCustomerId was passed
   useEffect(() => {
