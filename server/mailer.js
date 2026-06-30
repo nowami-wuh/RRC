@@ -5,21 +5,31 @@ import nodemailer from 'nodemailer';
  * Falls back to a no-op mock when EMAIL_USER / EMAIL_PASS are not set.
  */
 function createTransporter() {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    return null; // mock mode
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
+  const emailService = process.env.EMAIL_SERVICE;
+
+  if (!emailUser || !emailPass) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Production email credentials are missing: EMAIL_USER and EMAIL_PASS must be configured.');
+    }
+    return null; // mock mode for local development
   }
 
-  const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
-  const port = Number(process.env.EMAIL_PORT || 587);
   const secure = String(process.env.EMAIL_SECURE || 'false').toLowerCase() === 'true';
+  const transportOptions = emailService
+    ? { service: emailService }
+    : {
+        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: Number(process.env.EMAIL_PORT || 587),
+        secure,
+      };
 
   return nodemailer.createTransport({
-    host,
-    port,
-    secure,
+    ...transportOptions,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: emailUser,
+      pass: emailPass,
     },
   });
 }
@@ -40,10 +50,16 @@ export async function sendMail(mailOptions) {
     return;
   }
 
-  await transporter.sendMail({
-    from: `"RRC Lights & Sounds" <${process.env.EMAIL_USER}>`,
-    ...mailOptions,
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: `"RRC Lights & Sounds" <${process.env.EMAIL_USER}>`,
+      ...mailOptions,
+    });
+    console.log(`[EMAIL] sent to ${mailOptions.to}: ${info.messageId || 'no-message-id'}`);
+  } catch (error) {
+    console.error(`[EMAIL] failed to send to ${mailOptions.to}:`, error?.message || error);
+    throw error;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -67,6 +83,26 @@ export async function sendVerificationEmail(email, code) {
         </div>
         <p>This code will expire in <strong>10 minutes</strong>. If you did not request this code, please ignore this email.</p>
         <hr style="border: none; border-top: 1px solid #eee;" />
+        <p style="font-size: 12px; color: #777; text-align: center;">This is an automated message. Please do not reply.</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendSignupConfirmationEmail(email, username = '') {
+  await sendMail({
+    to: email,
+    subject: `RRC Lights & Sounds – Welcome to RRC, ${username || 'customer'}!`,
+    text: `Welcome to RRC Lights & Sounds! Your account has been successfully created for ${email}. We look forward to serving you.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #38629B; text-align: center;">Welcome to RRC Lights &amp; Sounds</h2>
+        <p>Hi ${username || 'there'},</p>
+        <p>Your account has been successfully created using this email address:</p>
+        <p style="font-weight: bold; word-break: break-word;">${email}</p>
+        <p>We&apos;re excited to help with your next event. You can now log in anytime and submit equipment or booking requests.</p>
+        <p>Thank you for choosing <strong>RRC Lights &amp; Sounds</strong>!</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin-top: 24px;" />
         <p style="font-size: 12px; color: #777; text-align: center;">This is an automated message. Please do not reply.</p>
       </div>
     `,
