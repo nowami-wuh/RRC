@@ -1606,7 +1606,7 @@ body {
 }
 
 .chat-panel {
-    flex: 1;
+    flex: 1 1 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1690,7 +1690,7 @@ body {
 
 /* ── Active chat ── */
 .chat-active {
-    flex: 1;
+    flex: 1 1 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1797,10 +1797,12 @@ body {
 .chat-action-btn svg { width: 18px; height: 18px; fill: var(--dark-blue); }
 
 /* ── Messages ── */
-.admin-shell .chat-messages {
-    flex: 1;
+.admin-shell .chat-messages,
+.admin-inquiries-shell .chat-messages {
+    flex: 1 1 0;
     min-height: 0;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     padding: 16px 24px;
     display: flex;
     flex-direction: column;
@@ -3342,6 +3344,9 @@ body {
         min-height: calc(100vh - var(--admin-top-offset));
         max-height: calc(100vh - var(--admin-top-offset));
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        position: relative;
     }
 
     .admin-inquiries-shell.mobile .conv-panel,
@@ -3349,13 +3354,35 @@ body {
         width: 100%;
         min-width: 100%;
         max-width: 100%;
-        height: 100%;
-        min-height: 100%;
-        max-height: 100%;
-        flex: 1 1 100%;
+        flex: 1 1 auto;
         display: flex;
         flex-direction: column;
-        min-height: 0;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .admin-inquiries-shell.mobile .chat-panel {
+        flex: 1 1 auto;
+    }
+
+    .admin-inquiries-shell.mobile .chat-active {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .admin-inquiries-shell.mobile .chat-messages {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        max-height: 100% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+
+    .admin-inquiries-shell.mobile .chat-header {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 3 !important;
     }
 
     .admin-inquiries-shell.mobile .conv-panel.mobile-hidden,
@@ -3407,6 +3434,36 @@ body {
    360px / ULTRA-NARROW DEVICE OVERRIDES (MAX-WIDTH 400px)
 ══════════════════════════════════════════════════════════════ */
 @media (max-width: 400px) {
+    /* --- Admin inquiries / chat mobile override --- */
+    .admin-inquiries-shell.mobile {
+        height: calc(100vh - var(--admin-top-offset)) !important;
+        min-height: calc(100vh - var(--admin-top-offset)) !important;
+        max-height: calc(100vh - var(--admin-top-offset)) !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .admin-inquiries-shell.mobile .conv-panel,
+    .admin-inquiries-shell.mobile .chat-panel,
+    .admin-inquiries-shell.mobile .chat-active,
+    .admin-inquiries-shell.mobile .chat-messages {
+        min-height: 0 !important;
+    }
+
+    .admin-inquiries-shell.mobile .chat-panel,
+    .admin-inquiries-shell.mobile .chat-active {
+        height: 100% !important;
+        max-height: 100% !important;
+        overflow: hidden !important;
+    }
+
+    .admin-inquiries-shell.mobile .chat-messages {
+        flex: 1 1 auto !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+
     /* --- Inventory adjustments --- */
     .category-title {
         font-size: 15px !important;

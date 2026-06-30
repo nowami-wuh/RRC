@@ -8,7 +8,7 @@ export default function AdminInquiries() {
   const [reply, setReply] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadConversationIds, setUnreadConversationIds] = useState(new Set());
-  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 360 : false));
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 480 : false));
   const [showChatView, setShowChatView] = useState(false);
   const [adminRequests, setAdminRequests] = useState([]);
   const messagesEndRef = useRef(null);
@@ -111,13 +111,17 @@ export default function AdminInquiries() {
   }, [activeConv]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 360px)');
+    const mediaQuery = window.matchMedia('(max-width: 480px)');
     const updateViewport = () => setIsMobile(mediaQuery.matches);
 
     updateViewport();
     mediaQuery.addEventListener?.('change', updateViewport);
+    mediaQuery.addListener?.(updateViewport);
 
-    return () => mediaQuery.removeEventListener?.('change', updateViewport);
+    return () => {
+      mediaQuery.removeEventListener?.('change', updateViewport);
+      mediaQuery.removeListener?.(updateViewport);
+    };
   }, []);
 
   useEffect(() => {

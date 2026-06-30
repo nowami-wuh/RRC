@@ -495,8 +495,11 @@ img {
   }
 
   .sidebar-bottom-actions {
+    width: 100%;
+    justify-content: flex-end;
     gap: 8px;
     align-items: center;
+    margin-left: auto;
   }
 
   .logout-btn {
