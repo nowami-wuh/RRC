@@ -107,35 +107,50 @@ body {
 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
 }
 
 .nav-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 15px;
-    color: white;
+    padding: 12px 14px;
+    color: #f5f0e6;
     text-decoration: none;
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 15px;
-    font-weight: 500;
-    transition: all 0.3s ease;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
 .nav-item:hover {
-    background-color: rgba(107, 141, 184, 0.1);
+    background-color: rgba(255, 255, 255, 0.08);
+    color: white;
+    transform: translateX(2px);
 }
 
 .nav-item.active {
-    background-color: var(--primary-blue);
-    color: black;
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
+    color: #07131f;
+    box-shadow: 0 8px 24px rgba(74, 112, 169, 0.25);
 }
 
 .nav-icon {
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
     fill: currentColor;
+    transition: transform 0.2s ease, fill 0.2s ease;
+}
+
+.nav-icon path {
+    fill: currentColor;
+}
+
+.nav-item:hover .nav-icon {
+    transform: scale(1.08);
 }
 
 /* Logout Button */
