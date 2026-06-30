@@ -3903,25 +3903,31 @@ body {
     .requests-admin-page .status-banner { flex-direction: column; align-items: stretch; gap: 10px; }
 }
 
-@media (max-width: 390px) {
-    .requests-admin-page .main-content { padding: 12px; }
+@media (max-width: 360px) {
+    .requests-admin-page .main-content { padding: 10px; }
+    .requests-admin-page .status-bar {
+        margin-bottom: 8px;
+        padding: 0;
+    }
     .requests-admin-page .status-tabs {
         display: flex;
         flex-wrap: nowrap;
         overflow-x: auto;
         gap: 6px;
-        padding-bottom: 4px;
+        padding: 2px 0 6px;
         scroll-snap-type: x proximity;
         -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
     }
+    .requests-admin-page .status-tabs::-webkit-scrollbar { display: none; }
     .requests-admin-page .status-tab {
         flex: 0 0 auto;
-        min-width: 78px;
-        padding: 7px 10px 10px;
+        min-width: 70px;
+        padding: 8px 10px 9px;
         border: 1px solid #d5dce6;
         border-radius: 999px;
         background: #f7f8fa;
-        font-size: 9.5px;
+        font-size: 9px;
         line-height: 1.1;
         scroll-snap-align: start;
     }
@@ -3930,7 +3936,10 @@ body {
         color: white;
         border-color: var(--dark-blue);
     }
-    .requests-admin-page .progress-track { display: none; }
+    .requests-admin-page .progress-track,
+    .requests-admin-page .sort-row {
+        display: none;
+    }
 }
 @media (max-width: 768px) {
     .apm-top-tabs { padding: 16px 16px 0; }

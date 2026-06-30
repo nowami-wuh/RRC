@@ -730,10 +730,10 @@ export default function AdminRequests() {
             {selectedBooking && ['pending', 'approved', 'upcoming', 'completed'].includes(selectedBooking.status) && (
               <div className="section-tabs">
                 <button className={`section-tab ${activeSection === 'approval' ? 'active' : ''}`} onClick={() => setActiveSection('approval')}>
-                  Approval Section
+                  Equipment Details
                 </button>
                 <button className={`section-tab ${activeSection === 'billing' ? 'active' : ''}`} onClick={() => setActiveSection('billing')}>
-                  Billing Section
+                  Estimated Bill
                 </button>
               </div>
             )}
