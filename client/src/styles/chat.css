@@ -239,3 +239,23 @@
         padding: 12px 14px;
     }
 }
+
+@media (max-width: 360px) {
+    .chat-input-bar {
+        padding: 8px 10px;
+        gap: 6px;
+    }
+
+    .attach-btn,
+    .send-btn {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+    }
+
+    .chat-input {
+        min-width: 0;
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+}

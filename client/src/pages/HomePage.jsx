@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { fetchEvents, fetchRequests } from '../api/api';
-import { useAuth } from '../context/AuthContext';
 import '../styles/home.css';
 
 function formatDate(date) {
@@ -43,37 +41,32 @@ function normalizeDate(dateStr) {
   return `${year}-${month}-${day}`;
 }
 
+function isVisibleCalendarRequest(status) {
+  return ['paid', 'confirmed'].includes(String(status || '').toLowerCase());
+}
+
 export default function HomePage() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [events, setEvents] = useState({});
-  const [myRequestIds, setMyRequestIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     // Fetch ALL requests for the public calendar view (so all users' bookings appear)
-    // Also fetch only the current user's requests to know which Booking IDs belong to them
     const allRequestsFetch = fetchRequests();
-    const myRequestsFetch = user?.id ? fetchRequests(user.id) : Promise.resolve({ requests: [] });
 
-    Promise.all([fetchEvents(), allRequestsFetch, myRequestsFetch])
-      .then(([eventsData, allRequestsData, myRequestsData]) => {
+    Promise.all([fetchEvents(), allRequestsFetch])
+      .then(([eventsData, allRequestsData]) => {
         // Correct key from /api/events response
         const allEvents = { ...(eventsData.eventsByDate || {}) };
-
-        // Track which request IDs belong to the logged-in user (for clickable links)
-        const myIds = new Set((myRequestsData.requests || []).map((r) => r.id));
-        setMyRequestIds(myIds);
 
         // Merge ALL booking requests into the calendar (public view)
         const requests = allRequestsData.requests || [];
         requests.forEach((req) => {
           if (req.event && req.event.date) {
-            // Skip cancelled and denied — don't show on the public calendar
-            if (req.status === 'cancelled' || req.status === 'denied') return;
+            // Only show requests that are fully confirmed or paid
+            if (!isVisibleCalendarRequest(req.status)) return;
 
             const dateKey = normalizeDate(req.event.date);
             if (!dateKey) return;
@@ -90,7 +83,6 @@ export default function HomePage() {
                   req.event.timeStart && req.event.timeEnd
                     ? `${req.event.timeStart} - ${req.event.timeEnd}`
                     : req.event.timeStart || req.event.timeEnd || 'All Day',
-                location: req.event.venue || '',
                 status: req.status,
               });
             }
@@ -105,7 +97,7 @@ export default function HomePage() {
       })
       .catch(() => setError('Unable to load events.'))
       .finally(() => setLoading(false));
-  }, [user?.id]);
+  }, []);
 
   const days = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -212,27 +204,6 @@ export default function HomePage() {
               <div key={index} className="event-item">
                 {event.time && <div className="event-time">{event.time}</div>}
                 <div className="event-title">{event.title}</div>
-                {event.location && <div className="event-location">{event.location}</div>}
-                {event.bookingId && (
-                  <div className="event-id">
-                    Booking ID:{' '}
-                    {user && myRequestIds.has(event.bookingId) ? (
-                      // Current user's own booking — navigate to My Requests and highlight it
-                      <span
-                        role="link"
-                        tabIndex={0}
-                        onClick={() => navigate('/my-requests', { state: { searchId: event.bookingId } })}
-                        onKeyDown={(e) => e.key === 'Enter' && navigate('/my-requests', { state: { searchId: event.bookingId } })}
-                        style={{ color: '#4A90E2', textDecoration: 'underline', cursor: 'pointer' }}
-                      >
-                        {event.bookingId}
-                      </span>
-                    ) : (
-                      // Another user's booking — plain text (privacy)
-                      <span style={{ fontStyle: 'italic', color: '#888' }}>{event.bookingId}</span>
-                    )}
-                  </div>
-                )}
               </div>
             ))}
           </div>

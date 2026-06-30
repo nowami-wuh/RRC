@@ -12,7 +12,15 @@ export default function AdminRequests() {
   const [inventoryItems, setInventoryItems] = useState([]);
   const [packages, setPackages] = useState([]);
 
-  // Active status tab: 'pending' | 'approved' | 'denied'
+  // Active status tab: 'pending' | 'approved' | 'upcoming' | 'completed' | 'denied' | 'cancelled'
+  const STATUS_TABS = [
+    { key: 'pending', label: 'PENDING' },
+    { key: 'approved', label: 'APPROVED' },
+    { key: 'upcoming', label: 'UPCOMING' },
+    { key: 'completed', label: 'COMPLETED' },
+    { key: 'denied', label: 'DENIED' },
+    { key: 'cancelled', label: 'CANCELLED' },
+  ];
   const [activeStatusTab, setActiveStatusTab] = useState('pending');
   // Selected request for details view
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -89,16 +97,32 @@ export default function AdminRequests() {
   // Status mapping logic
   const isRequestInTab = (req, tab) => {
     const status = req.status?.toLowerCase();
-    if (tab === 'pending') {
-      return status === 'pending';
-    }
-    if (tab === 'approved') {
-      return status === 'approved' || status === 'awaitingpayment' || status === 'upcoming' || status === 'completed';
-    }
-    if (tab === 'denied') {
-      return status === 'denied' || status === 'cancelled';
-    }
+    if (tab === 'pending') return status === 'pending';
+    if (tab === 'approved') return status === 'approved' || status === 'awaitingpayment';
+    if (tab === 'upcoming') return status === 'upcoming';
+    if (tab === 'completed') return status === 'completed';
+    if (tab === 'denied') return status === 'denied';
+    if (tab === 'cancelled') return status === 'cancelled';
     return false;
+  };
+
+  const STATUS_LABELS = {
+    awaitingpayment: 'AWAITING PAYMENT',
+    upcoming: 'UPCOMING',
+    completed: 'COMPLETED',
+    cancelled: 'CANCELLED',
+  };
+
+  const getStatusBadgeClass = (status) => {
+    if (!status) return '';
+    if (['approved', 'awaitingpayment', 'upcoming', 'completed'].includes(status)) return 'approved';
+    if (['denied', 'cancelled'].includes(status)) return 'denied';
+    return '';
+  };
+
+  const formatStatusLabel = (status) => {
+    if (!status) return 'N/A';
+    return STATUS_LABELS[status] || status.toUpperCase();
   };
 
   // Filter requests based on selected tab and search ID
@@ -330,38 +354,15 @@ export default function AdminRequests() {
         <div className="requests-status-bar">
           <div className="status-bar">
             <div className="status-tabs">
-              <button
-                className={`status-tab ${activeStatusTab === 'pending' ? 'active' : ''}`}
-                onClick={() => setActiveStatusTab('pending')}
-              >
-                PENDING
-              </button>
-              <button
-                className={`status-tab ${activeStatusTab === 'approved' ? 'active' : ''}`}
-                onClick={() => setActiveStatusTab('approved')}
-              >
-                APPROVED
-              </button>
-              <button
-                className={`status-tab ${activeStatusTab === 'denied' ? 'active' : ''}`}
-                onClick={() => setActiveStatusTab('denied')}
-              >
-                DENIED
-              </button>
-            </div>
-            <div className="progress-track">
-              <div
-                className="progress-fill"
-                style={{
-                  left:
-                    activeStatusTab === 'pending'
-                      ? '0%'
-                      : activeStatusTab === 'approved'
-                        ? '33.333%'
-                        : '66.666%',
-                  width: '33.333%',
-                }}
-              />
+              {STATUS_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  className={`status-tab ${activeStatusTab === tab.key ? 'active' : ''}`}
+                  onClick={() => setActiveStatusTab(tab.key)}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -428,15 +429,8 @@ export default function AdminRequests() {
                     <span>{req.event?.date}</span>
                     <span>{req.event?.venue}</span>
                     <span>
-                      <span
-                        className={`status-badge ${req.status === 'approved' || req.status === 'awaitingpayment' || req.status === 'completed' || req.status === 'upcoming'
-                            ? 'approved'
-                            : req.status === 'denied' || req.status === 'cancelled'
-                              ? 'denied'
-                              : ''
-                          }`}
-                      >
-                        {req.status}
+                      <span className={`status-badge ${getStatusBadgeClass(req.status)}`}>
+                        {formatStatusLabel(req.status)}
                       </span>
                     </span>
                   </div>

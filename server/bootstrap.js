@@ -155,21 +155,21 @@ async function ensureTables() {
 }
 
 async function seedAuthData() {
-  const customerRows = await query('SELECT COUNT(*) AS count FROM customers');
-  if (customerRows[0].count === 0) {
-    const hash = await bcrypt.hash(defaultPassword, 10);
+  const authPasswordHash = await bcrypt.hash(defaultPassword, 10);
+
+  const customerRows = await query('SELECT 1 FROM customers WHERE username = ? LIMIT 1', ['testuser']);
+  if (customerRows.length === 0) {
     await execute(
       'INSERT INTO customers (public_id, username, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)',
-      ['RRC-000001', 'testuser', 'test@example.com', '09171234567', hash],
+      ['RRC-000001', 'testuser', 'test@example.com', '09171234567', authPasswordHash],
     );
   }
 
-  const adminRows = await query('SELECT COUNT(*) AS count FROM admins');
-  if (adminRows[0].count === 0) {
-    const hash = await bcrypt.hash(defaultPassword, 10);
+  const adminRows = await query('SELECT 1 FROM admins WHERE username = ? LIMIT 1', ['admin']);
+  if (adminRows.length === 0) {
     await execute(
       'INSERT INTO admins (username, email, full_name, password_hash) VALUES (?, ?, ?, ?)',
-      ['admin', 'admin@rrc.local', 'RRC Admin', hash],
+      ['admin', 'admin@rrc.local', 'RRC Admin', authPasswordHash],
     );
   }
 }

@@ -59,11 +59,8 @@ console.log('MYSQL_USER set=', Boolean(process.env.MYSQL_USER));
 console.log('MYSQL_PASSWORD set=', Boolean(process.env.MYSQL_PASSWORD));
 console.log('MYSQL_DATABASE=', process.env.MYSQL_DATABASE);
 console.log('MYSQL_SSL=', process.env.MYSQL_SSL);
-console.log('EMAIL_HOST=', process.env.EMAIL_HOST || 'smtp.gmail.com');
-console.log('EMAIL_PORT=', process.env.EMAIL_PORT || 587);
-console.log('EMAIL_SECURE=', process.env.EMAIL_SECURE);
-console.log('EMAIL_USER set=', Boolean(process.env.EMAIL_USER));
-console.log('EMAIL_PASS set=', Boolean(process.env.EMAIL_PASS));
+console.log('BREVO_API_KEY set=', Boolean(process.env.BREVO_API_KEY));
+console.log('EMAIL_USER=', process.env.EMAIL_USER || '(not set)');
 console.log('NODE_ENV=', process.env.NODE_ENV);
 console.log('CORS_ORIGINS=', process.env.CORS_ORIGINS || process.env.CLIENT_ORIGIN);
 

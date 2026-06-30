@@ -27,8 +27,8 @@ export default function MakeRequest() {
   const [rentAdditional, setRentAdditional] = useState('');
 
   // Generated IDs
-  const [bookingId] = useState(() => generateId('BK'));
-  const [requestId] = useState(() => generateId('RQ'));
+  const [bookingId, setBookingId] = useState(() => generateId('BK'));
+  const [requestId, setRequestId] = useState(() => generateId('RQ'));
 
   // Inventory
   const [inventoryGroups, setInventoryGroups] = useState([]);
@@ -116,6 +116,19 @@ export default function MakeRequest() {
     setOpenGroups(prev => ({ ...prev, [group]: !prev[group] }));
   };
 
+  const resetFormState = () => {
+    setBookForm(EMPTY_FORM);
+    setRentForm(EMPTY_FORM);
+    setBookAdditional('');
+    setRentAdditional('');
+    setSelectedEquipment({});
+    setSearchTerm('');
+    setDropdownOpen(false);
+    setError('');
+    setBookingId(generateId('BK'));
+    setRequestId(generateId('RQ'));
+  };
+
   const handleSubmit = async (type) => {
     const form = type === 'book' ? bookForm : rentForm;
     const additional = type === 'book' ? bookAdditional : rentAdditional;
@@ -195,12 +208,7 @@ export default function MakeRequest() {
                 className="success-btn secondary"
                 onClick={() => {
                   setSubmitted(null);
-                  setBookForm(EMPTY_FORM);
-                  setRentForm(EMPTY_FORM);
-                  setBookAdditional('');
-                  setRentAdditional('');
-                  setSelectedEquipment({});
-                  setError('');
+                  resetFormState();
                 }}
               >
                 Make Another Request

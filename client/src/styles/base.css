@@ -152,8 +152,14 @@ img {
   fill: currentColor;
 }
 
-.logout-btn {
+.sidebar-bottom-actions {
   margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logout-btn {
   padding: 12px 18px;
   border: none;
   background: #d32f2f;
@@ -163,10 +169,39 @@ img {
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .logout-btn:hover {
   background: #b71c1c;
+}
+
+.logout-btn-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.logout-btn-label {
+  display: inline-block;
+}
+
+.sidebar-header-bell {
+  position: static;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.sidebar-mobile-bell {
+  display: none;
+}
+
+.mr-notif-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .main-content {
@@ -411,5 +446,37 @@ img {
   input,
   textarea {
     font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .sidebar-header-bell {
+    display: none;
+  }
+
+  .sidebar-mobile-bell {
+    display: block;
+  }
+
+  .sidebar-bottom-actions {
+    gap: 8px;
+    align-items: center;
+  }
+
+  .logout-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .logout-btn-label {
+    display: none;
+  }
+
+  .mr-notif-bell {
+    width: 44px;
+    height: 44px;
+    padding: 0;
   }
 }

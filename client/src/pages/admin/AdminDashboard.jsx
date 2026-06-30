@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { fetchEvents, fetchAdminRequests } from '../../api/api';
 import '../../styles/admin.css';
 
@@ -36,6 +35,10 @@ function formatDisplayDate(date) {
   return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
+function isVisibleCalendarRequest(status) {
+  return ['paid', 'confirmed'].includes(String(status || '').toLowerCase());
+}
+
 export default function AdminDashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -53,8 +56,8 @@ export default function AdminDashboard() {
         const requests = requestsData.requests || [];
         requests.forEach((req) => {
           if (req.event && req.event.date) {
-            // Filter out cancelled and denied requests
-            if (req.status === 'cancelled' || req.status === 'denied') return;
+            // Only show fully confirmed or paid requests
+            if (!isVisibleCalendarRequest(req.status)) return;
 
             const dateKey = normalizeDate(req.event.date);
             if (!allEvents[dateKey]) {
@@ -66,11 +69,9 @@ export default function AdminDashboard() {
               allEvents[dateKey].push({
                 bookingId: req.id,
                 title: req.event.title || 'Event',
-                time: req.event.timeStart && req.event.timeEnd 
+                time: req.event.timeStart && req.event.timeEnd
                   ? `${req.event.timeStart} - ${req.event.timeEnd}`
                   : req.event.timeStart || req.event.timeEnd || 'All Day',
-                location: req.event.venue || '',
-                pax: req.event.pax || '',
                 status: req.status,
               });
             }
@@ -228,19 +229,6 @@ export default function AdminDashboard() {
                 <div key={index} className="event-item">
                   {event.time && <div className="event-time">{event.time}</div>}
                   <div className="event-title">{event.title}</div>
-                  {event.location && <div className="event-location">{event.location}</div>}
-                  {event.bookingId && (
-                    <div className="event-id">
-                      Booking ID:{' '}
-                      <Link
-                        to="/admin/requests"
-                        state={{ searchId: event.bookingId }}
-                        style={{ color: '#4A90E2', textDecoration: 'underline' }}
-                      >
-                        {event.bookingId}
-                      </Link>
-                    </div>
-                  )}
                 </div>
               ))}
           </div>

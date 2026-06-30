@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
-import { fetchAdminInquiries, sendAdminInquiryReply, fetchUser, markConversationRead, deleteConversation } from '../../api/api';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, markConversationRead, deleteConversation } from '../../api/api';
 
 export default function AdminInquiries() {
   const [messages, setMessages] = useState([]);
@@ -10,17 +10,20 @@ export default function AdminInquiries() {
   const [unreadConversationIds, setUnreadConversationIds] = useState(new Set());
   const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 360 : false));
   const [showChatView, setShowChatView] = useState(false);
+  const [adminRequests, setAdminRequests] = useState([]);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const selectCustomerId = location.state?.selectCustomerId || null;
   const selectCustomerName = location.state?.selectCustomerName || null;
 
   useEffect(() => {
-    fetchAdminInquiries()
-      .then((data) => {
-        const msgs = data.messages || [];
+    Promise.all([fetchAdminInquiries(), fetchAdminRequests()])
+      .then(([inquiryData, requestData]) => {
+        const msgs = inquiryData.messages || [];
         setMessages(msgs);
+        setAdminRequests(requestData.requests || []);
         // Auto-select the conversation passed from AdminRequests
         if (selectCustomerId) {
           setActiveConv(selectCustomerId);
@@ -142,6 +145,10 @@ export default function AdminInquiries() {
 
   const activeConversation = conversationMap[activeConv];
   const activeMessages = activeConversation?.messages || [];
+  const activeBookingRequest = adminRequests.find((req) => {
+    const requestCustomerId = req.customerId || req.customer_public_id || req.customerId?.toString?.();
+    return requestCustomerId && String(requestCustomerId) === String(activeConv);
+  });
 
   const handleSelectConversation = (conversationId) => {
     setActiveConv(conversationId);
@@ -368,6 +375,16 @@ export default function AdminInquiries() {
                   <span className="status-dot online"></span>
                   Online
                 </div>
+                {activeBookingRequest && (
+                  <button
+                    type="button"
+                    className="chat-request-link"
+                    onClick={() => navigate('/admin/requests', { state: { searchId: activeBookingRequest.id } })}
+                  >
+                    <span className="chat-request-badge">Booking</span>
+                    <span>{activeBookingRequest.id}</span>
+                  </button>
+                )}
               </div>
               <div className="chat-header-actions">
                 <button className="chat-action-btn" title="Phone Call" type="button" onClick={handlePhoneCall}>
@@ -468,6 +485,22 @@ export default function AdminInquiries() {
                   <div><strong>ID:</strong> {infoData.id || infoData.public_id || activeConv}</div>
                   <div><strong>Email:</strong> {infoData.email || '—'}</div>
                   <div><strong>Phone:</strong> {infoData.phone || '—'}</div>
+                  {activeBookingRequest && (
+                    <div>
+                      <strong>Booking Request:</strong>{' '}
+                      <button
+                        type="button"
+                        className="chat-request-link"
+                        onClick={() => {
+                          setShowInfo(false);
+                          navigate('/admin/requests', { state: { searchId: activeBookingRequest.id } });
+                        }}
+                      >
+                        <span className="chat-request-badge">Open</span>
+                        <span>{activeBookingRequest.id}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
