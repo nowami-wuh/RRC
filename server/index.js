@@ -13,6 +13,7 @@ import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
 import debugRoutes from './routes/debug.js';
 import { bootstrapDatabase } from './bootstrap.js';
+import { verifyMailer } from './mailer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,5 +72,7 @@ bootstrapDatabase().catch((error) => {
 }).finally(() => {
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    // Verify SMTP connectivity at startup — check Render logs for ✅ or ❌
+    verifyMailer().catch(() => {}); // errors already logged inside verifyMailer
   });
 });

@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 
 /**
  * Creates and returns a configured Nodemailer transporter.
+ * Uses Gmail port 465 (SSL) which is more reliable on cloud platforms than 587.
  * Falls back to a no-op mock when EMAIL_USER / EMAIL_PASS are not set.
  */
 function createTransporter() {
@@ -16,14 +17,23 @@ function createTransporter() {
     return null; // mock mode for local development
   }
 
-  const secure = String(process.env.EMAIL_SECURE || 'false').toLowerCase() === 'true';
-  const transportOptions = emailService
-    ? { service: emailService }
-    : {
-        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: Number(process.env.EMAIL_PORT || 587),
-        secure,
-      };
+  // When EMAIL_SERVICE=gmail is set, use explicit host/port/secure
+  // so we can control timeouts. Port 465 + secure:true (SSL) is more
+  // reliable on Render than port 587 (STARTTLS).
+  const isGmail = (emailService || '').toLowerCase() === 'gmail';
+  const transportOptions = isGmail
+    ? {
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // SSL — avoids STARTTLS handshake issues on Render
+      }
+    : emailService
+      ? { service: emailService }
+      : {
+          host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+          port: Number(process.env.EMAIL_PORT || 465),
+          secure: String(process.env.EMAIL_SECURE || 'true').toLowerCase() === 'true',
+        };
 
   return nodemailer.createTransport({
     ...transportOptions,
@@ -31,6 +41,10 @@ function createTransporter() {
       user: emailUser,
       pass: emailPass,
     },
+    // Fail fast — do not hang the request if SMTP is unreachable
+    connectionTimeout: 10000,  // 10s to establish TCP connection
+    greetingTimeout: 10000,    // 10s to receive SMTP greeting
+    socketTimeout: 15000,      // 15s of inactivity before giving up
   });
 }
 
@@ -59,6 +73,29 @@ export async function sendMail(mailOptions) {
   } catch (error) {
     console.error(`[EMAIL] failed to send to ${mailOptions.to}:`, error?.message || error);
     throw error;
+  }
+}
+
+/**
+ * Verifies SMTP connectivity at startup. Call this once after server starts.
+ * Logs success/failure to console — check Render logs to confirm.
+ */
+export async function verifyMailer() {
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
+
+  if (!emailUser || !emailPass) {
+    console.log('[EMAIL] Running in mock mode — no credentials set.');
+    return;
+  }
+
+  const transporter = createTransporter();
+  try {
+    await transporter.verify();
+    console.log('[EMAIL] ✅ SMTP connection verified — Gmail ready to send.');
+  } catch (err) {
+    console.error('[EMAIL] ❌ SMTP verification failed:', err.message);
+    console.error('[EMAIL] Check EMAIL_USER, EMAIL_PASS (App Password), and EMAIL_SERVICE in Render env vars.');
   }
 }
 
