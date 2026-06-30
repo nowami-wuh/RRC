@@ -85,12 +85,17 @@ export default function AdminLayout() {
     <div className="admin-shell">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <img src="/rrc-logo.jpg" alt="RRC Logo" className="sidebar-logo" />
-          <h1 className="sidebar-title">
-            <span className="title-rrc">RRC</span>
-            <span className="title-lights">Lights&Sounds</span>
-            <span className="title-booking">BOOKING</span>
-          </h1>
+          <div className="sidebar-brand">
+            <div className="sidebar-brand-icons">
+              <img src="/light-icon.png" alt="RRC light icon" className="sidebar-light-icon" />
+              <img src="/rrc-logo.jpg" alt="RRC Logo" className="sidebar-logo" />
+            </div>
+            <h1 className="sidebar-title">
+              <span className="title-rrc">RRC</span>
+              <span className="title-lights">Lights&Sounds</span>
+              <span className="title-booking">BOOKING</span>
+            </h1>
+          </div>
         </div>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
