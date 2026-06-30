@@ -29,6 +29,8 @@ services:
         sync: false
       - key: EMAIL_PASS
         sync: false
+      - key: BREVO_API_KEY
+        sync: false
       - key: SKIP_EMAIL_VERIFICATION
         value: "false"
       - key: CORS_ORIGINS

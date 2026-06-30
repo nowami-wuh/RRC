@@ -1,61 +1,32 @@
-import nodemailer from 'nodemailer';
-
 /**
- * Creates and returns a configured Nodemailer transporter.
- * Uses Gmail port 465 (SSL) which is more reliable on cloud platforms than 587.
- * Falls back to a no-op mock when EMAIL_USER / EMAIL_PASS are not set.
+ * mailer.js
+ *
+ * Uses Brevo (formerly Sendinblue) Transactional Email REST API over HTTPS.
+ * This bypasses Render's free-tier SMTP port block (ports 465/587 are blocked).
+ *
+ * Required env var: BREVO_API_KEY
+ * Optional env var: EMAIL_USER  (the verified sender address in Brevo)
+ *
+ * Local dev fallback: if BREVO_API_KEY is not set, emails are logged to console.
  */
-function createTransporter() {
-  const emailUser = process.env.EMAIL_USER;
-  const emailPass = process.env.EMAIL_PASS;
-  const emailService = process.env.EMAIL_SERVICE;
 
-  if (!emailUser || !emailPass) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Production email credentials are missing: EMAIL_USER and EMAIL_PASS must be configured.');
-    }
-    return null; // mock mode for local development
-  }
-
-  // When EMAIL_SERVICE=gmail is set, use explicit host/port/secure
-  // so we can control timeouts. Port 465 + secure:true (SSL) is more
-  // reliable on Render than port 587 (STARTTLS).
-  const isGmail = (emailService || '').toLowerCase() === 'gmail';
-  const transportOptions = isGmail
-    ? {
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, // SSL — avoids STARTTLS handshake issues on Render
-      }
-    : emailService
-      ? { service: emailService }
-      : {
-          host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-          port: Number(process.env.EMAIL_PORT || 465),
-          secure: String(process.env.EMAIL_SECURE || 'true').toLowerCase() === 'true',
-        };
-
-  return nodemailer.createTransport({
-    ...transportOptions,
-    auth: {
-      user: emailUser,
-      pass: emailPass,
-    },
-    // Fail fast — do not hang the request if SMTP is unreachable
-    connectionTimeout: 10000,  // 10s to establish TCP connection
-    greetingTimeout: 10000,    // 10s to receive SMTP greeting
-    socketTimeout: 15000,      // 15s of inactivity before giving up
-  });
-}
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 /**
- * Low-level send helper. Logs to console when credentials are missing.
- * @param {object} mailOptions - Standard nodemailer mail options
+ * Low-level send helper using Brevo's Transactional Email API.
+ * Falls back to console logging in local dev when BREVO_API_KEY is missing.
+ * @param {object} mailOptions - { to, subject, text, html }
  */
 export async function sendMail(mailOptions) {
-  const transporter = createTransporter();
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.EMAIL_USER || 'noreply@example.com';
+  const senderName = 'RRC Lights & Sounds';
 
-  if (!transporter) {
+  if (!apiKey) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('BREVO_API_KEY is not set. Add it to your Render environment variables.');
+    }
+    // Mock mode for local development
     console.log('\n======================================================');
     console.log(`[EMAIL MOCK] To: ${mailOptions.to}`);
     console.log(`[EMAIL MOCK] Subject: ${mailOptions.subject}`);
@@ -64,40 +35,65 @@ export async function sendMail(mailOptions) {
     return;
   }
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"RRC Lights & Sounds" <${process.env.EMAIL_USER}>`,
-      ...mailOptions,
-    });
-    console.log(`[EMAIL] sent to ${mailOptions.to}: ${info.messageId || 'no-message-id'}`);
-  } catch (error) {
-    console.error(`[EMAIL] failed to send to ${mailOptions.to}:`, error?.message || error);
-    throw error;
+  const payload = {
+    sender: { name: senderName, email: senderEmail },
+    to: [{ email: mailOptions.to }],
+    subject: mailOptions.subject,
+    textContent: mailOptions.text,
+    htmlContent: mailOptions.html,
+  };
+
+  const response = await fetch(BREVO_API_URL, {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'api-key': apiKey,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    const message = `Brevo API error ${response.status}: ${errorBody}`;
+    console.error(`[EMAIL] failed to send to ${mailOptions.to}:`, message);
+    throw new Error(message);
   }
+
+  const result = await response.json();
+  console.log(`[EMAIL] sent to ${mailOptions.to}: messageId=${result.messageId || 'n/a'}`);
 }
 
 /**
- * Verifies SMTP connectivity at startup. Call this once after server starts.
- * Logs success/failure to console — check Render logs to confirm.
+ * Verifies Brevo API key is valid at startup.
+ * Logs ✅ or ❌ — check Render logs after deploy.
  */
 export async function verifyMailer() {
-  const emailUser = process.env.EMAIL_USER;
-  const emailPass = process.env.EMAIL_PASS;
+  const apiKey = process.env.BREVO_API_KEY;
 
-  if (!emailUser || !emailPass) {
-    console.log('[EMAIL] Running in mock mode — no credentials set.');
+  if (!apiKey) {
+    console.log('[EMAIL] Running in mock mode — BREVO_API_KEY not set.');
     return;
   }
 
-  const transporter = createTransporter();
   try {
-    await transporter.verify();
-    console.log('[EMAIL] ✅ SMTP connection verified — Gmail ready to send.');
+    const response = await fetch('https://api.brevo.com/v3/account', {
+      headers: { 'api-key': apiKey, 'accept': 'application/json' },
+    });
+
+    if (response.ok) {
+      const account = await response.json();
+      console.log(`[EMAIL] ✅ Brevo API key verified. Account: ${account.email}`);
+    } else {
+      const body = await response.text();
+      console.error(`[EMAIL] ❌ Brevo API key invalid (${response.status}): ${body}`);
+      console.error('[EMAIL] Check BREVO_API_KEY in Render environment variables.');
+    }
   } catch (err) {
-    console.error('[EMAIL] ❌ SMTP verification failed:', err.message);
-    console.error('[EMAIL] Check EMAIL_USER, EMAIL_PASS (App Password), and EMAIL_SERVICE in Render env vars.');
+    console.error('[EMAIL] ❌ Brevo connectivity check failed:', err.message);
   }
 }
+
 
 // ---------------------------------------------------------------------------
 // Reusable email templates
