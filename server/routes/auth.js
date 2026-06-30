@@ -1,6 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
-import { sendVerificationEmail } from '../mailer.js';
+import { sendVerificationEmail, sendSignupConfirmationEmail } from '../mailer.js';
 import { execute, query } from '../db.js';
 
 const router = express.Router();
@@ -47,28 +47,76 @@ function isValidUsername(username) {
     && /^[a-zA-Z0-9_-]+$/.test(username);
 }
 
-async function isUsernameTaken(username) {
-  const [customerRows, adminRows] = await Promise.all([
+async function isUsernameTaken(username, options = { includePending: true }) {
+  const includePending = options.includePending ?? true;
+
+  const queries = [
     query('SELECT 1 FROM customers WHERE username = ? LIMIT 1', [username]),
     query('SELECT 1 FROM admins WHERE username = ? LIMIT 1', [username]),
-  ]);
+  ];
 
-  return customerRows.length > 0 || adminRows.length > 0;
+  if (includePending) {
+    queries.push(query('SELECT 1 FROM pending_registrations WHERE username = ? LIMIT 1', [username]));
+  }
+
+  const [customerRows, adminRows, pendingRows] = await Promise.all(queries);
+  return customerRows.length > 0 || adminRows.length > 0 || (includePending && pendingRows.length > 0);
 }
 
-async function isEmailTaken(email) {
-  const rows = await query('SELECT 1 FROM customers WHERE email = ? LIMIT 1', [email]);
-  return rows.length > 0;
+async function isEmailTaken(email, options = { includePending: true }) {
+  const includePending = options.includePending ?? true;
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+
+  const queries = [
+    query('SELECT 1 FROM customers WHERE email = ? LIMIT 1', [normalizedEmail]),
+    query('SELECT 1 FROM admins WHERE email = ? LIMIT 1', [normalizedEmail]),
+  ];
+
+  if (includePending) {
+    queries.push(query('SELECT 1 FROM pending_registrations WHERE email = ? LIMIT 1', [normalizedEmail]));
+  }
+
+  const [customerRows, adminRows, pendingRows] = await Promise.all(queries);
+  return customerRows.length > 0 || adminRows.length > 0 || (includePending && pendingRows.length > 0);
 }
 
-function queueVerificationEmail(email, code) {
+function shouldBypassEmailVerification() {
+  return String(process.env.SKIP_EMAIL_VERIFICATION).toLowerCase() === 'true';
+}
+
+async function createCustomerAccount({ username, email, phone, passwordHash }) {
+  const publicId = `RRC-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 10)}`;
+
+  await execute(
+    'INSERT INTO customers (public_id, username, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)',
+    [publicId, username, email, phone, passwordHash],
+  );
+
+  return {
+    id: publicId,
+    username,
+    email,
+    phone,
+    role: 'customer',
+  };
+}
+
+// Sends verification email and surfaces errors to the caller.
+// Previously used setImmediate() which silently swallowed email failures in production.
+async function dispatchVerificationEmail(email, code) {
+  await sendVerificationEmail(email, code);
+  console.log(`Verification email sent to ${email}`);
+}
+
+// Confirmation emails are non-critical — fire-and-forget is fine here.
+function queueSignupConfirmationEmail(email, username) {
   setImmediate(() => {
-    void sendVerificationEmail(email, code)
+    void sendSignupConfirmationEmail(email, username)
       .then(() => {
-        console.log(`Verification email queued for ${email}`);
+        console.log(`Signup confirmation email sent to ${email}`);
       })
       .catch((error) => {
-        console.error('Background verification email failed:', error);
+        console.error('Background signup confirmation email failed:', error);
       });
   });
 }
@@ -109,7 +157,7 @@ router.post('/login', async (req, res) => {
 
 router.post('/signup', async (req, res) => {
   const username = String(req.body.username || '').trim();
-  const email = String(req.body.email || '').trim();
+  const email = String(req.body.email || '').trim().toLowerCase();
   const contact = String(req.body.contact || '').trim();
   const password = req.body.password || '';
 
@@ -129,6 +177,14 @@ router.post('/signup', async (req, res) => {
     });
   }
 
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({
+      error: 'Invalid email address.',
+      code: 'INVALID_EMAIL',
+      field: 'signupEmail',
+    });
+  }
+
   if (!isStrongPassword(password)) {
     return res.status(400).json({
       error: 'Password must be at least 8 characters long and include uppercase letters, lowercase letters, and numbers.',
@@ -145,28 +201,23 @@ router.post('/signup', async (req, res) => {
     });
   }
 
+  if (await isEmailTaken(email)) {
+    return res.status(409).json({
+      error: 'Email address is already registered.',
+      code: 'EMAIL_TAKEN',
+      field: 'signupEmail',
+    });
+  }
+
   const passwordHash = await bcrypt.hash(password, 10);
-  const publicId = `RRC-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 10)}`;
-
-  await execute(
-    'INSERT INTO customers (public_id, username, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)',
-    [publicId, username, email, contact, passwordHash],
-  );
-
-  const newUser = {
-    id: publicId,
-    username,
-    email,
-    phone: contact,
-    role: 'customer',
-  };
+  const newUser = await createCustomerAccount({ username, email, phone: contact, passwordHash });
 
   return res.status(201).json({ user: newUser });
 });
 
 router.post('/signup-initiate', async (req, res) => {
   const username = String(req.body.username || '').trim();
-  const email = String(req.body.email || '').trim();
+  const email = String(req.body.email || '').trim().toLowerCase();
   const contact = String(req.body.contact || '').trim();
   const password = req.body.password || '';
 
@@ -203,7 +254,10 @@ router.post('/signup-initiate', async (req, res) => {
   }
 
   try {
-    if (await isUsernameTaken(username)) {
+    const bypassVerification = shouldBypassEmailVerification();
+
+    const usernameTaken = await isUsernameTaken(username, { includePending: !bypassVerification });
+    if (usernameTaken) {
       return res.status(409).json({
         error: 'Username is already taken.',
         code: 'USERNAME_TAKEN',
@@ -211,7 +265,8 @@ router.post('/signup-initiate', async (req, res) => {
       });
     }
 
-    if (await isEmailTaken(email)) {
+    const emailTaken = await isEmailTaken(email, { includePending: !bypassVerification });
+    if (emailTaken) {
       return res.status(409).json({
         error: 'Email address is already registered.',
         code: 'EMAIL_TAKEN',
@@ -221,25 +276,17 @@ router.post('/signup-initiate', async (req, res) => {
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const passwordHash = await bcrypt.hash(password, 10);
-    const skipVerification = String(process.env.SKIP_EMAIL_VERIFICATION).toLowerCase() === 'true';
 
-    if (skipVerification) {
-      const publicId = `RRC-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 10)}`;
-      await execute(
-        'INSERT INTO customers (public_id, username, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)',
-        [publicId, username, email, contact, passwordHash]
-      );
+    if (bypassVerification) {
+      const newUser = await createCustomerAccount({ username, email, phone: contact, passwordHash });
+      await execute('DELETE FROM pending_registrations WHERE email = ?', [email]);
+      queueSignupConfirmationEmail(email, username);
 
-      return res.json({
+      return res.status(201).json({
         success: true,
         message: 'Account created successfully.',
-        user: {
-          id: publicId,
-          username,
-          email,
-          phone: contact,
-          role: 'customer',
-        },
+        user: newUser,
+        bypassVerification: true,
       });
     }
 
@@ -248,9 +295,19 @@ router.post('/signup-initiate', async (req, res) => {
       [email, username, contact, passwordHash, code, username, contact, passwordHash, code]
     );
 
-    queueVerificationEmail(email, code);
+    try {
+      await dispatchVerificationEmail(email, code);
+    } catch (emailError) {
+      console.error('Signup verification email failed:', emailError);
+      // Clean up the pending registration so the user can retry
+      await execute('DELETE FROM pending_registrations WHERE email = ?', [email]).catch(() => {});
+      return res.status(500).json({
+        error: 'Failed to send verification email. Please check your email address and try again.',
+        code: 'EMAIL_SEND_FAILED',
+      });
+    }
 
-    return res.json({ success: true, message: 'Verification code queued for delivery.' });
+    return res.json({ success: true, message: 'Verification code sent to your email.' });
   } catch (error) {
     console.error('Signup Initiate Error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
@@ -289,6 +346,7 @@ router.post('/signup-verify', async (req, res) => {
       role: 'customer',
     };
 
+    queueSignupConfirmationEmail(reg.email, reg.username);
     return res.status(201).json({ user: newUser });
   } catch (error) {
     console.error('Signup Verify Error:', error);
@@ -316,9 +374,19 @@ router.post('/reset-initiate', async (req, res) => {
       [email, code, code]
     );
 
-    queueVerificationEmail(email, code);
+    try {
+      await dispatchVerificationEmail(email, code);
+    } catch (emailError) {
+      console.error('Password reset email failed:', emailError);
+      // Clean up the reset record so the user can retry
+      await execute('DELETE FROM password_resets WHERE email = ?', [email]).catch(() => {});
+      return res.status(500).json({
+        error: 'Failed to send verification email. Please try again.',
+        code: 'EMAIL_SEND_FAILED',
+      });
+    }
 
-    return res.json({ success: true, message: 'Verification code queued for delivery.' });
+    return res.json({ success: true, message: 'Verification code sent to your email.' });
   } catch (error) {
     console.error('Reset Initiate Error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
