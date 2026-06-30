@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const initialBookings = {
   pending: [
@@ -280,6 +281,7 @@ function peso(value) {
 }
 
 export default function AdminRequests() {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState(initialBookings);
   const [currentStatus, setCurrentStatus] = useState('pending');
   const [sortAsc, setSortAsc] = useState(false);
@@ -653,7 +655,22 @@ export default function AdminRequests() {
                   <p>{selectedBooking ? `Username: ${selectedBooking.booking.client.username}` : '—'}</p>
                   <p>{selectedBooking ? `Contact Number: ${selectedBooking.booking.client.phone}` : '—'}</p>
                   <p>{selectedBooking ? `Email: ${selectedBooking.booking.client.email}` : '—'}</p>
-                  <button className="chat-btn" onClick={() => showToastMessage('Opening chat with client...')}>
+                  <button
+                    className="chat-btn"
+                    onClick={() => {
+                      const client = selectedBooking?.booking.client;
+                      if (client) {
+                        navigate('/admin/inquiries', {
+                          state: {
+                            selectCustomerId: client.email || client.username,
+                            selectCustomerName: client.username,
+                          },
+                        });
+                      } else {
+                        showToastMessage('No client details available.', true);
+                      }
+                    }}
+                  >
                     Direct to Chat
                   </button>
                 </div>
