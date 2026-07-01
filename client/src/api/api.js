@@ -118,7 +118,7 @@ export function updateUserProfile(userId, profile) {
 export function changeUserPassword(userId, currentPassword, newPassword) {
   return request('/user/password', {
     method: 'POST',
-    body: JSON.stringify({ userId, currentPassword, newPassword }),
+    body: JSON.stringify({ userId, currentPassword: currentPassword || undefined, newPassword }),
   });
 }
 
