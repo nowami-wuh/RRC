@@ -72,6 +72,23 @@ export default function AboutPage() {
         </div>
       )}
 
+      <div className="brand-banner">
+        <div className="brand-logo-area">
+          <div className="brand-icons">
+            <img src="/light-icon.png" alt="Lights Icon" className="light-icon" />
+            <img src="/rrc-logo.jpg" alt="RRC Logo" className="rrc-logo" />
+          </div>
+          <div className="brand-name-block">
+            <div className="brand-name-rrc">RRC</div>
+            <div className="brand-name-ls">Lights &amp; Sounds</div>
+            <div className="brand-badge">BOOKING</div>
+          </div>
+        </div>
+        <div className="brand-cta">
+          <div className="cta-item">Book, Schedule, Inquire</div>
+        </div>
+      </div>
+
       {msg.text && (
         <div className={`about-toast ${msg.type}`}>
           {msg.text}
