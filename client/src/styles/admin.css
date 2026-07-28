@@ -1220,12 +1220,45 @@ body {
     }
 
     .chat-header {
-        padding: 8px 10px;
-        gap: 6px;
+        padding: 8px 12px;
+        gap: 8px;
         overflow: hidden;
         flex-wrap: nowrap;
         min-height: 0;
+        background: white;
     }
+
+    .mobile-back-btn {
+        border: none;
+        background: transparent;
+        color: var(--dark-blue);
+        cursor: pointer;
+        padding: 4px;
+        margin-right: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        transition: background 0.15s;
+    }
+    .mobile-back-btn:active { background: #e6eefb; }
+    .mobile-back-btn svg { width: 20px; height: 20px; fill: var(--dark-blue); }
+
+    /* Messenger-style: avatar is smaller and tappable */
+    .chat-header-avatar {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 12px !important;
+    }
+    .chat-header-avatar-btn {
+        cursor: pointer;
+        transition: opacity 0.15s, transform 0.15s;
+    }
+    .chat-header-avatar-btn:active { opacity: 0.75; transform: scale(0.92); }
+    .chat-header-avatar.chat-header-avatar-btn { overflow: hidden; }
 
     .chat-header-info {
         flex: 1;
@@ -1234,21 +1267,33 @@ body {
     }
 
     .chat-header-name {
-        font-size: 13px;
+        font-size: 14px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
+    .chat-header-status { font-size: 11px; }
+
+    /* Messenger-style: only phone shown in header on mobile */
     .chat-header-actions {
         flex-shrink: 0;
-        gap: 4px;
+        gap: 2px;
+    }
+    .chat-header-actions .chat-action-btn.booking-icon,
+    .chat-header-actions .chat-action-btn.info-icon,
+    .chat-header-actions .chat-action-btn.delete-icon {
+        display: none;
     }
 
+    /* Circular action button (Messenger-style) */
     .chat-action-btn {
-        width: 30px;
-        height: 30px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #f0f4ff;
     }
+    .chat-action-btn svg { width: 18px; height: 18px; }
 
     .chat-messages {
         padding: 10px 12px;
@@ -1757,13 +1802,20 @@ body {
     flex-shrink: 0;
 }
 
-.chat-header-info { flex: 1; }
+.chat-header-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
 
 .chat-header-name {
     font-family: 'Garet Heavy', sans-serif;
     font-size: 15px;
     font-weight: 700;
     color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .chat-header-status {
@@ -1806,17 +1858,34 @@ body {
     background: #eaf2ff;
 }
 
-.chat-action-btn {
-    width: 34px; height: 34px;
-    background: #f4f7fd;
-    border: none;
-    border-radius: 8px;
+.chat-action-btn {`r`n    width: 34px; height: 34px;`r`n    background: #f4f7fd;`r`n    border: none;`r`n    border-radius: 50%;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: background 0.15s;
 }
 .chat-action-btn:hover { background: #e6eefb; }
 .chat-action-btn svg { width: 18px; height: 18px; fill: var(--dark-blue); }
+
+/* Delete conversation button inside info panel */
+.info-delete-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 10px 16px;
+    background: #fff0f0;
+    border: 1.5px solid #f5c2c2;
+    border-radius: 10px;
+    color: #c0392b;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s, border-color 0.15s;
+}
+.info-delete-btn:hover { background: #fde8e8; border-color: #e57373; }
+.info-delete-btn svg { width: 18px; height: 18px; fill: #c0392b; flex-shrink: 0; }
 
 /* ── Receipt upload → mark-as-paid prompt ── */
 .receipt-prompt {
@@ -1885,11 +1954,7 @@ body {
     letter-spacing: 0.04em;
 }
 
-.chat-action-btn {
-    width: 34px; height: 34px;
-    background: #f4f7fd;
-    border: none;
-    border-radius: 8px;
+.chat-action-btn {`r`n    width: 34px; height: 34px;`r`n    background: #f4f7fd;`r`n    border: none;`r`n    border-radius: 50%;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: background 0.15s;

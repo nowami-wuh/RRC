@@ -383,15 +383,23 @@ export default function AdminInquiries() {
             <div className="chat-header">
               {isMobile && (
                 <button className="mobile-back-btn" onClick={handleBackToList} title="Back to inbox">
-                  ←
+                  <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
                 </button>
               )}
-              <div className="chat-header-avatar">
+              {/* Avatar is clickable — tapping opens the info panel (Messenger-style) */}
+              <div
+                className="chat-header-avatar chat-header-avatar-btn"
+                onClick={handleShowInfo}
+                title="View profile"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleShowInfo()}
+              >
                 {customerAvatars[activeConv]
                   ? <img src={customerAvatars[activeConv]} alt={activeConversation?.name} className="msg-avatar-img" />
                   : (activeConversation?.name || '').substring(0, 2).toUpperCase()}
               </div>
-              <div className="chat-header-info">
+              <div className="chat-header-info" onClick={isMobile ? handleShowInfo : undefined} style={isMobile ? { cursor: 'pointer' } : {}}>
                 <div className="chat-header-name">{activeConversation?.name || activeConv}</div>
                 <div className="chat-header-status">
                   <span className="status-dot online"></span>
@@ -402,11 +410,10 @@ export default function AdminInquiries() {
                 {activeBookingRequest && (
                   <button
                     type="button"
-                    className="chat-action-btn"
+                    className="chat-action-btn booking-icon"
                     title={`View Booking ${activeBookingRequest.id}`}
                     onClick={() => navigate('/admin/requests', { state: { searchId: activeBookingRequest.id } })}
                   >
-                    {/* Booking / document icon */}
                     <svg viewBox="0 0 24 24">
                       <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
                     </svg>
@@ -417,12 +424,12 @@ export default function AdminInquiries() {
                     <path d="M6.62 10.79a15.149 15.149 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
                   </svg>
                 </button>
-                <button className="chat-action-btn" title="Delete Chat" onClick={handleDeleteConversation}>
+                <button className="chat-action-btn delete-icon" title="Delete Chat" onClick={handleDeleteConversation}>
                   <svg viewBox="0 0 24 24">
                     <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
                   </svg>
                 </button>
-                <button className="chat-action-btn" title="Info" onClick={handleShowInfo}>
+                <button className="chat-action-btn info-icon" title="Info" onClick={handleShowInfo}>
                   <svg viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
                   </svg>
@@ -558,6 +565,11 @@ export default function AdminInquiries() {
                     </div>
                   )}
                 </div>
+                {/* Delete conversation — always accessible from info panel */}
+                <button className="info-delete-btn" onClick={() => { setShowInfo(false); handleDeleteConversation(); }}>
+                  <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  Delete Conversation
+                </button>
               </div>
             ) : (
               <div className="info-body">No information available</div>
