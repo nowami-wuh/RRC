@@ -1,6 +1,6 @@
 import express from 'express';
 import { execute, parseJson, query, safeJson } from '../db.js';
-import { sendRequestStatusEmail } from '../mailer.js';
+import { sendRequestStatusEmail, sendChatReplyEmail } from '../mailer.js';
 
 const router = express.Router();
 
@@ -216,6 +216,25 @@ router.post('/inquiries', async (req, res) => {
       'INSERT INTO chat_messages (sender_role, sender_name, customer_public_id, text, image, time_label) VALUES (?, ?, ?, ?, ?, ?)',
       [payload.senderRole || 'admin', payload.senderName || 'RRC Admin', customerPublicId, payload.text || '', payload.image || null, timeLabel],
     );
+
+    // ── Email notification to customer ──────────────────────────────────────
+    if (customerPublicId) {
+      try {
+        const rows = await query(
+          'SELECT email, username FROM customers WHERE public_id = ? LIMIT 1',
+          [customerPublicId],
+        );
+        if (rows[0]?.email) {
+          const msgText = payload.image && !payload.text ? '' : (payload.text || '');
+          sendChatReplyEmail(rows[0].email, msgText, rows[0].username || '').catch((emailErr) => {
+            console.error('Failed to send chat reply email:', emailErr.message);
+          });
+        }
+      } catch (emailErr) {
+        console.error('Failed to look up customer for email:', emailErr.message);
+      }
+    }
+
     res.status(201).json({ message: { senderRole: payload.senderRole || 'admin', senderName: payload.senderName || 'RRC Admin', customerPublicId, text: payload.text || '', image: payload.image || null, time: timeLabel } });
   } catch (error) {
     res.status(500).json({ error: error.message || 'Unable to post reply' });

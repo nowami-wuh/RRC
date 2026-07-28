@@ -1209,12 +1209,34 @@ body {
     }
 
     .chat-header {
-        padding: 10px 12px;
-        gap: 8px;
+        padding: 8px 10px;
+        gap: 6px;
+        overflow: hidden;
+        flex-wrap: nowrap;
+        min-height: 0;
+    }
+
+    .chat-header-info {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
     }
 
     .chat-header-name {
         font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .chat-header-actions {
+        flex-shrink: 0;
+        gap: 4px;
+    }
+
+    .chat-action-btn {
+        width: 30px;
+        height: 30px;
     }
 
     .chat-messages {
@@ -1772,6 +1794,74 @@ body {
 .chat-request-link:hover {
     background: #eaf2ff;
 }
+
+.chat-action-btn {
+    width: 34px; height: 34px;
+    background: #f4f7fd;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+}
+.chat-action-btn:hover { background: #e6eefb; }
+.chat-action-btn svg { width: 18px; height: 18px; fill: var(--dark-blue); }
+
+/* ── Receipt upload → mark-as-paid prompt ── */
+.receipt-prompt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 12px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #fff8e1 0%, #fffbf0 100%);
+    border: 1.5px solid #f0c040;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(240,192,64,0.15);
+    animation: msgIn 0.25s ease;
+    flex-wrap: wrap;
+}
+
+.receipt-prompt-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.receipt-prompt-text {
+    flex: 1;
+    font-size: 13px;
+    color: #7a5c00;
+    font-family: 'Garet', sans-serif;
+    min-width: 120px;
+}
+
+.receipt-prompt-btn {
+    background: var(--dark-blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-family: 'Garet Heavy', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.receipt-prompt-btn:hover { background: #3a5a8a; }
+
+.receipt-prompt-dismiss {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: color 0.15s;
+}
+.receipt-prompt-dismiss:hover { color: #666; }
 
 .chat-request-badge {
     background: var(--dark-blue);

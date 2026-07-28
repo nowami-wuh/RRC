@@ -281,3 +281,49 @@ Thank you for choosing RRC Lights & Sounds!
     `,
   });
 }
+
+/**
+ * Notifies a customer by email when the admin replies to their chat message.
+ * @param {string} email        - Customer's email address
+ * @param {string} adminMessage - The admin's reply text (or '[Photo]' for images)
+ * @param {string} customerName - Customer's display name
+ */
+export async function sendChatReplyEmail(email, adminMessage, customerName = '') {
+  const greeting = customerName ? `Hi ${customerName},` : 'Hi there,';
+  const msgDisplay = adminMessage && adminMessage.trim() ? adminMessage : '📷 [Photo]';
+
+  await sendMail({
+    to: email,
+    subject: 'RRC Lights & Sounds – New Message From Admin',
+    text: `
+${greeting}
+
+You have a new message from RRC Lights & Sounds:
+
+"${msgDisplay}"
+
+Log in to your account and open the Chat page to continue the conversation.
+
+Thank you for choosing RRC Lights & Sounds!
+    `.trim(),
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #38629B; text-align: center;">RRC Lights &amp; Sounds</h2>
+        <p>${greeting}</p>
+        <p>You have a <strong>new message</strong> from the RRC admin:</p>
+        <div style="background: #f5f8ff; border-left: 4px solid #4A70A9; border-radius: 6px; padding: 14px 18px; margin: 20px 0; font-size: 15px; color: #1a1a1a; word-break: break-word;">
+          ${msgDisplay}
+        </div>
+        <p>Log in to your account and open the <strong>Chat</strong> page to continue the conversation.</p>
+        <p style="text-align: center; margin-top: 24px;">
+          <a href="https://rrc-lights-sounds.vercel.app/chat"
+             style="display: inline-block; background: #4A70A9; color: #fff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+            Open Chat
+          </a>
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin-top: 24px;" />
+        <p style="font-size: 12px; color: #777; text-align: center;">This is an automated message. Please do not reply.</p>
+      </div>
+    `,
+  });
+}

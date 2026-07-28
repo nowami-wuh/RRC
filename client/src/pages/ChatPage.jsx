@@ -74,9 +74,6 @@ export default function ChatPage() {
 
   return (
     <>
-      <header className="page-header">
-        <h1 className="page-title">Inquiries / Chat</h1>
-      </header>
       <div className="chat-container">
         {loading && <div className="event-item">Loading chat…</div>}
         {error && <div className="event-item">{error}</div>}

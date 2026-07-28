@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, markConversationRead, deleteConversation } from '../../api/api';
 
@@ -11,6 +11,7 @@ export default function AdminInquiries() {
   const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 480 : false));
   const [showChatView, setShowChatView] = useState(false);
   const [adminRequests, setAdminRequests] = useState([]);
+  const [receiptPromptMsgIndex, setReceiptPromptMsgIndex] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
@@ -377,18 +378,21 @@ export default function AdminInquiries() {
                   <span className="status-dot online"></span>
                   Online
                 </div>
+              </div>
+              <div className="chat-header-actions">
                 {activeBookingRequest && (
                   <button
                     type="button"
-                    className="chat-request-link"
+                    className="chat-action-btn"
+                    title={`View Booking ${activeBookingRequest.id}`}
                     onClick={() => navigate('/admin/requests', { state: { searchId: activeBookingRequest.id } })}
                   >
-                    <span className="chat-request-badge">Booking</span>
-                    <span>{activeBookingRequest.id}</span>
+                    {/* Booking / document icon */}
+                    <svg viewBox="0 0 24 24">
+                      <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                    </svg>
                   </button>
                 )}
-              </div>
-              <div className="chat-header-actions">
                 <button className="chat-action-btn" title="Phone Call" type="button" onClick={handlePhoneCall}>
                   <svg viewBox="0 0 24 24">
                     <path d="M6.62 10.79a15.149 15.149 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
@@ -410,22 +414,47 @@ export default function AdminInquiries() {
             <div className="chat-messages">
               {activeMessages.map((msg, index) => {
                 const isOutgoing = msg.senderRole === 'admin';
+                const isReceiptImage = !isOutgoing && msg.image;
                 return (
-                  <div key={index} className={`msg-row ${isOutgoing ? 'outgoing' : 'incoming'}`}>
-                    {!isOutgoing && (
-                      <div className="msg-avatar">
-                        {msg.senderName.substring(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                    <div className={`bubble ${msg.image ? 'image-bubble' : ''}`}>
-                      {msg.text && <div>{msg.text}</div>}
-                      {msg.image && <img src={msg.image} alt="Attachment" />}
-                      <div className="bubble-meta">
-                        <span className="bubble-time">{msg.time}</span>
-                        {isOutgoing && <span className="read-tick">✓</span>}
+                  <React.Fragment key={index}>
+                    <div className={`msg-row ${isOutgoing ? 'outgoing' : 'incoming'}`}>
+                      {!isOutgoing && (
+                        <div className="msg-avatar">
+                          {msg.senderName.substring(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className={`bubble ${msg.image ? 'image-bubble' : ''}`}>
+                        {msg.text && <div>{msg.text}</div>}
+                        {msg.image && <img src={msg.image} alt="Attachment" />}
+                        <div className="bubble-meta">
+                          <span className="bubble-time">{msg.time}</span>
+                          {isOutgoing && <span className="read-tick">✓</span>}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                    {isReceiptImage && activeBookingRequest && receiptPromptMsgIndex !== index && (
+                      <div className="receipt-prompt">
+                        <span className="receipt-prompt-icon">🧾</span>
+                        <span className="receipt-prompt-text">Receipt uploaded — mark this request as paid?</span>
+                        <button
+                          className="receipt-prompt-btn"
+                          onClick={() => {
+                            setReceiptPromptMsgIndex(index);
+                            navigate('/admin/requests', { state: { searchId: activeBookingRequest.id } });
+                          }}
+                        >
+                          Mark as Paid
+                        </button>
+                        <button
+                          className="receipt-prompt-dismiss"
+                          title="Dismiss"
+                          onClick={() => setReceiptPromptMsgIndex(index)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </React.Fragment>
                 );
               })}
               <div ref={messagesEndRef} />
