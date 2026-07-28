@@ -65,7 +65,7 @@ const navItems = [
   },
   {
     path: '/my-account',
-    label: 'My Account',
+    label: 'Account',
     icon: (
       <svg className="nav-icon" viewBox="0 0 24 24">
         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -143,13 +143,27 @@ export default function Layout() {
               <span className="title-booking">BOOKING</span>
             </h1>
           </div>
-
-          {/* Global Notification Bell */}
+        </div>
+        <nav className="sidebar-nav">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+              end={item.end}
+            >
+              {item.icon}
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="sidebar-bottom-actions">
+          {/* Notification Bell */}
           {user && (
-            <div className="mr-notif-wrap sidebar-header-bell">
+            <div className="mr-notif-wrap">
               <button
                 id="notifBell"
-                className={`mr-notif-bell ${unreadCount > 0 ? 'has-unread' : ''}`}
+                className={`sidebar-icon-btn mr-notif-bell ${unreadCount > 0 ? 'has-unread' : ''}`}
                 onClick={() => setNotifOpen((v) => !v)}
                 title="Notifications"
                 aria-label="Notifications"
@@ -194,78 +208,15 @@ export default function Layout() {
               )}
             </div>
           )}
-        </div>
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-              end={item.end}
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="sidebar-bottom-actions">
-          <button className="logout-btn" onClick={handleLogout} aria-label="Logout">
+
+          {/* Logout Icon Button */}
+          <button className="logout-btn sidebar-icon-btn" onClick={handleLogout} aria-label="Logout" title="Logout">
             <svg className="logout-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            <span className="logout-btn-label">Logout</span>
           </button>
-          {user && (
-            <div className="mr-notif-wrap sidebar-mobile-bell">
-              <button
-                id="notifBellMobile"
-                className={`mr-notif-bell ${unreadCount > 0 ? 'has-unread' : ''}`}
-                onClick={() => setNotifOpen((v) => !v)}
-                title="Notifications"
-                aria-label="Notifications"
-              >
-                <svg className="mr-notif-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
-                  <path d="M9 17v1a3 3 0 0 0 6 0v-1" />
-                </svg>
-                {unreadCount > 0 && (
-                  <span className="mr-notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
-                )}
-              </button>
-
-              {notifOpen && (
-                <div className="mr-notif-panel" id="notifPanelMobile">
-                  <div className="mr-notif-panel-header">
-                    <span>Notifications</span>
-                    {unreadCount > 0 && (
-                      <button className="mr-notif-mark-all" onClick={handleMarkAllRead}>
-                        Mark all read
-                      </button>
-                    )}
-                  </div>
-                  <div className="mr-notif-list">
-                    {notifications.length === 0 ? (
-                      <div className="mr-notif-empty">No notifications yet.</div>
-                    ) : (
-                      notifications.map((n) => (
-                        <div
-                          key={n.id}
-                          className={`mr-notif-item ${n.isRead ? 'read' : 'unread'}`}
-                          onClick={() => handleNotificationClick(n)}
-                        >
-                          <div className="mr-notif-msg">{n.message}</div>
-                          <div className="mr-notif-time">{timeAgo(n.createdAt)}</div>
-                          {!n.isRead && <span className="mr-notif-dot" />}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </aside>
       <main className="main-content">

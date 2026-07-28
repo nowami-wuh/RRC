@@ -305,11 +305,6 @@ export default function MyRequests() {
 
   return (
     <>
-      {/* ── Page Header ──────────────────────────────────────────────────────── */}
-      <header className="page-header">
-        <h1 className="page-title">My Requests</h1>
-      </header>
-
       {/* ── Status Tabs ──────────────────────────────────────────────────────── */}
       <div className="mr-tabs-bar">
         {STATUS_TABS.map((tab) => {

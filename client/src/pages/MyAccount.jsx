@@ -174,12 +174,6 @@ export default function MyAccount() {
 
   return (
     <>
-      <header className="page-header">
-        <div className="header-text">
-          <h1 className="page-title">Account</h1>
-          <p className="page-subtitle">Manage and protect your account</p>
-        </div>
-      </header>
       <div className="account-layout">
         <aside className="profile-col">
           <div className="profile-card">

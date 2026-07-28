@@ -192,52 +192,63 @@ img {
   margin-top: auto;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sidebar-bottom-actions .mr-notif-wrap {
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: 100;
+}
+
+.sidebar-bottom-actions .mr-notif-panel {
+  top: auto;
+  bottom: calc(100% + 12px);
+  left: 0;
+  right: auto;
+}
+
+.sidebar-icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .logout-btn {
-  padding: 12px 18px;
+  padding: 0;
   border: none;
   background: #d32f2f;
   color: white;
-  font-family: 'Garet Heavy', sans-serif;
-  font-size: 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
 }
 
 .logout-btn:hover {
   background: #b71c1c;
+  transform: scale(1.05);
 }
 
 .logout-btn-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
-.logout-btn-label {
-  display: inline-block;
-}
-
-.sidebar-header-bell {
-  position: static;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
+.sidebar-header-bell,
 .sidebar-mobile-bell {
   display: none;
 }
 
 .mr-notif-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .main-content {

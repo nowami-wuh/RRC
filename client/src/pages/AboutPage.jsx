@@ -3,9 +3,6 @@ import '../styles/about.css';
 export default function AboutPage() {
   return (
     <>
-      <header className="page-header">
-        <h1 className="page-title">About Us</h1>
-      </header>
       <div className="brand-banner">
         <div className="brand-logo-area">
           <div className="brand-icons">

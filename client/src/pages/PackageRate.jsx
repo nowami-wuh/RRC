@@ -18,10 +18,6 @@ export default function PackageRate() {
 
   return (
     <>
-      <header className="page-header">
-        <h1 className="page-title">Package Rate</h1>
-      </header>
-
       <div className="section-tabs">
         {Object.keys(sections).map((section) => (
           <button

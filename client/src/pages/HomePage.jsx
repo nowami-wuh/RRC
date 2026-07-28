@@ -42,7 +42,8 @@ function normalizeDate(dateStr) {
 }
 
 function isVisibleCalendarRequest(status) {
-  return ['paid', 'confirmed'].includes(String(status || '').toLowerCase());
+  const s = String(status || '').toLowerCase();
+  return ['approved', 'awaitingpayment', 'upcoming', 'completed', 'paid', 'confirmed'].includes(s);
 }
 
 export default function HomePage() {
@@ -65,7 +66,7 @@ export default function HomePage() {
         const requests = allRequestsData.requests || [];
         requests.forEach((req) => {
           if (req.event && req.event.date) {
-            // Only show requests that are fully confirmed or paid
+            // Only show requests that are confirmed, upcoming, completed, or approved
             if (!isVisibleCalendarRequest(req.status)) return;
 
             const dateKey = normalizeDate(req.event.date);
@@ -140,20 +141,6 @@ export default function HomePage() {
 
   return (
     <>
-      <header className="page-header">
-        <h1 className="page-title">EVENTS CALENDAR</h1>
-        <div className="header-legend">
-          <span className="legend-item">
-            <span className="legend-dot today" />
-            Today
-          </span>
-          <span className="legend-item">
-            <span className="legend-dot has-event" />
-            Has event
-          </span>
-        </div>
-      </header>
-
       <div className="content-wrapper">
         <section className="calendar-section">
           <div className="calendar-header">
@@ -196,14 +183,16 @@ export default function HomePage() {
           </div>
 
           <div className="events-list" id="eventsList">
-            {loading && <div className="event-item">Loading events…</div>}
-            {error && <div className="event-item">{error}</div>}
-            {!loading && !selectedDate && <div className="event-item">Choose a date with a highlighted dot.</div>}
-            {!loading && selectedDate && selectedEvents.length === 0 && <div className="event-item">No events scheduled for this day.</div>}
+            {loading && <p className="no-events-text">Loading events…</p>}
+            {error && <p className="no-events-text">{error}</p>}
+            {!loading && !selectedDate && <p className="no-events-text">Select a date to view scheduled events.</p>}
+            {!loading && selectedDate && selectedEvents.length === 0 && (
+              <p className="no-events-text">No events scheduled for this day.</p>
+            )}
             {!loading && selectedEvents.map((event, index) => (
               <div key={index} className="event-item">
-                {event.time && <div className="event-time">{event.time}</div>}
                 <div className="event-title">{event.title}</div>
+                {event.time && <div className="event-time">{event.time}</div>}
               </div>
             ))}
           </div>
