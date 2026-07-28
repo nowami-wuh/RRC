@@ -83,6 +83,7 @@ body {
     width: 30px;
     height: 30px;
     object-fit: contain;
+    filter: brightness(0) invert(1);
 }
 
 .sidebar-logo {
@@ -95,6 +96,8 @@ body {
 .sidebar-title {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
     line-height: 1;
     font-family: 'Garet Heavy', sans-serif;
 }
@@ -104,6 +107,8 @@ body {
     font-weight: 900;
     color: white;
     letter-spacing: -0.5px;
+    text-align: left;
+    align-self: flex-start;
 }
 
 .title-lights {
@@ -111,6 +116,8 @@ body {
     font-weight: 900;
     color: white;
     letter-spacing: -0.5px;
+    text-align: left;
+    align-self: flex-start;
 }
 
 .title-booking {

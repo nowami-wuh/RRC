@@ -92,7 +92,7 @@ export default function AdminLayout() {
             </div>
             <h1 className="sidebar-title">
               <span className="title-rrc">RRC</span>
-              <span className="title-lights">Lights&Sounds</span>
+              <span className="title-lights">Lights &amp; Sounds</span>
               <span className="title-booking">BOOKING</span>
             </h1>
           </div>
