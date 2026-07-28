@@ -9,7 +9,7 @@
 /* Admin Edit Bar & Button */
 .about-admin-bar {
     display: flex;
-    justify-content: flex-end;
+    justify-content: flex-start;
     padding: 20px 40px 0;
 }
 
@@ -447,9 +447,72 @@
     .contact-text {
         font-size: 13px;
     }
+
+    .edit-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .about-admin-bar {
+        padding: 16px 16px 0;
+        justify-content: flex-start;
+    }
+
+    .about-toast {
+        margin: 12px 16px 0;
+    }
 }
 
 @media (max-width: 480px) {
+    .about-admin-bar {
+        padding: 12px 10px 0;
+        justify-content: flex-start;
+    }
+
+    .about-edit-btn {
+        font-size: 12px;
+        padding: 7px 12px;
+    }
+
+    .about-toast {
+        margin: 10px 10px 0;
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    .about-edit-form {
+        padding: 14px 12px;
+        gap: 12px;
+    }
+
+    .about-edit-title {
+        font-size: 15px;
+        padding-bottom: 8px;
+    }
+
+    .edit-label {
+        font-size: 12px;
+    }
+
+    .edit-textarea,
+    .edit-input {
+        font-size: 12px;
+        padding: 7px 9px;
+    }
+
+    .edit-form-actions {
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .edit-btn-cancel,
+    .edit-btn-save {
+        padding: 8px 14px;
+        font-size: 12px;
+        flex: 1;
+        text-align: center;
+    }
+
     .about-content {
         padding: 12px 10px;
         gap: 14px;
@@ -552,5 +615,47 @@
     .contact-text {
         font-size: 12px;
         line-height: 1.4;
+    }
+}
+
+@media (max-width: 360px) {
+    .about-admin-bar {
+        padding: 8px 6px 0;
+        justify-content: flex-start;
+    }
+
+    .about-edit-btn {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+
+    .about-content {
+        padding: 10px 6px;
+        gap: 10px;
+    }
+
+    .about-edit-form {
+        padding: 12px 10px;
+        gap: 10px;
+    }
+
+    .about-edit-title {
+        font-size: 14px;
+    }
+
+    .edit-label {
+        font-size: 11px;
+    }
+
+    .edit-textarea,
+    .edit-input {
+        font-size: 11px;
+        padding: 6px 8px;
+    }
+
+    .edit-btn-cancel,
+    .edit-btn-save {
+        padding: 7px 10px;
+        font-size: 11px;
     }
 }
