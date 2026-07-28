@@ -152,6 +152,18 @@ async function ensureTables() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS about_info (
+      id INT PRIMARY KEY DEFAULT 1,
+      description TEXT NOT NULL,
+      facebook VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      phone VARCHAR(255) NOT NULL,
+      location VARCHAR(255) NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 async function seedAuthData() {
@@ -276,6 +288,20 @@ async function seedReferenceData() {
         [itemCode, category, name, stock, requiresAuth, notes],
       );
     }
+  }
+
+  const aboutRows = await query('SELECT COUNT(*) AS count FROM about_info');
+  if (aboutRows[0].count === 0) {
+    await execute(
+      'INSERT INTO about_info (id, description, facebook, email, phone, location) VALUES (1, ?, ?, ?, ?, ?)',
+      [
+        'RRC Professional Lights and Sounds is a service provider that caters to events such as weddings, concerts, corporate occasions, and private gatherings, providing services such as lights and sounds equipment rentals, as well as stage and truss setup, among others.',
+        'RRC Professional Lights & Sounds',
+        'ricson_duenas@yahoo.com',
+        '0955-075-4117 / (042)332-1417',
+        'Laylay, Boac, Marinduque',
+      ],
+    );
   }
 }
 

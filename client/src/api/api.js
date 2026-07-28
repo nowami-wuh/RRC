@@ -254,3 +254,14 @@ export function createAdminPackage(payload) {
   });
 }
 
+export function fetchAboutInfo() {
+  return request('/about');
+}
+
+export function updateAboutInfo(payload) {
+  return request('/about', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+

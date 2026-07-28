@@ -12,6 +12,7 @@ import userRoutes from './routes/user.js';
 import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
 import debugRoutes from './routes/debug.js';
+import aboutRoutes from './routes/about.js';
 import { bootstrapDatabase } from './bootstrap.js';
 import { verifyMailer } from './mailer.js';
 
@@ -40,6 +41,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/debug', debugRoutes);
+app.use('/api/about', aboutRoutes);
 
 const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
 if (fs.existsSync(clientDistPath)) {

@@ -1,12 +1,155 @@
 .brand-banner {
-    background-color: var(--bg-beige);
-    border: 1.5px solid #ccc;
-    border-radius: 12px;
-    padding: 24px 32px;
+    display: none !important;
+}
+
+.about-page-container {
+    width: 100%;
+}
+
+/* Admin Edit Bar & Button */
+.about-admin-bar {
     display: flex;
+    justify-content: flex-end;
+    padding: 20px 40px 0;
+}
+
+.about-edit-btn {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 8px;
+    background: var(--dark-blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.about-edit-btn:hover {
+    background: #364fab;
+}
+
+.about-toast {
+    margin: 16px 40px 0;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.about-toast.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+.about-toast.error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+}
+
+/* Edit Form */
+.about-edit-form {
+    width: 100%;
+    background: white;
+    border: 1.5px solid var(--dark-blue);
+    border-radius: 12px;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
     gap: 20px;
+}
+
+.about-edit-title {
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 18px;
+    color: var(--text-dark);
+    border-bottom: 1px solid #eee;
+    padding-bottom: 12px;
+}
+
+.edit-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.edit-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-dark);
+    font-family: 'Garet', sans-serif;
+}
+
+.edit-textarea,
+.edit-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #ccc;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text-dark);
+    transition: border-color 0.2s;
+}
+
+.edit-textarea:focus,
+.edit-input:focus {
+    outline: none;
+    border-color: var(--dark-blue);
+}
+
+.edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.edit-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.edit-btn-cancel {
+    padding: 9px 20px;
+    border: 1.5px solid #ccc;
+    background: transparent;
+    color: var(--text-dark);
+    border-radius: 8px;
+    font-family: 'Garet', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.edit-btn-cancel:hover {
+    background: #f0f0f0;
+}
+
+.edit-btn-save {
+    padding: 9px 24px;
+    border: none;
+    background: var(--dark-blue);
+    color: white;
+    border-radius: 8px;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.edit-btn-save:hover {
+    background: #364fab;
+}
+
+.edit-btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .brand-logo-area {
