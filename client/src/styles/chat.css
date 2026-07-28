@@ -91,9 +91,25 @@
     flex-shrink: 0;
     align-self: flex-end;
     margin-bottom: 0;
+    overflow: hidden;
 }
 
 .msg-avatar.hidden-avatar { visibility: hidden; }
+
+/* Profile picture inside avatar circle */
+.msg-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
+/* Outgoing self-avatar (right side of sent messages) */
+.msg-avatar-self {
+    background: var(--dark-blue);
+    overflow: hidden;
+}
 
 /* Bubble */
 .bubble {

@@ -12,6 +12,7 @@ export default function AdminInquiries() {
   const [showChatView, setShowChatView] = useState(false);
   const [adminRequests, setAdminRequests] = useState([]);
   const [receiptPromptMsgIndex, setReceiptPromptMsgIndex] = useState(null);
+  const [customerAvatars, setCustomerAvatars] = useState({});
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
@@ -145,6 +146,20 @@ export default function AdminInquiries() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConv, messages]);
+
+  // Fetch and cache customer avatar when switching conversations
+  useEffect(() => {
+    if (!activeConv) return;
+    if (customerAvatars[activeConv] !== undefined) return; // already fetched
+    fetchUser(activeConv)
+      .then((res) => {
+        const avatar = res?.user?.avatar || null;
+        setCustomerAvatars((prev) => ({ ...prev, [activeConv]: avatar }));
+      })
+      .catch(() => {
+        setCustomerAvatars((prev) => ({ ...prev, [activeConv]: null }));
+      });
+  }, [activeConv]);
 
   const activeConversation = conversationMap[activeConv];
   const activeMessages = activeConversation?.messages || [];
@@ -342,7 +357,9 @@ export default function AdminInquiries() {
                 onClick={() => handleSelectConversation(conv.id)}
               >
                 <div className="conv-avatar">
-                  {conv.name.substring(0, 2).toUpperCase()}
+                  {customerAvatars[conv.id]
+                    ? <img src={customerAvatars[conv.id]} alt={conv.name} className="conv-avatar-img" />
+                    : conv.name.substring(0, 2).toUpperCase()}
                   <span className="online-dot"></span>
                 </div>
                 <div className="conv-info">
@@ -370,7 +387,9 @@ export default function AdminInquiries() {
                 </button>
               )}
               <div className="chat-header-avatar">
-                {(activeConversation?.name || '').substring(0, 2).toUpperCase()}
+                {customerAvatars[activeConv]
+                  ? <img src={customerAvatars[activeConv]} alt={activeConversation?.name} className="msg-avatar-img" />
+                  : (activeConversation?.name || '').substring(0, 2).toUpperCase()}
               </div>
               <div className="chat-header-info">
                 <div className="chat-header-name">{activeConversation?.name || activeConv}</div>
@@ -420,7 +439,9 @@ export default function AdminInquiries() {
                     <div className={`msg-row ${isOutgoing ? 'outgoing' : 'incoming'}`}>
                       {!isOutgoing && (
                         <div className="msg-avatar">
-                          {msg.senderName.substring(0, 2).toUpperCase()}
+                          {customerAvatars[msg.customerPublicId]
+                            ? <img src={customerAvatars[msg.customerPublicId]} alt={msg.senderName} className="msg-avatar-img" />
+                            : msg.senderName.substring(0, 2).toUpperCase()}
                         </div>
                       )}
                       <div className={`bubble ${msg.image ? 'image-bubble' : ''}`}>
@@ -510,7 +531,11 @@ export default function AdminInquiries() {
               <div className="info-loading">Loading...</div>
             ) : infoData ? (
               <div className="info-body">
-                <div className="info-avatar">{(infoData.username || infoData.id || '').substring(0,2).toUpperCase()}</div>
+                <div className="info-avatar">
+                  {customerAvatars[activeConv]
+                    ? <img src={customerAvatars[activeConv]} alt={infoData.username} className="msg-avatar-img" />
+                    : (infoData.username || infoData.id || '').substring(0, 2).toUpperCase()}
+                </div>
                 <div className="info-rows">
                   <div><strong>Name:</strong> {infoData.username || '—'}</div>
                   <div><strong>ID:</strong> {infoData.id || infoData.public_id || activeConv}</div>
