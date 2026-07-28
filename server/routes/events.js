@@ -3,11 +3,25 @@ import { parseJson, query } from '../db.js';
 
 const router = express.Router();
 
+function formatYMD(dateInput) {
+  if (!dateInput) return '';
+  if (typeof dateInput === 'string') {
+    const isoMatch = dateInput.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 router.get('/', (req, res) => {
   query('SELECT event_date, events_json FROM events ORDER BY event_date ASC')
     .then((rows) => {
       const eventsByDate = rows.reduce((acc, row) => {
-        const dateKey = new Date(row.event_date).toISOString().slice(0, 10);
+        const dateKey = formatYMD(row.event_date);
         acc[dateKey] = parseJson(row.events_json, []);
         return acc;
       }, {});

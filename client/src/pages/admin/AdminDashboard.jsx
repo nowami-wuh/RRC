@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchEvents, fetchAdminRequests } from '../../api/api';
 import '../../styles/admin.css';
 
@@ -36,10 +37,12 @@ function formatDisplayDate(date) {
 }
 
 function isVisibleCalendarRequest(status) {
-  return ['paid', 'confirmed'].includes(String(status || '').toLowerCase());
+  const s = String(status || '').toLowerCase();
+  return ['upcoming', 'completed', 'paid', 'confirmed'].includes(s);
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [events, setEvents] = useState({});
@@ -226,9 +229,18 @@ export default function AdminDashboard() {
             )}
             {!loading &&
               selectedEvents.map((event, index) => (
-                <div key={index} className="event-item">
-                  {event.time && <div className="event-time">{event.time}</div>}
+                <div
+                  key={index}
+                  className="event-item clickable-event-card"
+                  style={{ cursor: event.bookingId ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (event.bookingId) {
+                      navigate('/admin/requests', { state: { searchId: event.bookingId } });
+                    }
+                  }}
+                >
                   <div className="event-title">{event.title}</div>
+                  {event.time && <div className="event-time">{event.time}</div>}
                 </div>
               ))}
           </div>

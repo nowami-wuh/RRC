@@ -177,21 +177,28 @@ body {
 /* Logout Button */
 .logout-btn {
     margin-top: auto;
-    padding: 10px 16px;
-    background: transparent;
-    border: 1.5px solid rgba(255, 255, 255, 0.25);
-    border-radius: 8px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    background: #d32f2f;
+    border: none;
+    border-radius: 50%;
     color: white;
-    font-family: 'Garet', sans-serif;
-    font-size: 14px;
     cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-    align-self: flex-start;
-    width: 100%;
+    transition: background 0.2s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 .logout-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.5);
+    background: #b71c1c;
+    transform: scale(1.05);
+}
+.logout-btn-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
 }
 
 /* Primary next/action button */

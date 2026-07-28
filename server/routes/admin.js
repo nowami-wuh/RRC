@@ -4,6 +4,20 @@ import { sendRequestStatusEmail, sendChatReplyEmail } from '../mailer.js';
 
 const router = express.Router();
 
+function formatYMD(dateInput) {
+  if (!dateInput) return '';
+  if (typeof dateInput === 'string') {
+    const isoMatch = dateInput.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function formatRequest(row) {
   return {
     id: row.request_code,
@@ -110,10 +124,8 @@ router.patch('/requests/:requestCode', async (req, res) => {
     if (status === 'upcoming' && updated) {
       try {
         const ev = updated.event || {};
-        // Parse the event date string into a YYYY-MM-DD key
-        const parsedDate = ev.date ? new Date(ev.date) : null;
-        if (parsedDate && !isNaN(parsedDate)) {
-          const dateKey = parsedDate.toISOString().slice(0, 10);
+        const dateKey = ev.date ? formatYMD(ev.date) : null;
+        if (dateKey) {
           const timeLabel = `${ev.timeStart || ''} - ${ev.timeEnd || ''}`;
 
           const existing = await query('SELECT events_json FROM events WHERE event_date = ? LIMIT 1', [dateKey]);

@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { fetchAdminRequests, updateAdminRequestStatus } from '../../api/api';
 
 const initialBookings = {
   pending: [
@@ -282,6 +283,7 @@ function peso(value) {
 
 export default function AdminRequests() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [bookings, setBookings] = useState(initialBookings);
   const [currentStatus, setCurrentStatus] = useState('pending');
   const [sortAsc, setSortAsc] = useState(false);
@@ -298,6 +300,72 @@ export default function AdminRequests() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectReasonError, setRejectReasonError] = useState('');
+
+  // Fetch real API requests and merge into bookings
+  useEffect(() => {
+    fetchAdminRequests()
+      .then((data) => {
+        const apiRequests = data.requests || [];
+        if (apiRequests.length === 0) return;
+
+        setBookings((prev) => {
+          const next = cloneData(prev);
+          apiRequests.forEach((req) => {
+            let category = req.status ? req.status.toLowerCase() : 'pending';
+            if (category === 'awaitingpayment') category = 'approved';
+            if (!next[category]) next[category] = [];
+
+            const formattedReq = {
+              id: req.id,
+              event: req.event?.title || 'Event',
+              requestDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '',
+              client: {
+                username: req.customerName || req.customerId || 'Customer',
+                phone: req.customerPhone || '',
+                email: req.customerEmail || '',
+              },
+              eventDetails: {
+                name: req.event?.title || 'Event',
+                date: req.event?.date || '',
+                time: req.event?.timeStart && req.event?.timeEnd ? `${req.event.timeStart} - ${req.event.timeEnd}` : req.event?.timeStart || 'All Day',
+                venue: req.event?.venue || '',
+                pax: req.event?.pax || 0,
+              },
+              package: req.package?.name?.replace('PACKAGE ', '') || null,
+              equipment: req.equipment || {},
+              addonFee: req.billing?.addonFee || 0,
+              mobilizationFee: req.billing?.mobilizationFee || 0,
+              promoApplied: false,
+              requestType: req.type === 'book' ? 'booking' : 'rent',
+              additionalRequirements: req.additional || null,
+            };
+
+            // Remove duplicate if exists in any list
+            for (const key of Object.keys(next)) {
+              next[key] = next[key].filter((b) => b.id !== req.id);
+            }
+            next[category].unshift(formattedReq);
+          });
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  // Listen for searchId from location state (navigated from calendar or inquiry)
+  useEffect(() => {
+    const searchId = location.state?.searchId;
+    if (searchId) {
+      for (const statusKey of Object.keys(bookings)) {
+        const found = bookings[statusKey].find((b) => b.id === searchId);
+        if (found) {
+          setCurrentStatus(statusKey);
+          openDetail(searchId);
+          break;
+        }
+      }
+    }
+  }, [location.state?.searchId, bookings]);
 
   const showToastMessage = (message, isError = false) => {
     setToast({ show: true, message, isError });
@@ -388,6 +456,9 @@ export default function AdminRequests() {
       }
       return next;
     });
+
+    // Update backend database via API
+    updateAdminRequestStatus(id, newStatus).catch(() => {});
 
     setDetailState(null);
     setCurrentEquipment({});
