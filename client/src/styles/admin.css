@@ -1858,7 +1858,11 @@ body {
     background: #eaf2ff;
 }
 
-.chat-action-btn {`r`n    width: 34px; height: 34px;`r`n    background: #f4f7fd;`r`n    border: none;`r`n    border-radius: 50%;
+.chat-action-btn {
+    width: 34px; height: 34px;
+    background: #f4f7fd;
+    border: none;
+    border-radius: 50%;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: background 0.15s;
@@ -1954,7 +1958,11 @@ body {
     letter-spacing: 0.04em;
 }
 
-.chat-action-btn {`r`n    width: 34px; height: 34px;`r`n    background: #f4f7fd;`r`n    border: none;`r`n    border-radius: 50%;
+.chat-action-btn {
+    width: 34px; height: 34px;
+    background: #f4f7fd;
+    border: none;
+    border-radius: 50%;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: background 0.15s;
