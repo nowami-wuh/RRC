@@ -96,6 +96,16 @@ export default function AdminLayout() {
               <span className="title-booking">BOOKING</span>
             </h1>
           </div>
+
+          <div className="sidebar-header-actions">
+            <button className="logout-btn sidebar-icon-btn" onClick={handleLogout} title="Logout" aria-label="Logout">
+              <svg className="logout-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </div>
         </div>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
@@ -110,12 +120,8 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
-        <button className="logout-btn sidebar-icon-btn" onClick={handleLogout} title="Logout" aria-label="Logout">
-          <svg className="logout-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
+        <button className="logout-btn" onClick={handleLogout}>
+          Logout
         </button>
       </aside>
       <main className={`main-content${isChatPage ? ' chat-layout' : ''}`}>

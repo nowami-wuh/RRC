@@ -177,28 +177,25 @@ body {
 /* Logout Button */
 .logout-btn {
     margin-top: auto;
-    width: 42px;
-    height: 42px;
-    padding: 0;
-    background: #d32f2f;
-    border: none;
-    border-radius: 50%;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
     color: white;
+    font-family: 'Garet', sans-serif;
+    font-size: 14px;
     cursor: pointer;
-    transition: background 0.2s, transform 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+    transition: background 0.2s, border-color 0.2s;
+    align-self: flex-start;
+    width: 100%;
 }
 .logout-btn:hover {
-    background: #b71c1c;
-    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
 }
-.logout-btn-icon {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
+
+.sidebar-header-actions {
+    display: none;
 }
 
 /* Primary next/action button */
@@ -4124,12 +4121,64 @@ body {
         gap: 8px !important;
     }
 
-    .logout-btn {
-        width: auto !important;
-        align-self: flex-end !important;
-        margin-top: 8px !important;
-        padding: 8px 14px !important;
-        font-size: 12px !important;
+    .sidebar-header {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        margin-bottom: 10px !important;
+        padding-bottom: 10px !important;
+        gap: 8px !important;
+    }
+
+    .sidebar-brand {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+
+    .sidebar-brand-icons {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .sidebar-header-actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        margin-left: auto !important;
+        flex-shrink: 0 !important;
+    }
+
+    .sidebar-header-actions .logout-btn {
+        width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        background: #d32f2f !important;
+        border: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-top: 0 !important;
+        align-self: center !important;
+    }
+
+    .sidebar-header-actions .logout-btn-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    .sidebar > .logout-btn {
+        display: none !important;
     }
 
     /* Main page container */

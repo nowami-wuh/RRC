@@ -224,21 +224,37 @@ img {
 }
 
 .logout-btn {
-  padding: 0;
+  padding: 12px 18px;
   border: none;
   background: #d32f2f;
   color: white;
+  font-family: 'Garet Heavy', sans-serif;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .logout-btn:hover {
   background: #b71c1c;
-  transform: scale(1.05);
 }
 
 .logout-btn-icon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
+}
+
+.logout-btn-label {
+  display: inline-block;
+}
+
+.sidebar-header-actions {
+  display: none;
 }
 
 .sidebar-header-bell,
@@ -379,16 +395,76 @@ img {
 
   .sidebar {
     width: 100%;
-    padding: 14px 16px;
+    padding: 10px 10px;
     border-right: none;
     border-bottom: 2px solid #d0ccc0;
     max-height: auto;
   }
 
   .sidebar-header {
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    gap: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    gap: 8px;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 0;
+    padding-left: 0;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sidebar-brand-icons {
+    margin-left: 0;
+    padding-left: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header-actions .logout-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    gap: 0;
+  }
+
+  .sidebar-header-actions .logout-btn-label {
+    display: none;
+  }
+
+  .sidebar-header-actions .mr-notif-wrap {
+    position: relative;
+    top: auto;
+    right: auto;
+  }
+
+  .sidebar-header-actions .mr-notif-panel {
+    top: calc(100% + 8px);
+    bottom: auto;
+    right: 0;
+    left: auto;
+  }
+
+  .sidebar-bottom-actions {
+    display: none !important;
   }
 
   .sidebar-logo {
