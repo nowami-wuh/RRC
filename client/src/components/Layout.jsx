@@ -149,13 +149,13 @@ export default function Layout() {
             </h1>
           </div>
 
-          {/* Inline Mobile Actions (Bell + Logout) */}
+          {/* Header Actions (Bell on Desktop & Mobile, Logout on Mobile) */}
           <div className="sidebar-header-actions">
             {user && (
               <div className="mr-notif-wrap">
                 <button
                   id="notifBellHeader"
-                  className={`sidebar-icon-btn mr-notif-bell ${unreadCount > 0 ? 'has-unread' : ''}`}
+                  className={`sidebar-icon-btn mr-notif-bell ${notifOpen ? 'active' : ''} ${unreadCount > 0 ? 'has-unread' : ''}`}
                   onClick={() => setNotifOpen((v) => !v)}
                   title="Notifications"
                   aria-label="Notifications"
@@ -201,7 +201,7 @@ export default function Layout() {
               </div>
             )}
 
-            <button className="logout-btn sidebar-icon-btn" onClick={handleLogout} aria-label="Logout" title="Logout">
+            <button className="logout-btn sidebar-icon-btn mobile-logout-btn" onClick={handleLogout} aria-label="Logout" title="Logout">
               <svg className="logout-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16 17 21 12 16 7" />
@@ -224,59 +224,8 @@ export default function Layout() {
           ))}
         </nav>
         <div className="sidebar-bottom-actions">
-          {/* Notification Bell */}
-          {user && (
-            <div className="mr-notif-wrap">
-              <button
-                id="notifBell"
-                className={`sidebar-icon-btn mr-notif-bell ${unreadCount > 0 ? 'has-unread' : ''}`}
-                onClick={() => setNotifOpen((v) => !v)}
-                title="Notifications"
-                aria-label="Notifications"
-              >
-                <svg className="mr-notif-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
-                  <path d="M9 17v1a3 3 0 0 0 6 0v-1" />
-                </svg>
-                {unreadCount > 0 && (
-                  <span className="mr-notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
-                )}
-              </button>
-
-              {notifOpen && (
-                <div className="mr-notif-panel" id="notifPanel">
-                  <div className="mr-notif-panel-header">
-                    <span>Notifications</span>
-                    {unreadCount > 0 && (
-                      <button className="mr-notif-mark-all" onClick={handleMarkAllRead}>
-                        Mark all read
-                      </button>
-                    )}
-                  </div>
-                  <div className="mr-notif-list">
-                    {notifications.length === 0 ? (
-                      <div className="mr-notif-empty">No notifications yet.</div>
-                    ) : (
-                      notifications.map((n) => (
-                        <div
-                          key={n.id}
-                          className={`mr-notif-item ${n.isRead ? 'read' : 'unread'}`}
-                          onClick={() => handleNotificationClick(n)}
-                        >
-                          <div className="mr-notif-msg">{n.message}</div>
-                          <div className="mr-notif-time">{timeAgo(n.createdAt)}</div>
-                          {!n.isRead && <span className="mr-notif-dot" />}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Desktop Logout Button */}
-          <button className="logout-btn" onClick={handleLogout} aria-label="Logout">
+          <button className="logout-btn desktop-logout-btn" onClick={handleLogout} aria-label="Logout">
             <svg className="logout-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />

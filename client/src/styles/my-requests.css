@@ -808,8 +808,8 @@
 }
 .mr-notif-bell {
   position: relative;
-  background: var(--dark-blue, #4A70A9);
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  border: 1.5px solid rgba(74, 112, 169, 0.4);
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -818,20 +818,33 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
-  color: #ffffff;
+  transition: all 0.2s ease;
+  color: var(--dark-blue, #4A70A9);
 }
 .mr-notif-bell svg,
 .mr-notif-icon {
   width: 20px;
   height: 20px;
+  stroke: var(--dark-blue, #4A70A9);
+  color: var(--dark-blue, #4A70A9);
+  fill: none;
+  transition: all 0.2s ease;
+}
+.mr-notif-bell.active,
+.mr-notif-bell:hover,
+.mr-notif-bell:active {
+  background: var(--dark-blue, #4A70A9);
+  border-color: var(--dark-blue, #4A70A9);
+  box-shadow: 0 2px 10px rgba(74, 112, 169, 0.35);
+}
+.mr-notif-bell.active svg,
+.mr-notif-bell.active .mr-notif-icon,
+.mr-notif-bell:hover svg,
+.mr-notif-bell:hover .mr-notif-icon,
+.mr-notif-bell:active svg,
+.mr-notif-bell:active .mr-notif-icon {
   stroke: #ffffff;
   color: #ffffff;
-}
-.mr-notif-bell:hover, .mr-notif-bell.has-unread {
-  background: var(--dark-blue);
-  border-color: #ffffff;
-  box-shadow: 0 2px 8px rgba(56,98,155,0.25);
 }
 .mr-notif-bell.has-unread {
   animation: bell-ring 2s ease-in-out infinite;
