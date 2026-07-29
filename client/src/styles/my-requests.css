@@ -808,8 +808,8 @@
 }
 .mr-notif-bell {
   position: relative;
-  background: none;
-  border: 2px solid #e0e6ef;
+  background: var(--dark-blue, #4A70A9);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -819,11 +819,18 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  color: var(--dark-blue);
+  color: #ffffff;
+}
+.mr-notif-bell svg,
+.mr-notif-icon {
+  width: 20px;
+  height: 20px;
+  stroke: #ffffff;
+  color: #ffffff;
 }
 .mr-notif-bell:hover, .mr-notif-bell.has-unread {
   background: var(--dark-blue);
-  border-color: var(--dark-blue);
+  border-color: #ffffff;
   box-shadow: 0 2px 8px rgba(56,98,155,0.25);
 }
 .mr-notif-bell.has-unread {
@@ -996,9 +1003,14 @@
   .event-details      { flex-direction: column; }
   .event-pax          { text-align: left; }
   .mr-notif-panel {
-    width: calc(100vw - 32px);
-    right: -8px;
-    left: auto;
+    position: fixed;
+    top: 56px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: calc(100vw - 16px);
+    max-height: 75vh;
+    z-index: 10001;
   }
   .mr-modal           { padding: 28px 20px 22px; }
   .card-divider       { margin: 0 16px; }
