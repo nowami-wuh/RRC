@@ -88,12 +88,8 @@ export default function AdminInquiries() {
 
   const handleConvLongPressDelete = () => {
     if (longPressConvId) {
-      const previousActiveConv = activeConv;
-      // temporarily set activeConv to the long-pressed one so handleDeleteConversation targets it
-      setActiveConv(longPressConvId);
-      setTimeout(() => {
-        handleDeleteConversation();
-      }, 0);
+      // Directly delete the long-pressed conversation without relying on async state update
+      handleDeleteConversation(longPressConvId);
     }
     setLongPressConvId(null);
   };
@@ -337,22 +333,26 @@ export default function AdminInquiries() {
     window.location.href = `tel:${formattedPhone}`;
   };
 
-  const handleDeleteConversation = async () => {
-    if (!activeConv) return;
-    const ok = window.confirm(`Delete all chat messages for customer ${activeConv}? This cannot be undone.`);
+  const handleDeleteConversation = async (conversationIdParam) => {
+    const targetConv = conversationIdParam || activeConv;
+    if (!targetConv) return;
+    const ok = window.confirm(`Delete all chat messages for customer ${targetConv}? This cannot be undone.`);
     if (!ok) return;
     try {
-      await deleteConversation(activeConv);
+      await deleteConversation(targetConv);
       // remove from local messages and unread set
-      setMessages((prev) => prev.filter((m) => m.customerPublicId !== activeConv));
+      setMessages((prev) => prev.filter((m) => m.customerPublicId !== targetConv));
       setUnreadConversationIds((prev) => {
-        if (!prev.has(activeConv)) return prev;
+        if (!prev.has(targetConv)) return prev;
         const next = new Set(prev);
-        next.delete(activeConv);
+        next.delete(targetConv);
         return next;
       });
-      setActiveConv('');
-      if (isMobile) setShowChatView(false);
+      // If we deleted the currently active conversation, clear it and hide chat on mobile
+      if (activeConv === targetConv) {
+        setActiveConv('');
+        if (isMobile) setShowChatView(false);
+      }
       setShowInfo(false);
     } catch (e) {
       // ignore; could show error toast later
@@ -547,7 +547,7 @@ export default function AdminInquiries() {
                     <path d="M6.62 10.79a15.149 15.149 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
                   </svg>
                 </button>
-                <button className="chat-action-btn delete-icon" title="Delete Chat" onClick={handleDeleteConversation}>
+                <button className="chat-action-btn delete-icon" title="Delete Chat" onClick={() => handleDeleteConversation()}>
                   <svg viewBox="0 0 24 24">
                     <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
                   </svg>
