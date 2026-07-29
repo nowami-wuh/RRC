@@ -155,11 +155,19 @@ export default function AdminInquiries() {
 
   const conversations = Object.values(conversationMap);
 
-  // Filter conversations by search input (by name or ID)
-  const displayedConversations = conversations.filter((conv) =>
-    conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter conversations by search input (by name or ID) and sort newest-first
+  const displayedConversations = conversations
+    .filter((conv) =>
+      conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      conv.id.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      const aLast = a.messages && a.messages.length ? a.messages[a.messages.length - 1] : null;
+      const bLast = b.messages && b.messages.length ? b.messages[b.messages.length - 1] : null;
+      const aTime = aLast && aLast.createdAt ? new Date(aLast.createdAt).getTime() : 0;
+      const bTime = bLast && bLast.createdAt ? new Date(bLast.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
   const unreadCount = displayedConversations.filter((conv) => unreadConversationIds.has(conv.id) && conv.id !== activeConv).length;
 
   useEffect(() => {
@@ -278,6 +286,14 @@ export default function AdminInquiries() {
         // ignore failures — local state still cleared
       }
     })();
+  }, [activeConv]);
+
+  // Clear swipe/reply UI state when switching conversations so it doesn't carry over
+  useEffect(() => {
+    setTouchStartX(0);
+    setTouchCurrentX(0);
+    setSwipingMsgId(null);
+    setReplyingTo(null);
   }, [activeConv]);
 
   const handleBackToList = () => {
