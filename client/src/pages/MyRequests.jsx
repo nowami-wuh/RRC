@@ -542,6 +542,8 @@ export default function MyRequests() {
   const [cancelError, setCancelError] = useState('');
   const [searchId,    setSearchId]    = useState(location.state?.searchId || '');
   const highlightRef = useRef(null);
+  const tabsBarRef   = useRef(null);
+  const tabsWrapRef  = useRef(null);
 
   // ── Data Loading ─────────────────────────────────────────────────────────────
 
@@ -578,6 +580,35 @@ export default function MyRequests() {
       highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [searchId, expandedId]);
+
+  // Scroll active tab into view & detect if bar can scroll (for fade hint)
+  useEffect(() => {
+    const bar  = tabsBarRef.current;
+    const wrap = tabsWrapRef.current;
+    if (!bar || !wrap) return;
+    // Show fade if scrollable
+    const checkScroll = () => {
+      const canScroll = bar.scrollWidth > bar.clientWidth + 2;
+      wrap.classList.toggle('can-scroll', canScroll);
+    };
+    checkScroll();
+    bar.addEventListener('scroll', checkScroll);
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      bar.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, []);
+
+  // Scroll active tab button into view when tab changes
+  useEffect(() => {
+    const bar = tabsBarRef.current;
+    if (!bar) return;
+    const activeBtn = bar.querySelector('.mr-tab.active');
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [activeTab]);
 
   // ── Filtering ────────────────────────────────────────────────────────────────
 
@@ -619,21 +650,23 @@ export default function MyRequests() {
   return (
     <>
       {/* ── Filter Tabs ── */}
-      <div className="mr-tabs-bar" id="filterTabs">
-        {STATUS_TABS.map((tab) => {
-          const count = countFor(tab.key);
-          return (
-            <button
-              key={tab.key}
-              id={`tab-${tab.key}`}
-              className={`mr-tab ${activeTab === tab.key ? 'active' : ''}`}
-              onClick={() => { setActiveTab(tab.key); setExpandedId(null); setSearchId(''); }}
-            >
-              {tab.label}
-              {count > 0 && <span className="mr-tab-count">{count}</span>}
-            </button>
-          );
-        })}
+      <div className="mr-tabs-bar-wrap" ref={tabsWrapRef}>
+        <div className="mr-tabs-bar" id="filterTabs" ref={tabsBarRef}>
+          {STATUS_TABS.map((tab) => {
+            const count = countFor(tab.key);
+            return (
+              <button
+                key={tab.key}
+                id={`tab-${tab.key}`}
+                className={`mr-tab ${activeTab === tab.key ? 'active' : ''}`}
+                onClick={() => { setActiveTab(tab.key); setExpandedId(null); setSearchId(''); }}
+              >
+                {tab.label}
+                {count > 0 && <span className="mr-tab-count">{count}</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Search Highlight Banner ── */}

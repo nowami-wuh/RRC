@@ -3,17 +3,39 @@
    ============================================================ */
 
 /* ── Tabs Bar ─────────────────────────────────────────────── */
+.mr-tabs-bar-wrap {
+  position: relative;
+  margin: 16px 40px 0;
+}
+
+/* Fade-right hint that the bar is scrollable */
+.mr-tabs-bar-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 32px;
+  background: linear-gradient(to right, transparent, #f0f0f0);
+  border-radius: 0 8px 8px 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.mr-tabs-bar-wrap.can-scroll::after { opacity: 1; }
+
 .mr-tabs-bar {
   display: flex;
   gap: 4px;
   background: #f0f0f0;
   border-radius: 8px;
   padding: 4px;
-  margin: 16px 40px 0;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;          /* NEVER wrap — single scrollable row */
+  white-space: nowrap;
 }
 .mr-tabs-bar::-webkit-scrollbar { display: none; }
 
@@ -960,17 +982,16 @@
 
 /* ── Responsive ───────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .mr-tabs-bar        { margin: 12px 24px 0; }
+  .mr-tabs-bar-wrap   { margin: 12px 24px 0; }
   .requests-wrapper   { padding: 20px 24px; }
   .mr-search-banner   { margin: 12px 24px 0; }
 }
 
 @media (max-width: 768px) {
-  .mr-tabs-bar        { margin: 10px 16px 0; }
+  .mr-tabs-bar-wrap   { margin: 10px 16px 0; }
   .requests-wrapper   { padding: 16px; }
   .mr-search-banner   { margin: 10px 16px 0; }
   .card-top           { padding: 14px 16px 12px; }
-  .card-body          { }
   .card-id            { font-size: 18px; }
   .event-details      { flex-direction: column; }
   .event-pax          { text-align: left; }
@@ -994,8 +1015,10 @@
 }
 
 @media (max-width: 480px) {
-  .mr-tabs-bar        { margin: 8px 10px 0; gap: 2px; }
+  .mr-tabs-bar-wrap   { margin: 8px 10px 0; }
+  .mr-tabs-bar        { gap: 2px; padding: 3px; }
   .mr-tab             { padding: 6px 10px; font-size: 12px; }
+  .mr-tab-count       { font-size: 10px; padding: 1px 5px; min-width: 16px; }
   .requests-wrapper   { padding: 12px 10px; }
   .card-id            { font-size: 16px; }
   .mr-modal           { padding: 24px 16px 20px; }
@@ -1005,4 +1028,17 @@
   .billing-row        { flex-direction: column; align-items: flex-start; gap: 2px; }
   .action-btn         { width: 100%; justify-content: center; }
   .card-footer        { flex-direction: column; }
+}
+
+/* ── Ultra-small (280px) ──────────────────────────────────── */
+@media (max-width: 320px) {
+  .mr-tabs-bar-wrap   { margin: 6px 8px 0; }
+  .mr-tabs-bar        { gap: 2px; padding: 3px; }
+  .mr-tab             { padding: 5px 8px; font-size: 11px; }
+  .mr-tab-count       { font-size: 9px; padding: 0 4px; min-width: 14px; }
+  .requests-wrapper   { padding: 10px 8px; }
+  .card-top           { padding: 12px 12px 10px; }
+  .card-id            { font-size: 15px; }
+  .card-date-requested { font-size: 11px; }
+  .status-badge       { font-size: 11px; padding: 4px 10px; }
 }
