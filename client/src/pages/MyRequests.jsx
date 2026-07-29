@@ -1,24 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import {
-  fetchRequests,
-  cancelRequest,
-} from '../api/api';
+import { fetchRequests, cancelRequest } from '../api/api';
 import '../styles/my-requests.css';
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// ── Status Tab Config ───────────────────────────────────────────────────────────
 
 const STATUS_TABS = [
-  { key: 'pending',   label: 'Pending',   color: '#d97706' },
-  { key: 'approved',  label: 'Approved',  color: '#2563eb' },
-  { key: 'upcoming',  label: 'Upcoming',  color: '#7c3aed' },
-  { key: 'completed', label: 'Completed', color: '#059669' },
-  { key: 'denied',    label: 'Denied',    color: '#dc2626' },
-  { key: 'cancelled', label: 'Cancelled', color: '#6b7280' },
+  { key: 'all',       label: 'All' },
+  { key: 'pending',   label: 'Pending' },
+  { key: 'approved',  label: 'Approved' },
+  { key: 'upcoming',  label: 'Upcoming' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'denied',    label: 'Denied' },
+  { key: 'cancelled', label: 'Cancelled' },
 ];
 
-// Map DB statuses to tab keys
 function getTabKey(status) {
   if (!status) return 'pending';
   const s = status.toLowerCase();
@@ -31,18 +28,7 @@ function getTabKey(status) {
   return 'pending';
 }
 
-function statusBadgeText(status) {
-  const map = {
-    pending: 'Pending Review',
-    approved: 'Approved',
-    awaitingpayment: 'Awaiting Downpayment',
-    upcoming: 'Upcoming',
-    completed: 'Completed',
-    denied: 'Denied',
-    cancelled: 'Cancelled',
-  };
-  return map[status?.toLowerCase()] || (status || 'Unknown');
-}
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function formatCurrency(val) {
   const num = Number(val) || 0;
@@ -58,167 +44,502 @@ function daysUntil(dateStr) {
   return Math.round((target - now) / 86400000);
 }
 
-function timeAgo(dateStr) {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+function statusBadgeClass(status) {
+  const s = status?.toLowerCase();
+  if (s === 'approved' || s === 'awaitingpayment') return 'approved';
+  if (s === 'upcoming') return 'upcoming';
+  if (s === 'completed') return 'completed';
+  if (s === 'denied') return 'denied';
+  if (s === 'cancelled') return 'cancelled';
+  return 'pending';
 }
 
-// ── Billing Breakdown Component ────────────────────────────────────────────────
-function BillingBreakdown({ billing, pkg }) {
-  if (!billing && !pkg) return <p className="mr-no-billing">No billing details yet.</p>;
+function statusBadgeText(status) {
+  const map = {
+    pending: 'PENDING',
+    approved: 'APPROVED',
+    awaitingpayment: 'APPROVED',
+    upcoming: 'UPCOMING',
+    completed: 'COMPLETED',
+    denied: 'DENIED',
+    cancelled: 'CANCELLED',
+  };
+  return map[status?.toLowerCase()] || (status?.toUpperCase() || 'UNKNOWN');
+}
+
+// ── Timeline ────────────────────────────────────────────────────────────────────
+
+const TIMELINE_STEPS = [
+  { key: 'submitted',   label: 'Request\nSubmitted' },
+  { key: 'evaluated',   label: 'Admin\nEvaluation' },
+  { key: 'downpayment', label: 'Downpayment' },
+  { key: 'upcoming',    label: 'Upcoming' },
+  { key: 'completed',   label: 'Completed' },
+];
+
+function getTimelineState(status) {
+  const s = status?.toLowerCase();
+  // returns array of 'done' | 'active' | 'idle' | 'denied-step' | 'cancelled-step' for each step
+  if (s === 'pending') {
+    return ['done', 'active', 'idle', 'idle', 'idle'];
+  }
+  if (s === 'approved' || s === 'awaitingpayment') {
+    return ['done', 'done', 'active', 'idle', 'idle'];
+  }
+  if (s === 'upcoming') {
+    return ['done', 'done', 'done', 'active', 'idle'];
+  }
+  if (s === 'completed') {
+    return ['done', 'done', 'done', 'done', 'done'];
+  }
+  if (s === 'denied') {
+    return ['done', 'denied-step', 'idle', 'idle', 'idle'];
+  }
+  if (s === 'cancelled') {
+    return ['done', 'cancelled-step', 'idle', 'idle', 'idle'];
+  }
+  return ['done', 'active', 'idle', 'idle', 'idle'];
+}
+
+function Timeline({ status }) {
+  const states = getTimelineState(status);
+  const checkSvg = (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+      <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+
+  return (
+    <div className="status-timeline">
+      {TIMELINE_STEPS.map((step, i) => {
+        const state = states[i];
+        return (
+          <div key={step.key} className={`timeline-step ${state}`}>
+            <div className="step-circle">
+              {state === 'done' && checkSvg}
+              {state === 'denied-step' && '✕'}
+              {state === 'cancelled-step' && '—'}
+              {state === 'active' && '●'}
+            </div>
+            <span className="step-label">{step.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Equipment / Package Table ────────────────────────────────────────────────────
+
+function PackageSection({ pkg }) {
+  if (!pkg) return null;
+  // pkg can be { name, groups: [{category, items:[{name,qty,unit}]}], packageCost }
+  // OR it might come from DB as a flat object
+  const groups = pkg.groups || [];
+  const packageName = pkg.name || 'PACKAGE';
+  const packageCost = pkg.packageCost ?? pkg.basePrice ?? null;
+
+  return (
+    <div className="package-section">
+      <div className="package-section-label">Assigned Package</div>
+      <div className="package-tag">{packageName}</div>
+      <div className="package-table-wrapper">
+        <table className="package-table">
+          <thead>
+            <tr>
+              <th>Item Description</th>
+              <th>Qty</th>
+              <th>Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.length > 0 ? (
+              groups.map((group, gi) => (
+                <>
+                  <tr key={`g-${gi}`} className="package-group-row">
+                    <td colSpan={3}>{group.category}</td>
+                  </tr>
+                  {(group.items || []).map((item, ii) => (
+                    <tr key={`i-${gi}-${ii}`}>
+                      <td>{item.name}</td>
+                      <td>{item.qty}</td>
+                      <td>{item.unit}</td>
+                    </tr>
+                  ))}
+                </>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={3} style={{ textAlign: 'center', color: '#aaa', fontStyle: 'italic', padding: '16px' }}>
+                  Equipment details will be provided by the admin.
+                </td>
+              </tr>
+            )}
+            {packageCost != null && (
+              <tr className="package-cost-row">
+                <td colSpan={3}>Package Cost: {formatCurrency(packageCost)}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function RentItemsSection({ equipment }) {
+  if (!equipment || equipment.length === 0) return null;
+
+  return (
+    <div className="package-section">
+      <div className="package-section-label">Requested Equipment</div>
+      <div className="rent-table-wrapper">
+        <table className="package-table">
+          <thead>
+            <tr>
+              <th>Item Description</th>
+              <th>Qty</th>
+              <th>Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {equipment.map((item, i) => (
+              <tr key={i}>
+                <td>{item.name}</td>
+                <td>{item.qty}</td>
+                <td>{item.unit}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── Billing Section ─────────────────────────────────────────────────────────────
+
+function BillingSection({ billing, pkg }) {
+  if (!billing && !pkg) return null;
 
   const b = billing || {};
-  const basePrice   = Number(b.basePrice)   || 0;
-  const promoPrice  = Number(b.promoPrice)  || 0;
-  const addonsTotal = Number(b.addonsTotal) || 0;
-  const mobilization= Number(b.mobilization)|| 0;
-  const extensionHrs= Number(b.extensionHours) || 0;
-  const extensionAmt= extensionHrs * 2500;
-  const downpayment = Number(b.downpayment) || 0;
+  const basePrice    = Number(b.basePrice)    || 0;
+  const promoPrice   = Number(b.promoPrice)   || 0;
+  const addonsTotal  = Number(b.addonsTotal)  || 0;
+  const mobilization = Number(b.mobilization) || 0;
+  const extensionHrs = Number(b.extensionHours) || 0;
+  const extensionAmt = extensionHrs * 2500;
+  const downpayment  = Number(b.downpayment)  || 0;
   const promoApplied = Boolean(b.promoApplied);
 
   const effectiveBase = promoApplied && promoPrice > 0 ? promoPrice : basePrice;
   const total = effectiveBase + addonsTotal + mobilization + extensionAmt;
   const balance = total - downpayment;
 
-  return (
-    <div className="mr-billing-table">
-      {basePrice > 0 && (
-        <div className="mr-billing-row">
-          <span className="mr-billing-label">
-            {pkg?.name || 'Package'} — Base Price
-            {promoApplied && promoPrice > 0 && (
-              <span className="mr-promo-tag">PROMO</span>
-            )}
-          </span>
-          <span className="mr-billing-val">
-            {promoApplied && promoPrice > 0 ? (
-              <>
-                <span className="mr-strike">{formatCurrency(basePrice)}</span>
-                {' '}{formatCurrency(promoPrice)}
-              </>
-            ) : formatCurrency(basePrice)}
-          </span>
-        </div>
-      )}
-
-      {addonsTotal > 0 && (
-        <div className="mr-billing-row">
-          <span className="mr-billing-label">Equipment / Special Effects Add-ons</span>
-          <span className="mr-billing-val">{formatCurrency(addonsTotal)}</span>
-        </div>
-      )}
-
-      {mobilization > 0 && (
-        <div className="mr-billing-row">
-          <span className="mr-billing-label">Mobilization Fee</span>
-          <span className="mr-billing-val">{formatCurrency(mobilization)}</span>
-        </div>
-      )}
-
-      {extensionHrs > 0 && (
-        <div className="mr-billing-row">
-          <span className="mr-billing-label">
-            Duration Extension ({extensionHrs} hr{extensionHrs > 1 ? 's' : ''} × ₱2,500/hr)
-          </span>
-          <span className="mr-billing-val">{formatCurrency(extensionAmt)}</span>
-        </div>
-      )}
-
-      <div className="mr-billing-divider" />
-
-      <div className="mr-billing-row mr-billing-total">
-        <span className="mr-billing-label">Total Amount</span>
-        <span className="mr-billing-val">{formatCurrency(total)}</span>
-      </div>
-
-      {downpayment > 0 && (
-        <>
-          <div className="mr-billing-row">
-            <span className="mr-billing-label">Downpayment Received</span>
-            <span className="mr-billing-val mr-green">{formatCurrency(downpayment)}</span>
-          </div>
-          <div className="mr-billing-row">
-            <span className="mr-billing-label">Remaining Balance</span>
-            <span className="mr-billing-val">{formatCurrency(balance)}</span>
-          </div>
-        </>
-      )}
-
-      {!billing && (
-        <p className="mr-billing-note">
-          * Billing details will be finalized by the admin. Please check back or coordinate via chat.
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ── Equipment List Component ───────────────────────────────────────────────────
-function EquipmentList({ equipment, type }) {
-  if (!equipment || equipment.length === 0) {
+  if (total === 0 && downpayment === 0) {
     return (
-      <p className="mr-no-billing">
-        {type === 'rent'
-          ? 'No equipment specified.'
-          : 'Equipment list will be provided once the admin assigns a package.'}
-      </p>
+      <div className="billing-section">
+        <div className="billing-section-label">Billing</div>
+        <div className="billing-box">
+          <p className="billing-note">* Billing details will be finalized by the admin.</p>
+        </div>
+      </div>
     );
   }
 
-  const grouped = equipment.reduce((acc, item) => {
-    const cat = (item.category || 'SOUNDS').toUpperCase();
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
-    return acc;
-  }, {});
-
   return (
-    <div className="mr-equip-list">
-      {Object.entries(grouped).map(([cat, items]) => (
-        <div key={cat}>
-          <div className="mr-equip-cat">{cat}</div>
-          {items.map((item, i) => (
-            <div key={i} className="mr-equip-row">
-              <span className="mr-equip-qty">{item.qty}</span>
-              <span className="mr-equip-name">{item.name}</span>
+    <div className="billing-section">
+      <div className="billing-section-label">Billing Details</div>
+      <div className="billing-box">
+        {basePrice > 0 && (
+          <div className="billing-row">
+            <span className="billing-label">
+              {pkg?.name || 'Package'} — Base Price
+              {promoApplied && promoPrice > 0 && (
+                <span className="billing-promo-tag">PROMO</span>
+              )}
+            </span>
+            <span className="billing-value">
+              {promoApplied && promoPrice > 0 ? (
+                <>
+                  <span className="billing-strike">{formatCurrency(basePrice)}</span>
+                  {formatCurrency(promoPrice)}
+                </>
+              ) : formatCurrency(basePrice)}
+            </span>
+          </div>
+        )}
+        {addonsTotal > 0 && (
+          <div className="billing-row">
+            <span className="billing-label">Equipment / Add-ons</span>
+            <span className="billing-value">{formatCurrency(addonsTotal)}</span>
+          </div>
+        )}
+        {mobilization > 0 && (
+          <div className="billing-row">
+            <span className="billing-label">Mobilization Fee</span>
+            <span className="billing-value">{formatCurrency(mobilization)}</span>
+          </div>
+        )}
+        {extensionHrs > 0 && (
+          <div className="billing-row">
+            <span className="billing-label">Extension ({extensionHrs} hr{extensionHrs > 1 ? 's' : ''} × ₱2,500)</span>
+            <span className="billing-value">{formatCurrency(extensionAmt)}</span>
+          </div>
+        )}
+
+        {total > 0 && (
+          <div className="billing-row total">
+            <span className="billing-label">Total Amount</span>
+            <span className="billing-value">{formatCurrency(total)}</span>
+          </div>
+        )}
+
+        {downpayment > 0 && (
+          <>
+            <div className="billing-row">
+              <span className="billing-label">Downpayment Received</span>
+              <span className="billing-value green">{formatCurrency(downpayment)}</span>
             </div>
-          ))}
-        </div>
-      ))}
+            <div className="billing-row">
+              <span className="billing-label">Remaining Balance</span>
+              <span className="billing-value">{formatCurrency(balance)}</span>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────────
+// ── Request Card ─────────────────────────────────────────────────────────────────
+
+function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNavigate }) {
+  const tabKey = getTabKey(req.status);
+  const ev = req.event || {};
+  const days = tabKey === 'upcoming' ? daysUntil(ev.date) : null;
+  const canCancel = ['pending', 'approved', 'awaitingpayment'].includes(req.status?.toLowerCase());
+
+  // Determine what sections to show in card body
+  const showPackage  = req.type === 'book' && req.package;
+  const showRentItems = req.type === 'rent' && req.equipment && req.equipment.length > 0;
+  const showBilling  = !!req.billing;
+
+  // Banners
+  const isAwaiting = req.status?.toLowerCase() === 'awaitingpayment';
+  const isApproved = req.status?.toLowerCase() === 'approved';
+  const isDenied   = req.status?.toLowerCase() === 'denied';
+  const isPending  = req.status?.toLowerCase() === 'pending';
+  const isUpcoming = req.status?.toLowerCase() === 'upcoming';
+
+  return (
+    <div
+      id={`card-${req.id}`}
+      className={`request-card ${isHighlighted ? 'highlighted' : ''} ${isExpanded ? 'expanded' : ''}`}
+    >
+      {/* ── Top Row ── */}
+      <div className="card-top" onClick={onToggle}>
+        <div className="card-id-group">
+          <span className={`card-type-badge ${req.type || 'book'}`}>
+            {req.type === 'rent' ? 'RENT' : 'BOOKING'}
+          </span>
+          <span className="card-id">
+            {req.type === 'rent' ? 'Request' : 'Booking'} ID &nbsp;
+            <strong>{req.id}</strong>
+          </span>
+          <span className="card-date-requested">
+            Date of Request: <strong>{req.dateRequested}</strong>
+          </span>
+        </div>
+        <div className="card-right">
+          <span className={`status-badge ${statusBadgeClass(req.status)}`}>
+            <span className="status-dot" />
+            {statusBadgeText(req.status)}
+          </span>
+          {days !== null && (
+            <span className={`mr-countdown ${days <= 3 ? 'urgent' : ''}`}>
+              {days === 0 ? 'Today!' : days > 0 ? `${days} day${days > 1 ? 's' : ''} away` : 'Past'}
+            </span>
+          )}
+          <span className="card-chevron">▼</span>
+        </div>
+      </div>
+
+      {/* ── Collapsible Body ── */}
+      {isExpanded && (
+        <div className="card-body">
+          {/* Timeline */}
+          <Timeline status={req.status} />
+          <hr className="card-divider" />
+
+          {/* Event Details */}
+          <div className="event-details">
+            <div className="event-info">
+              <span className="event-title-main">{ev.title || 'Untitled Event'}</span>
+              <div className="event-meta">
+                <span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 9H21M7 3V5M17 3V5M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  {ev.date} &nbsp;|&nbsp; {ev.timeStart} – {ev.timeEnd}
+                </span>
+                <span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#666" />
+                  </svg>
+                  {ev.venue}
+                </span>
+              </div>
+            </div>
+            {ev.pax && (
+              <div className="event-pax">
+                Pax: <strong>{ev.pax}</strong>
+              </div>
+            )}
+          </div>
+
+          {/* Banners */}
+          {isPending && (
+            <div className="pending-notice">
+              <span className="pending-notice-pulse" />
+              Your request is under admin review. You will be notified once it has been evaluated.
+            </div>
+          )}
+
+          {isAwaiting && (
+            <div className="awaiting-banner">
+              <span className="awaiting-icon">💳</span>
+              <div className="awaiting-text">
+                <div className="awaiting-label">Awaiting Downpayment</div>
+                <div className="awaiting-msg">
+                  Please settle your downpayment via GCash or bank transfer and send your receipt through the chat to confirm your booking.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isApproved && !isAwaiting && (
+            <div className="awaiting-banner">
+              <span className="awaiting-icon">💳</span>
+              <div className="awaiting-text">
+                <div className="awaiting-label">Awaiting Downpayment</div>
+                <div className="awaiting-msg">
+                  Please settle your downpayment via GCash or bank transfer and send your receipt through the chat to confirm your booking.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isUpcoming && (
+            <div className="upcoming-banner">
+              <span className="upcoming-icon">🎉</span>
+              <div className="upcoming-text">
+                <div className="upcoming-label">Booking Confirmed!</div>
+                <div className="upcoming-msg">
+                  Your downpayment has been received. We look forward to seeing you on event day!
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isDenied && req.denialReason && (
+            <div className="denial-banner">
+              <span className="denial-icon">❌</span>
+              <div className="denial-text">
+                <div className="denial-label">Reason for Denial</div>
+                <div className="denial-reason">{req.denialReason}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Additional Requirements */}
+          {req.additional && (
+            <>
+              <hr className="card-divider" style={{ marginTop: '16px' }} />
+              <div className="additional-req-section">
+                <div className="additional-req-label">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-2 8H7v-2h4v2zm4-4H7v-2h8v2z" />
+                  </svg>
+                  Additional Requirements
+                </div>
+                <div className="additional-req-text">{req.additional}</div>
+              </div>
+            </>
+          )}
+
+          {/* Package / Rent Items */}
+          {showPackage && (
+            <>
+              <hr className="card-divider" style={{ marginTop: '16px' }} />
+              <PackageSection pkg={req.package} />
+            </>
+          )}
+
+          {showRentItems && (
+            <>
+              <hr className="card-divider" style={{ marginTop: '16px' }} />
+              <RentItemsSection equipment={req.equipment} />
+            </>
+          )}
+
+          {/* Billing */}
+          {(showBilling || showPackage) && (
+            <>
+              <hr className="card-divider" />
+              <BillingSection billing={req.billing} pkg={req.package} />
+            </>
+          )}
+
+          {/* Footer Actions */}
+          <div className="card-footer">
+            <button
+              className="action-btn chat-btn"
+              onClick={() => onNavigate('/chat')}
+              id={`chat-btn-${req.id}`}
+            >
+              💬 Chat with Admin
+            </button>
+            {tabKey === 'denied' && (
+              <button
+                className="action-btn new-req-btn"
+                onClick={() => onNavigate('/make-request')}
+                id={`new-req-btn-${req.id}`}
+              >
+                Submit New Request
+              </button>
+            )}
+            {canCancel && (
+              <button
+                className="action-btn cancel-btn danger"
+                onClick={() => onCancel(req)}
+                id={`cancel-btn-${req.id}`}
+              >
+                Cancel Request
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Component ──────────────────────────────────────────────────────────────
+
 export default function MyRequests() {
   const { user } = useAuth();
-  const location  = useLocation();
-  const navigate  = useNavigate();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [requests,      setRequests]      = useState([]);
-  const [activeTab,     setActiveTab]     = useState('pending');
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState('');
-
-  // Expanded card state (one expanded at a time per tab)
-  const [expandedId, setExpandedId] = useState(null);
-  // Active section inside expanded card
-  const [expandedSection, setExpandedSection] = useState('details'); // 'details' | 'billing' | 'equipment'
-
-  // Cancel modal
-  const [cancelModal, setCancelModal]   = useState(null); // { request }
-  const [cancelling,  setCancelling]    = useState(false);
-  const [cancelError, setCancelError]   = useState('');
-
-  // Search / highlight from calendar navigation
+  const [requests,    setRequests]    = useState([]);
+  const [activeTab,   setActiveTab]   = useState('all');
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState('');
+  const [expandedId,  setExpandedId]  = useState(null);
+  const [cancelModal, setCancelModal] = useState(null);
+  const [cancelling,  setCancelling]  = useState(false);
+  const [cancelError, setCancelError] = useState('');
   const [searchId,    setSearchId]    = useState(location.state?.searchId || '');
   const highlightRef = useRef(null);
 
@@ -226,47 +547,49 @@ export default function MyRequests() {
 
   const loadData = useCallback(() => {
     if (!user?.id) { setLoading(false); setError('Please sign in to view your requests.'); return; }
-
     setLoading(true);
     fetchRequests(user.id)
-      .then((data) => {
-        setRequests(data.requests || []);
-      })
+      .then((data) => { setRequests(data.requests || []); })
       .catch(() => setError('Unable to load requests.'))
       .finally(() => setLoading(false));
   }, [user?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Auto-select tab when arriving from calendar with searchId
   useEffect(() => {
     if (location.state?.searchId) {
       setSearchId(location.state.searchId);
-      setActiveTab('pending'); // will be overridden once requests load
+      setActiveTab('all');
     }
   }, [location.state?.searchId]);
 
-  // Once requests load, if searchId set, jump to the right tab and expand the card
   useEffect(() => {
     if (searchId && requests.length > 0) {
       const found = requests.find((r) => r.id.toLowerCase() === searchId.toLowerCase());
       if (found) {
-        setActiveTab(getTabKey(found.status));
+        setActiveTab('all');
         setExpandedId(found.id);
       }
     }
   }, [searchId, requests]);
 
-  // Scroll highlighted card into view
   useEffect(() => {
     if (searchId && highlightRef.current) {
       highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [searchId, expandedId]);
 
-  // ── Derived data ──────────────────────────────────────────────────────────────
+  // ── Filtering ────────────────────────────────────────────────────────────────
 
-  const filteredRequests = requests.filter((r) => getTabKey(r.status) === activeTab);
+  const filteredRequests = requests.filter((r) => {
+    if (activeTab === 'all') return true;
+    return getTabKey(r.status) === activeTab;
+  });
+
+  const countFor = (key) => {
+    if (key === 'all') return requests.length;
+    return requests.filter((r) => getTabKey(r.status) === key).length;
+  };
 
   // ── Cancel handlers ───────────────────────────────────────────────────────────
 
@@ -287,34 +610,23 @@ export default function MyRequests() {
     }
   };
 
-  // ── Expand / collapse ────────────────────────────────────────────────────────
-
   const toggleExpand = (id) => {
     setExpandedId((prev) => (prev === id ? null : id));
-    setExpandedSection('details');
   };
 
-  // ── Render helpers ────────────────────────────────────────────────────────────
-
-  const tabCfg = STATUS_TABS.find((t) => t.key === activeTab) || STATUS_TABS[0];
-
-  const canCancel = (status) => {
-    const s = status?.toLowerCase();
-    return s === 'pending' || s === 'approved' || s === 'awaitingpayment';
-  };
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <>
-      {/* ── Status Tabs ──────────────────────────────────────────────────────── */}
-      <div className="mr-tabs-bar">
+      {/* ── Filter Tabs ── */}
+      <div className="mr-tabs-bar" id="filterTabs">
         {STATUS_TABS.map((tab) => {
-          const count = requests.filter((r) => getTabKey(r.status) === tab.key).length;
+          const count = countFor(tab.key);
           return (
             <button
               key={tab.key}
               id={`tab-${tab.key}`}
               className={`mr-tab ${activeTab === tab.key ? 'active' : ''}`}
-              style={activeTab === tab.key ? { '--tab-color': tab.color } : {}}
               onClick={() => { setActiveTab(tab.key); setExpandedId(null); setSearchId(''); }}
             >
               {tab.label}
@@ -324,7 +636,7 @@ export default function MyRequests() {
         })}
       </div>
 
-      {/* ── Search Highlight Banner ───────────────────────────────────────────── */}
+      {/* ── Search Highlight Banner ── */}
       {searchId && (
         <div className="mr-search-banner">
           <span>📌 Showing: <strong>{searchId}</strong></span>
@@ -332,225 +644,87 @@ export default function MyRequests() {
         </div>
       )}
 
-      {/* ── Request Cards ─────────────────────────────────────────────────────── */}
+      {/* ── Cards ── */}
       <div className="requests-wrapper" id="requestsWrapper">
-        {loading && <div className="empty-state">Loading requests…</div>}
-        {error   && <div className="empty-state">{error}</div>}
-
-        {!loading && filteredRequests.length === 0 && (
-          <div className="empty-state" id="emptyState">
-            <div className="mr-empty-icon">{
-              activeTab === 'pending'   ? '⏳' :
-              activeTab === 'approved'  ? '✅' :
-              activeTab === 'upcoming'  ? '📅' :
-              activeTab === 'completed' ? '🎉' :
-              activeTab === 'denied'    ? '❌' : '🚫'
-            }</div>
-            <div>No {tabCfg.label.toLowerCase()} requests.</div>
+        {loading && (
+          <div className="empty-state">
+            <div className="mr-empty-icon">⏳</div>
+            <div>Loading your requests…</div>
+          </div>
+        )}
+        {error && (
+          <div className="empty-state">
+            <div className="mr-empty-icon">⚠️</div>
+            <div>{error}</div>
           </div>
         )}
 
-        {filteredRequests.map((req) => {
+        {!loading && !error && filteredRequests.length === 0 && (
+          <div className="empty-state" id="emptyState">
+            <div className="mr-empty-icon">
+              {activeTab === 'pending'   ? '⏳' :
+               activeTab === 'approved'  ? '✅' :
+               activeTab === 'upcoming'  ? '📅' :
+               activeTab === 'completed' ? '🎉' :
+               activeTab === 'denied'    ? '❌' :
+               activeTab === 'cancelled' ? '🚫' : '📋'}
+            </div>
+            <div>
+              {activeTab === 'all' ? 'No requests yet.' : `No ${activeTab} requests.`}
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && filteredRequests.map((req) => {
           const isHighlighted = searchId && req.id === searchId;
           const isExpanded    = expandedId === req.id;
-          const days          = getTabKey(req.status) === 'upcoming' ? daysUntil(req.event?.date) : null;
-
           return (
             <div
               key={req.id}
               ref={isHighlighted ? highlightRef : null}
-              className={`request-card tab-${getTabKey(req.status)} ${isHighlighted ? 'highlighted' : ''} ${isExpanded ? 'expanded' : ''}`}
             >
-              {/* ── Card Header ── */}
-              <div
-                className="request-card-header"
-                onClick={() => toggleExpand(req.id)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="mr-card-left">
-                  <span
-                    className="request-status"
-                    style={{ '--status-color': tabCfg.color }}
-                  >
-                    {statusBadgeText(req.status)}
-                  </span>
-                  <div className="request-title">{req.event?.title || 'Untitled Event'}</div>
-                  <div className="mr-card-meta">
-                    <span>📅 {req.event?.date}</span>
-                    <span>📍 {req.event?.venue}</span>
-                    <span>👥 {req.event?.pax} pax</span>
-                    <span>🕐 {req.event?.timeStart} – {req.event?.timeEnd}</span>
-                  </div>
-                </div>
-                <div className="mr-card-right">
-                  {days !== null && (
-                    <div className={`mr-countdown ${days <= 3 ? 'urgent' : ''}`}>
-                      {days === 0 ? 'Today!' : days > 0 ? `${days} day${days > 1 ? 's' : ''} away` : 'Past'}
-                    </div>
-                  )}
-                  <div className="request-id">{req.id}</div>
-                  <div className="mr-type-badge">{req.type === 'rent' ? '🔧 Rent' : '📦 Book'}</div>
-                  <span className="mr-expand-chevron">{isExpanded ? '▲' : '▼'}</span>
-                </div>
-              </div>
-
-              {/* ── Expanded Body ── */}
-              {isExpanded && (
-                <div className="request-card-body">
-                  {/* Section tabs (for approved/upcoming/completed) */}
-                  {(getTabKey(req.status) === 'approved' ||
-                    getTabKey(req.status) === 'upcoming' ||
-                    getTabKey(req.status) === 'completed') && (
-                    <div className="mr-section-tabs">
-                      <button
-                        className={`mr-section-tab ${expandedSection === 'details' ? 'active' : ''}`}
-                        onClick={() => setExpandedSection('details')}
-                      >Details</button>
-                      {req.type !== 'rent' && (
-                        <button
-                          className={`mr-section-tab ${expandedSection === 'equipment' ? 'active' : ''}`}
-                          onClick={() => setExpandedSection('equipment')}
-                        >Equipment</button>
-                      )}
-                      {req.type === 'rent' && (
-                        <button
-                          className={`mr-section-tab ${expandedSection === 'equipment' ? 'active' : ''}`}
-                          onClick={() => setExpandedSection('equipment')}
-                        >Rent Items</button>
-                      )}
-                      <button
-                        className={`mr-section-tab ${expandedSection === 'billing' ? 'active' : ''}`}
-                        onClick={() => setExpandedSection('billing')}
-                      >Billing</button>
-                    </div>
-                  )}
-
-                  {/* ── PENDING ── */}
-                  {getTabKey(req.status) === 'pending' && (
-                    <div className="mr-pending-body">
-                      <div className="mr-info-grid">
-                        <div className="mr-info-row"><strong>Request ID:</strong> {req.id}</div>
-                        <div className="mr-info-row"><strong>Type:</strong> {req.type === 'rent' ? 'Equipment Rent' : 'Event Booking'}</div>
-                        <div className="mr-info-row"><strong>Submitted:</strong> {req.dateRequested}</div>
-                        {req.additional && <div className="mr-info-row"><strong>Notes:</strong> {req.additional}</div>}
-                      </div>
-                      <div className="mr-pending-status-msg">
-                        <span className="mr-pending-pulse" />
-                        Your request is under review. The admin will assign a package or approve your equipment shortly.
-                      </div>
-                      <div className="mr-card-actions">
-                        <button className="mr-chat-btn" onClick={() => navigate('/chat')} id={`chat-btn-${req.id}`}>
-                          💬 Chat with Admin
-                        </button>
-                        <button className="mr-cancel-btn" onClick={() => openCancelModal(req)} id={`cancel-btn-${req.id}`}>
-                          Cancel Request
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── APPROVED / UPCOMING / COMPLETED ── */}
-                  {(getTabKey(req.status) === 'approved' ||
-                    getTabKey(req.status) === 'upcoming' ||
-                    getTabKey(req.status) === 'completed') && (
-                    <>
-                      {expandedSection === 'details' && (
-                        <div className="mr-info-grid">
-                          <div className="mr-info-row"><strong>Request ID:</strong> {req.id}</div>
-                          <div className="mr-info-row"><strong>Type:</strong> {req.type === 'rent' ? 'Equipment Rent' : 'Event Booking'}</div>
-                          <div className="mr-info-row"><strong>Submitted:</strong> {req.dateRequested}</div>
-                          {req.package?.name && <div className="mr-info-row"><strong>Package:</strong> {req.package.name}</div>}
-                          {req.additional && <div className="mr-info-row"><strong>Notes:</strong> {req.additional}</div>}
-                          {getTabKey(req.status) === 'approved' && (
-                            <div className="mr-approved-notice">
-                              💳 To confirm your booking, please settle your <strong>downpayment</strong> via GCash or bank transfer and send your receipt through the chat.
-                            </div>
-                          )}
-                          {getTabKey(req.status) === 'upcoming' && (
-                            <div className="mr-upcoming-notice">
-                              🎉 Your booking is <strong>confirmed!</strong> Your downpayment has been received. See you on event day!
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {expandedSection === 'equipment' && (
-                        <EquipmentList equipment={req.equipment} type={req.type} />
-                      )}
-                      {expandedSection === 'billing' && (
-                        <BillingBreakdown billing={req.billing} pkg={req.package} />
-                      )}
-                      <div className="mr-card-actions" style={{ marginTop: '16px' }}>
-                        <button className="mr-chat-btn" onClick={() => navigate('/chat')} id={`chat-approved-${req.id}`}>
-                          💬 Chat with Admin
-                        </button>
-                        {canCancel(req.status) && (
-                          <button className="mr-cancel-btn" onClick={() => openCancelModal(req)} id={`cancel-approved-${req.id}`}>
-                            Cancel Request
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-
-                  {/* ── DENIED ── */}
-                  {getTabKey(req.status) === 'denied' && (
-                    <div className="mr-denied-body">
-                      <div className="mr-info-grid">
-                        <div className="mr-info-row"><strong>Request ID:</strong> {req.id}</div>
-                        <div className="mr-info-row"><strong>Submitted:</strong> {req.dateRequested}</div>
-                      </div>
-                      <div className="mr-denial-box">
-                        <div className="mr-denial-title">❌ Reason for Denial</div>
-                        <div className="mr-denial-reason">
-                          {req.denialReason || 'No reason provided. Please contact the admin for more information.'}
-                        </div>
-                      </div>
-                      <div className="mr-card-actions">
-                        <button className="mr-chat-btn" onClick={() => navigate('/chat')}>💬 Contact Admin</button>
-                        <button className="mr-new-req-btn" onClick={() => navigate('/make-request')}>Submit New Request</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── CANCELLED ── */}
-                  {getTabKey(req.status) === 'cancelled' && (
-                    <div className="mr-cancelled-body">
-                      <div className="mr-info-grid">
-                        <div className="mr-info-row"><strong>Request ID:</strong> {req.id}</div>
-                        <div className="mr-info-row"><strong>Submitted:</strong> {req.dateRequested}</div>
-                      </div>
-                      <div className="mr-cancelled-notice">🚫 This request has been cancelled.</div>
-                      <div className="mr-card-actions">
-                        <button className="mr-new-req-btn" onClick={() => navigate('/make-request')}>Submit New Request</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              <RequestCard
+                req={req}
+                isExpanded={isExpanded}
+                isHighlighted={isHighlighted}
+                onToggle={() => toggleExpand(req.id)}
+                onCancel={openCancelModal}
+                onNavigate={navigate}
+              />
             </div>
           );
         })}
       </div>
 
-      {/* ── Cancel Confirmation Modal ─────────────────────────────────────────── */}
+      {/* ── Cancel Confirmation Modal ── */}
       {cancelModal && (
         <div className="mr-modal-overlay" id="cancelModal">
           <div className="mr-modal">
             <div className="mr-modal-icon">⚠️</div>
-            <h2 className="mr-modal-title">Cancel Booking?</h2>
+            <h2 className="mr-modal-title">Cancel this booking?</h2>
             <p className="mr-modal-desc">
               Are you sure you want to cancel your request for{' '}
-              <strong>{cancelModal.request.event?.title}</strong> on{' '}
-              <strong>{cancelModal.request.event?.date}</strong>?
-              <br />This action cannot be undone.
+              <strong>{cancelModal.request.event?.title}</strong>?
+              <br />
+              This action cannot be undone. The admin will be notified.
             </p>
             {cancelError && <div className="mr-modal-error">{cancelError}</div>}
             <div className="mr-modal-actions">
-              <button className="mr-modal-back" onClick={closeCancelModal} disabled={cancelling} id="cancelModalBack">
-                Go Back
+              <button
+                className="mr-modal-back"
+                onClick={closeCancelModal}
+                disabled={cancelling}
+                id="cancelModalBack"
+              >
+                Keep Booking
               </button>
-              <button className="mr-modal-confirm" onClick={handleConfirmCancel} disabled={cancelling} id="cancelModalConfirm">
-                {cancelling ? 'Cancelling…' : 'Yes, Cancel It'}
+              <button
+                className="mr-modal-confirm"
+                onClick={handleConfirmCancel}
+                disabled={cancelling}
+                id="cancelModalConfirm"
+              >
+                {cancelling ? 'Cancelling…' : 'Yes, Cancel'}
               </button>
             </div>
           </div>
@@ -559,5 +733,3 @@ export default function MyRequests() {
     </>
   );
 }
-
-
