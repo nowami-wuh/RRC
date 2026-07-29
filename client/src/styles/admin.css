@@ -1699,37 +1699,55 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.38);
+    background: rgba(0, 0, 0, 0.45);
     z-index: 2000;
+    padding: 12px;
+    box-sizing: border-box;
 }
 .info-panel {
     background: white;
     border-radius: 16px;
-    width: min(420px, calc(100% - 32px));
-    max-width: 420px;
-    max-height: calc(100vh - 40px);
-    padding: 20px;
-    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
+    width: 100%;
+    max-width: 380px;
+    max-height: calc(100vh - 24px);
+    padding: 24px 18px 18px;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.25);
     position: relative;
-    overflow: auto;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 .info-close {
     position: absolute;
     right: 12px;
-    top: 12px;
+    top: 10px;
     border: none;
-    background: transparent;
-    font-size: 18px;
+    background: #f1f5f9;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 16px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    transition: background 0.15s, color 0.15s;
+}
+.info-close:hover {
+    background: #e2e8f0;
+    color: #0f172a;
 }
 .info-body {
     display: flex;
-    gap: 14px;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
 }
 .info-avatar {
-    width: 56px;
-    height: 56px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: var(--primary-blue);
     color: white;
@@ -1738,11 +1756,46 @@ body {
     justify-content: center;
     font-weight: 700;
     font-size: 18px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.info-rows {
+    width: 100%;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 .info-rows div {
     margin-bottom: 10px;
-    font-size: 14px;
+    font-size: 13.5px;
     color: var(--text-dark);
+    line-height: 1.4;
+}
+.info-delete-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 14px;
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background 0.15s;
+    box-sizing: border-box;
+}
+.info-delete-btn:hover {
+    background: #fca5a5;
+}
+.info-delete-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    flex-shrink: 0;
 }
 .info-loading {
     padding: 20px 0;
@@ -2067,42 +2120,59 @@ body {
 
 /* Quoted Reply Box inside bubble */
 .reply-quote-box {
-    background: rgba(0, 0, 0, 0.06);
-    border-left: 3.5px solid var(--dark-blue);
+    background: #eef2f7;
+    border-left: 4px solid var(--dark-blue, #4A70A9);
     border-radius: 8px;
-    padding: 5px 10px;
-    margin-bottom: 6px;
+    padding: 6px 10px;
+    margin-bottom: 8px;
     font-size: 12.5px;
     cursor: pointer;
     transition: background 0.15s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
+
 .msg-row.incoming .reply-quote-box {
-    background: rgba(74, 112, 169, 0.08);
-    border-left-color: var(--dark-blue);
+    background: #eaf0f8;
+    border-left-color: var(--dark-blue, #4A70A9);
 }
+
 .msg-row.outgoing .reply-quote-box {
-    background: rgba(0, 0, 0, 0.07);
-    border-left-color: #333;
+    background: #ffffff;
+    border-left-color: var(--dark-blue, #4A70A9);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
+
 .reply-quote-box:hover {
-    background: rgba(0, 0, 0, 0.12);
+    background: #e2e8f0;
 }
+
+.msg-row.outgoing .reply-quote-box:hover {
+    background: #f1f5f9;
+}
+
 .reply-quote-name {
     font-family: 'Garet Heavy', sans-serif;
     font-size: 11px;
     font-weight: 900;
-    color: var(--dark-blue);
+    color: var(--dark-blue, #4A70A9);
     margin-bottom: 2px;
 }
+
 .msg-row.outgoing .reply-quote-name {
-    color: #222;
+    color: var(--dark-blue, #4A70A9);
 }
+
 .reply-quote-text {
-    color: #444;
+    color: #333333;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     font-style: italic;
+}
+
+.msg-row.outgoing .reply-quote-text {
+    color: #334155;
+    opacity: 1;
 }
 
 /* ── Reply Bar (above input bar) ── */
@@ -2222,18 +2292,19 @@ body {
 }
 
 .msg-row.outgoing .bubble {
-    background: var(--dark-blue, #4A70A9);
-    color: #ffffff;
+    background: #e2e8f5;
+    color: #0f172a;
     border-bottom-right-radius: 4px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.7);
 }
 
 .msg-row.outgoing .bubble-time {
-    color: rgba(255, 255, 255, 0.85);
+    color: #475569;
 }
 
 .msg-row.outgoing .read-tick {
-    color: #ffffff;
+    color: #2563eb;
 }
 
 /* Image bubble */

@@ -123,42 +123,59 @@
 
 /* Quoted Reply Box inside bubble */
 .reply-quote-box {
-    background: rgba(0, 0, 0, 0.06);
-    border-left: 3.5px solid var(--dark-blue);
+    background: #eef2f7;
+    border-left: 4px solid var(--dark-blue, #4A70A9);
     border-radius: 8px;
-    padding: 5px 10px;
-    margin-bottom: 6px;
+    padding: 6px 10px;
+    margin-bottom: 8px;
     font-size: 12.5px;
     cursor: pointer;
     transition: background 0.15s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
+
 .msg-row.incoming .reply-quote-box {
-    background: rgba(74, 112, 169, 0.08);
-    border-left-color: var(--dark-blue);
+    background: #eaf0f8;
+    border-left-color: var(--dark-blue, #4A70A9);
 }
+
 .msg-row.outgoing .reply-quote-box {
-    background: rgba(0, 0, 0, 0.07);
-    border-left-color: #333;
+    background: #ffffff;
+    border-left-color: var(--dark-blue, #4A70A9);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
+
 .reply-quote-box:hover {
-    background: rgba(0, 0, 0, 0.12);
+    background: #e2e8f0;
 }
+
+.msg-row.outgoing .reply-quote-box:hover {
+    background: #f1f5f9;
+}
+
 .reply-quote-name {
     font-family: 'Garet Heavy', sans-serif;
     font-size: 11px;
     font-weight: 900;
-    color: var(--dark-blue);
+    color: var(--dark-blue, #4A70A9);
     margin-bottom: 2px;
 }
+
 .msg-row.outgoing .reply-quote-name {
-    color: #222;
+    color: var(--dark-blue, #4A70A9);
 }
+
 .reply-quote-text {
-    color: #444;
+    color: #333333;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     font-style: italic;
+}
+
+.msg-row.outgoing .reply-quote-text {
+    color: #334155;
+    opacity: 1;
 }
 
 /* ── Reply Bar (above input bar) ── */
@@ -269,24 +286,25 @@
 
 .msg-row.incoming .bubble {
     background: #ffffff;
-    color: #1a1a1a;
+    color: #0f172a;
     border-bottom-left-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
 }
 
 .msg-row.outgoing .bubble {
-    background: var(--dark-blue, #4A70A9);
-    color: #ffffff;
+    background: #e2e8f5;
+    color: #0f172a;
     border-bottom-right-radius: 4px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.7);
 }
 
 .msg-row.outgoing .bubble-time {
-    color: rgba(255, 255, 255, 0.85);
+    color: #475569;
 }
 
 .msg-row.outgoing .read-tick {
-    color: #ffffff;
+    color: #2563eb;
 }
 
 /* Image bubble */
