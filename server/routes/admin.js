@@ -187,7 +187,7 @@ router.get('/inquiries', async (req, res) => {
         senderRole: row.sender_role,
         senderName: row.sender_name,
         customerPublicId: row.customer_public_id,
-        type: row.sender_role === 'admin' ? 'received' : 'sent',
+        type: row.sender_role === 'admin' ? 'sent' : 'received',
         text: row.text,
         image: row.image,
         time: row.time_label,

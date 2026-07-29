@@ -91,7 +91,7 @@
 
 /* Received (admin → customer): left side */
 .msg-row.incoming { justify-content: flex-start; }
-.msg-row.outgoing { justify-content: flex-end; flex-direction: row-reverse; }
+.msg-row.outgoing { justify-content: flex-end; }
 
 /* Reply trigger button on hover/tap */
 .reply-trigger-btn {
@@ -268,15 +268,25 @@
 }
 
 .msg-row.incoming .bubble {
-    background: var(--bubble-in);
+    background: #ffffff;
+    color: #1a1a1a;
     border-bottom-left-radius: 4px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
 .msg-row.outgoing .bubble {
-    background: var(--bubble-out);
+    background: var(--dark-blue, #4A70A9);
+    color: #ffffff;
     border-bottom-right-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.msg-row.outgoing .bubble-time {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.msg-row.outgoing .read-tick {
+    color: #ffffff;
 }
 
 /* Image bubble */

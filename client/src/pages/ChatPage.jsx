@@ -34,8 +34,34 @@ export default function ChatPage() {
   const [error, setError] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
   const [highlightedId, setHighlightedId] = useState(null);
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchCurrentX, setTouchCurrentX] = useState(0);
+  const [swipingMsgId, setSwipingMsgId] = useState(null);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  const handleTouchStart = (e, msgId) => {
+    setTouchStartX(e.touches[0].clientX);
+    setSwipingMsgId(msgId);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!swipingMsgId) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - touchStartX;
+    if (diff > 0 && diff < 100) {
+      setTouchCurrentX(diff);
+    }
+  };
+
+  const handleTouchEnd = (msg) => {
+    if (swipingMsgId && touchCurrentX > 40) {
+      setReplyingTo(msg);
+    }
+    setTouchStartX(0);
+    setTouchCurrentX(0);
+    setSwipingMsgId(null);
+  };
 
   useEffect(() => {
     fetchChatMessages(user?.id)
@@ -147,7 +173,7 @@ export default function ChatPage() {
         {error && <div className="event-item">{error}</div>}
         <div className="chat-messages">
           {filteredMessages.map((message, index) => {
-            const isOutgoing = message.type === 'sent';
+            const isOutgoing = message.senderRole === 'customer' || message.type === 'sent';
             const currentDateHeader = getMessageDateHeader(message.createdAt, message.time);
             const prevDateHeader = index > 0 ? getMessageDateHeader(filteredMessages[index - 1].createdAt, filteredMessages[index - 1].time) : null;
             const showDateHeader = currentDateHeader && currentDateHeader !== prevDateHeader;
@@ -162,11 +188,30 @@ export default function ChatPage() {
                 <div
                   id={`msg-${message.id || index}`}
                   className={`msg-row ${isOutgoing ? 'outgoing' : 'incoming'} ${highlightedId === message.id ? 'highlight-msg' : ''}`}
+                  onTouchStart={(e) => handleTouchStart(e, message.id || index)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={() => handleTouchEnd(message)}
+                  style={
+                    swipingMsgId === (message.id || index) && touchCurrentX > 0
+                      ? { transform: `translateX(${touchCurrentX}px)`, transition: 'none' }
+                      : { transition: 'transform 0.2s ease' }
+                  }
                 >
                   {!isOutgoing && (
                     <div className="msg-avatar">
                       {message.senderName?.substring(0, 2).toUpperCase() || 'AD'}
                     </div>
+                  )}
+                  {isOutgoing && (
+                    <button
+                      className="reply-trigger-btn"
+                      title="Reply"
+                      onClick={() => setReplyingTo(message)}
+                    >
+                      <svg viewBox="0 0 24 24">
+                        <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
+                      </svg>
+                    </button>
                   )}
                   <div className={`bubble ${message.image ? 'image-bubble' : ''}`}>
                     {/* Quoted Reply Box */}
@@ -189,15 +234,17 @@ export default function ChatPage() {
                       {isOutgoing && <span className="read-tick">✓</span>}
                     </div>
                   </div>
-                  <button
-                    className="reply-trigger-btn"
-                    title="Reply"
-                    onClick={() => setReplyingTo(message)}
-                  >
-                    <svg viewBox="0 0 24 24">
-                      <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
-                    </svg>
-                  </button>
+                  {!isOutgoing && (
+                    <button
+                      className="reply-trigger-btn"
+                      title="Reply"
+                      onClick={() => setReplyingTo(message)}
+                    >
+                      <svg viewBox="0 0 24 24">
+                        <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
+                      </svg>
+                    </button>
+                  )}
                   {isOutgoing && (
                     <div className="msg-avatar msg-avatar-self">
                       {user?.avatar

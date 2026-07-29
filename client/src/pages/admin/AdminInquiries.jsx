@@ -38,6 +38,32 @@ export default function AdminInquiries() {
   const [customerAvatars, setCustomerAvatars] = useState({});
   const [replyingTo, setReplyingTo] = useState(null);
   const [highlightedId, setHighlightedId] = useState(null);
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchCurrentX, setTouchCurrentX] = useState(0);
+  const [swipingMsgId, setSwipingMsgId] = useState(null);
+
+  const handleTouchStart = (e, msgId) => {
+    setTouchStartX(e.touches[0].clientX);
+    setSwipingMsgId(msgId);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!swipingMsgId) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - touchStartX;
+    if (diff > 0 && diff < 100) {
+      setTouchCurrentX(diff);
+    }
+  };
+
+  const handleTouchEnd = (msg) => {
+    if (swipingMsgId && touchCurrentX > 40) {
+      setReplyingTo(msg);
+    }
+    setTouchStartX(0);
+    setTouchCurrentX(0);
+    setSwipingMsgId(null);
+  };
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
@@ -491,7 +517,7 @@ export default function AdminInquiries() {
 
             <div className="chat-messages">
               {activeMessages.map((msg, index) => {
-                const isOutgoing = msg.senderRole === 'admin';
+                const isOutgoing = msg.senderRole === 'admin' || msg.type === 'sent';
                 const isReceiptImage = !isOutgoing && msg.image;
                 const currentDateHeader = getMessageDateHeader(msg.createdAt, msg.time);
                 const prevDateHeader = index > 0 ? getMessageDateHeader(activeMessages[index - 1].createdAt, activeMessages[index - 1].time) : null;
@@ -507,6 +533,14 @@ export default function AdminInquiries() {
                     <div
                       id={`msg-${msg.id || index}`}
                       className={`msg-row ${isOutgoing ? 'outgoing' : 'incoming'} ${highlightedId === msg.id ? 'highlight-msg' : ''}`}
+                      onTouchStart={(e) => handleTouchStart(e, msg.id || index)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={() => handleTouchEnd(msg)}
+                      style={
+                        swipingMsgId === (msg.id || index) && touchCurrentX > 0
+                          ? { transform: `translateX(${touchCurrentX}px)`, transition: 'none' }
+                          : { transition: 'transform 0.2s ease' }
+                      }
                     >
                       {!isOutgoing && (
                         <div className="msg-avatar">
@@ -514,6 +548,17 @@ export default function AdminInquiries() {
                             ? <img src={customerAvatars[msg.customerPublicId]} alt={msg.senderName} className="msg-avatar-img" />
                             : msg.senderName.substring(0, 2).toUpperCase()}
                         </div>
+                      )}
+                      {isOutgoing && (
+                        <button
+                          className="reply-trigger-btn"
+                          title="Reply"
+                          onClick={() => setReplyingTo(msg)}
+                        >
+                          <svg viewBox="0 0 24 24">
+                            <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
+                          </svg>
+                        </button>
                       )}
                       <div className={`bubble ${msg.image ? 'image-bubble' : ''}`}>
                         {/* Quoted Reply Box */}
@@ -536,15 +581,17 @@ export default function AdminInquiries() {
                           {isOutgoing && <span className="read-tick">✓</span>}
                         </div>
                       </div>
-                      <button
-                        className="reply-trigger-btn"
-                        title="Reply"
-                        onClick={() => setReplyingTo(msg)}
-                      >
-                        <svg viewBox="0 0 24 24">
-                          <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
-                        </svg>
-                      </button>
+                      {!isOutgoing && (
+                        <button
+                          className="reply-trigger-btn"
+                          title="Reply"
+                          onClick={() => setReplyingTo(msg)}
+                        >
+                          <svg viewBox="0 0 24 24">
+                            <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                     {isReceiptImage && activeBookingRequest && receiptPromptMsgIndex !== index && (
                       <div className="receipt-prompt">
