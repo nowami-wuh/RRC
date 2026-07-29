@@ -283,8 +283,31 @@ img {
   width: 100%;
 }
 
+/* Hidden on mobile by default — shown via media query */
 .mobile-logout-btn {
   display: none !important;
+  background: transparent !important;
+  color: var(--dark-blue, #4A70A9) !important;
+  border: 1.5px solid rgba(74, 112, 169, 0.4) !important;
+  width: 42px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+
+.mobile-logout-btn svg.logout-btn-icon {
+  width: 20px;
+  height: 20px;
+  stroke: var(--dark-blue, #4A70A9);
+}
+
+.mobile-logout-btn:hover {
+  background: var(--dark-blue, #4A70A9) !important;
+  border-color: var(--dark-blue, #4A70A9) !important;
+}
+
+.mobile-logout-btn:hover svg.logout-btn-icon {
+  stroke: #ffffff;
 }
 
 .logout-btn:hover {
@@ -524,6 +547,11 @@ img {
 
   .sidebar-bottom-actions {
     display: none !important;
+  }
+
+  /* Show the mobile logout icon button in the header */
+  .mobile-logout-btn {
+    display: flex !important;
   }
 
   .sidebar-logo {
