@@ -44,6 +44,13 @@ export default function AdminInventory() {
     unitName: '',
   });
 
+  const [removeUnitModal, setRemoveUnitModal] = useState({
+    show: false,
+    item: null,
+    unitId: '',
+    unitName: '',
+  });
+
   // UI state for flipped cards (array of category ids)
   const [flippedCards, setFlippedCards] = useState([]);
 
@@ -146,21 +153,32 @@ export default function AdminInventory() {
     }
   };
 
-  // Remove unit
-  const handleRemoveUnit = async (item, unitId) => {
-    if (!window.confirm('Are you sure you want to remove this unit?')) return;
-    const units = parseNotes(item.notes);
-    const updatedUnits = units.filter((u) => u.id !== unitId);
-    const newStock = updatedUnits.length;
+  // Show remove unit confirmation
+  const handleRemoveUnit = (item, unitId, unitName) => {
+    setRemoveUnitModal({ show: true, item, unitId, unitName });
+  };
+
+  const confirmRemoveUnit = async () => {
+    const { item, unitId } = removeUnitModal;
+    if (!item || !unitId) return;
+
     try {
+      const units = parseNotes(item.notes);
+      const updatedUnits = units.filter((u) => u.id !== unitId);
+      const newStock = updatedUnits.length;
       await updateAdminInventoryItem(item.id, { stock: newStock, notes: JSON.stringify(updatedUnits) });
       setInventoryItems((prev) =>
         prev.map((i) => (i.id === item.id ? { ...i, stock: newStock, notes: JSON.stringify(updatedUnits) } : i))
       );
+      setRemoveUnitModal({ show: false, item: null, unitId: '', unitName: '' });
       showToast('Unit removed successfully');
     } catch (err) {
       showToast(err.message || 'Failed to remove unit', true);
     }
+  };
+
+  const closeRemoveUnitModal = () => {
+    setRemoveUnitModal({ show: false, item: null, unitId: '', unitName: '' });
   };
 
   // Remove entire category (all inventory items under a subcategory)
@@ -458,166 +476,152 @@ export default function AdminInventory() {
   });
 
   return (
-    <section className="main-content">
+    <section className="main-content inventory-page">
       {/* ── Equipment Type Tabs ── */}
       <div className="equip-tabs">
         <button
           className={`equip-tab ${activeTab === 'sounds' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('sounds');
-            setCurrentPkgSection(null);
-            setSelectedPackage(null);
-          }}
+          onClick={() => setActiveTab('sounds')}
         >
           Sounds Equipment
         </button>
         <button
           className={`equip-tab ${activeTab === 'lights' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('lights');
-            setCurrentPkgSection(null);
-            setSelectedPackage(null);
-          }}
+          onClick={() => setActiveTab('lights')}
         >
           Lights Equipment
         </button>
+      </div>
+
+      {/* ── Toolbar ── */}
+      <div className="inventory-toolbar">
         <button
-          className={`equip-tab ${activeTab === 'packages' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('packages');
-            setCurrentPkgSection(null);
-            setSelectedPackage(null);
-          }}
+          className="add-category-btn"
+          onClick={() => setAddCategoryModal((prev) => ({ ...prev, show: true }))}
         >
-          Package Rate
+          Add Equipment Category
         </button>
       </div>
 
-      {activeTab !== 'packages' ? (
-        <>
-          {/* ── Toolbar ── */}
-          <div className="inventory-toolbar">
-            <button
-              className="add-category-btn"
-              onClick={() => setAddCategoryModal((prev) => ({ ...prev, show: true }))}
-            >
-              Add Equipment Category
-            </button>
+      {/* ── Category List ── */}
+      <div className="category-list">
+        {Object.keys(groupedInventory).length === 0 ? (
+          <div className="summary-empty" style={{ padding: '80px 0' }}>
+            No categories yet. Add one using the button above.
           </div>
-
-          {/* ── Category List ── */}
-          <div className="category-list">
-            {Object.keys(groupedInventory).length === 0 ? (
-              <div className="summary-empty" style={{ padding: '80px 0' }}>
-                No categories yet. Add one using the button above.
-              </div>
-            ) : (
-              Object.keys(groupedInventory).map((subCat) => {
-                const itemsInSubCat = groupedInventory[subCat];
-                const summary = buildSummary(itemsInSubCat);
-                const isFlipped = flippedCards.includes(subCat);
-                return (
-                  <div key={subCat} className={`category-card ${isFlipped ? 'flipped' : ''}`} data-cat-id={subCat}>
-                    <div className="category-card-inner">
-                      <div className="card-face front">
-                        <div className="card-header-row">
-                          <span className="category-title">{subCat}</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span className="flip-hint" onClick={() => toggleFlip(subCat)} style={{ cursor: 'pointer' }}>
-                              View Details
-                            </span>
-                            <button className="category-remove-btn" onClick={() => handleRemoveCategory(subCat)} title="Remove category">&times;</button>
-                          </div>
-                        </div>
-                        <div className="summary-table-wrap">
-                          <div className="summary-table-title">Inventory Summary</div>
-                          {summary.length === 0 ? (
-                            <p className="summary-empty">No equipment yet. Flip the card to add some.</p>
-                          ) : (
-                            <table className="summary-table">
-                              <thead>
-                                <tr>
-                                  <th>VARIATION</th>
-                                  <th>INOPERATIONAL</th>
-                                  <th>OPERATIONAL</th>
-                                  <th>IN USE</th>
-                                  <th>AVAILABLE</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {summary.map((row) => (
-                                  <tr key={row.variation}>
-                                    <td>{row.variation}</td>
-                                    <td>{row.inoperational}</td>
-                                    <td>{row.operational}</td>
-                                    <td>{row.inUse || '-'}</td>
-                                    <td>{row.available}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                        </div>
+        ) : (
+          Object.keys(groupedInventory).map((subCat) => {
+            const itemsInSubCat = groupedInventory[subCat];
+            const summary = buildSummary(itemsInSubCat);
+            const isFlipped = flippedCards.includes(subCat);
+            return (
+              <div key={subCat} className={`category-card ${isFlipped ? 'flipped' : ''}`} data-cat-id={subCat}>
+                <div className="category-card-inner">
+                  <div className="card-face front">
+                    <div className="card-header-row">
+                      <span className="category-title">{subCat}</span>
+                      <div className="category-actions">
+                        <button type="button" className="flip-toggle-btn" onClick={() => toggleFlip(subCat)}>
+                          View Details
+                        </button>
+                        <button className="category-remove-btn" onClick={() => handleRemoveCategory(subCat)} title="Remove category">
+                          &times;
+                        </button>
                       </div>
-
-                      <div className="card-face back">
-                        <div className="card-header-row">
-                          <span className="category-title">{subCat}</span>
-                          <span className="flip-hint" onClick={() => toggleFlip(subCat)} style={{ cursor: 'pointer' }}>Back to Summary</span>
-                        </div>
-                        <table className="detail-table">
+                    </div>
+                    <div className="summary-table-wrap">
+                      <div className="summary-table-title">Inventory Summary</div>
+                      {summary.length === 0 ? (
+                        <p className="summary-empty">No equipment yet. Flip the card to add some.</p>
+                      ) : (
+                        <table className="summary-table">
                           <thead>
                             <tr>
                               <th>VARIATION</th>
-                              <th>NAME</th>
-                              <th className="col-condition">CONDITION</th>
+                              <th>INOPERATIONAL</th>
+                              <th>OPERATIONAL</th>
+                              <th>IN USE</th>
+                              <th>AVAILABLE</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {itemsInSubCat.flatMap((item) => {
-                              const units = parseNotes(item.notes);
-                              return units.map((u) => (
-                                <tr key={u.id} data-unit-id={u.id}>
-                                  <td>
-                                    <div className="variation-cell">
-                                      <span>{getItemDisplayName(item.name)}</span>
-                                      <button className="unit-remove-x" onClick={() => handleRemoveUnit(item, u.id)} title="Remove unit">&times;</button>
-                                    </div>
-                                  </td>
-                                  <td className="unit-id-cell">
-                                    {u.name} {u.inUse && <span className="in-use-badge">● In Use</span>}
-                                  </td>
-                                  <td>
-                                    <div className="condition-toggle">
-                                      <button className={`condition-btn op ${u.condition === 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Operational')}>Operational</button>
-                                      <button className={`condition-btn inop ${u.condition !== 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Inoperational')}>Inoperational</button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ));
-                            })}
-                            <tr>
-                              <td colSpan="3">
-                                <button className="add-unit-row" onClick={() => openAddUnitModal(subCat, itemsInSubCat)}>
-                                  <em>Add Equipment</em> <span className="plus">+</span>
-                                </button>
-                              </td>
-                            </tr>
+                            {summary.map((row) => (
+                              <tr key={row.variation}>
+                                <td>{row.variation}</td>
+                                <td>{row.inoperational}</td>
+                                <td>{row.operational}</td>
+                                <td>{row.inUse || '-'}</td>
+                                <td>{row.available}</td>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
-                      </div>
+                      )}
                     </div>
                   </div>
-                );
-              })
-            )}
-          </div>
-            </>
-          ) : (
-            <div className="summary-empty" style={{ padding: '80px 0' }}>
-              Package Rate view is not available here.
-            </div>
-          )}
+
+                  <div className="card-face back">
+                    <div className="card-header-row">
+                      <span className="category-title">{subCat}</span>
+                      <button type="button" className="flip-toggle-btn back" onClick={() => toggleFlip(subCat)}>
+                        Back to Summary
+                      </button>
+                    </div>
+                    <div className="detail-table-wrap">
+                      <table className="detail-table">
+                        <thead>
+                          <tr>
+                            <th>VARIATION</th>
+                            <th>NAME</th>
+                            <th className="col-condition">CONDITION</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {itemsInSubCat.flatMap((item) => {
+                            const units = parseNotes(item.notes);
+                            return units.map((u) => (
+                              <tr key={u.id} data-unit-id={u.id}>
+                                <td>
+                                  <div className="variation-cell">
+                                    <span>{getItemDisplayName(item.name)}</span>
+                                    <button className="unit-remove-x" onClick={() => handleRemoveUnit(item, u.id, u.name)} title="Remove unit">
+                                      &times;
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="unit-id-cell">
+                                  {u.name} {u.inUse && <span className="in-use-badge">● In Use</span>}
+                                </td>
+                                <td>
+                                  <div className="condition-toggle">
+                                    <button className={`condition-btn op ${u.condition === 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Operational')}>
+                                      Operational
+                                    </button>
+                                    <button className={`condition-btn inop ${u.condition !== 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Inoperational')}>
+                                      Inoperational
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ));
+                          })}
+                          <tr>
+                            <td colSpan="3">
+                              <button className="add-unit-row" onClick={() => openAddUnitModal(subCat, itemsInSubCat)}>
+                                <em>Add Equipment</em> <span className="plus">+</span>
+                              </button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        )}
+      </div>
       {/* ══════════════════════════════
          MODALS
       ══════════════════════════════ */}
@@ -794,6 +798,31 @@ export default function AdminInventory() {
               </button>
               <button className="m-btn-save" onClick={handleSaveCategory}>
                 Create Category
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Remove Unit Confirmation Modal ── */}
+      <div className={`modal-overlay ${removeUnitModal.show ? 'active' : ''}`}>
+        <div className="modal">
+          <div className="modal-header">
+            <span className="modal-title">Remove Equipment Unit</span>
+            <button className="modal-close" onClick={closeRemoveUnitModal}>
+              ×
+            </button>
+          </div>
+          <div className="modal-body">
+            <p className="confirm-msg">
+              Remove <strong>{removeUnitModal.unitName}</strong> from <strong>{getItemDisplayName(removeUnitModal.item?.name || '')}</strong>?
+            </p>
+            <div className="m-actions">
+              <button className="m-btn-cancel" onClick={closeRemoveUnitModal}>
+                Cancel
+              </button>
+              <button className="m-btn-save" onClick={confirmRemoveUnit}>
+                Remove Unit
               </button>
             </div>
           </div>
