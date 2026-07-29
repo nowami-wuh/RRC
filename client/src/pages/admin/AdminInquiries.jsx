@@ -723,7 +723,19 @@ export default function AdminInquiries() {
                 </button>
               </div>
             ) : (
-              <div className="info-body">No information available</div>
+              <div className="info-body">
+                <div className="info-avatar">
+                  {(activeConversation?.name || activeConv || 'CU').substring(0, 2).toUpperCase()}
+                </div>
+                <div className="info-rows">
+                  <div><strong>Customer ID:</strong> {activeConv}</div>
+                  <div style={{ color: '#777', fontStyle: 'italic', fontSize: '13px', margin: '8px 0' }}>No additional profile information available.</div>
+                </div>
+                <button className="info-delete-btn" onClick={() => { setShowInfo(false); handleDeleteConversation(); }}>
+                  <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  Delete Conversation
+                </button>
+              </div>
             )}
           </div>
         </div>
