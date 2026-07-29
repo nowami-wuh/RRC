@@ -136,6 +136,13 @@ async function ensureTables() {
     // Column already exists — safe to ignore
   }
 
+  // Migrate existing table: add reply_to_json column for message replies
+  try {
+    await execute(`ALTER TABLE chat_messages ADD COLUMN reply_to_json LONGTEXT NULL AFTER time_label`);
+  } catch (e) {
+    // Column already exists — safe to ignore
+  }
+
   // Migrate existing tables: add avatar support for users and admins
   try { await execute(`ALTER TABLE customers ADD COLUMN avatar LONGTEXT NULL AFTER phone`); } catch (_) {}
   try { await execute(`ALTER TABLE admins ADD COLUMN avatar LONGTEXT NULL AFTER full_name`); } catch (_) {}

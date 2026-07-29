@@ -4,7 +4,12 @@ import { execute, query } from '../db.js';
 const router = express.Router();
 
 function formatMessage(row) {
+  let replyTo = null;
+  if (row.reply_to_json) {
+    try { replyTo = JSON.parse(row.reply_to_json); } catch (_) {}
+  }
   return {
+    id: row.id,
     type: row.sender_role === 'admin' ? 'received' : 'sent',
     senderRole: row.sender_role,
     senderName: row.sender_name,
@@ -12,7 +17,9 @@ function formatMessage(row) {
     text: row.text,
     image: row.image,
     time: row.time_label,
+    createdAt: row.created_at || new Date().toISOString(),
     isRead: Boolean(row.is_read),
+    replyTo: replyTo,
   };
 }
 
@@ -47,14 +54,16 @@ router.post('/messages', (req, res) => {
   const senderName = payload.senderName || (senderRole === 'admin' ? 'RRC Admin' : 'Customer');
   const customerPublicId = payload.customerPublicId || null;
   const timeLabel = payload.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const replyToJson = payload.replyTo ? JSON.stringify(payload.replyTo) : null;
 
   execute(
-    'INSERT INTO chat_messages (sender_role, sender_name, customer_public_id, text, image, time_label) VALUES (?, ?, ?, ?, ?, ?)',
-    [senderRole, senderName, customerPublicId, payload.text || '', payload.image || null, timeLabel],
+    'INSERT INTO chat_messages (sender_role, sender_name, customer_public_id, text, image, time_label, reply_to_json) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [senderRole, senderName, customerPublicId, payload.text || '', payload.image || null, timeLabel, replyToJson],
   )
-    .then(() => {
+    .then((result) => {
       res.status(201).json({
         message: {
+          id: result.insertId,
           type: senderRole === 'admin' ? 'received' : 'sent',
           senderRole,
           senderName,
@@ -62,6 +71,8 @@ router.post('/messages', (req, res) => {
           text: payload.text || '',
           image: payload.image || null,
           time: timeLabel,
+          createdAt: new Date().toISOString(),
+          replyTo: payload.replyTo || null,
         },
       });
     })

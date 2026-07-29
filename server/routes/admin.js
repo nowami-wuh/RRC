@@ -177,17 +177,25 @@ router.patch('/requests/:requestCode', async (req, res) => {
 router.get('/inquiries', async (req, res) => {
   try {
     const rows = await query('SELECT * FROM chat_messages ORDER BY created_at ASC, id ASC');
-    res.json({ messages: rows.map((row) => ({
-      id: row.id,
-      senderRole: row.sender_role,
-      senderName: row.sender_name,
-      customerPublicId: row.customer_public_id,
-      type: row.sender_role === 'admin' ? 'received' : 'sent',
-      text: row.text,
-      image: row.image,
-      time: row.time_label,
-      isRead: Boolean(row.is_read),
-    })) });
+    res.json({ messages: rows.map((row) => {
+      let replyTo = null;
+      if (row.reply_to_json) {
+        try { replyTo = JSON.parse(row.reply_to_json); } catch (_) {}
+      }
+      return {
+        id: row.id,
+        senderRole: row.sender_role,
+        senderName: row.sender_name,
+        customerPublicId: row.customer_public_id,
+        type: row.sender_role === 'admin' ? 'received' : 'sent',
+        text: row.text,
+        image: row.image,
+        time: row.time_label,
+        createdAt: row.created_at || new Date().toISOString(),
+        isRead: Boolean(row.is_read),
+        replyTo: replyTo,
+      };
+    }) });
   } catch (error) {
     res.status(500).json({ error: error.message || 'Unable to load inquiries' });
   }
@@ -224,9 +232,11 @@ router.post('/inquiries', async (req, res) => {
     const payload = req.body || {};
     const timeLabel = payload.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const customerPublicId = payload.customerPublicId || null;
-    await execute(
-      'INSERT INTO chat_messages (sender_role, sender_name, customer_public_id, text, image, time_label) VALUES (?, ?, ?, ?, ?, ?)',
-      [payload.senderRole || 'admin', payload.senderName || 'RRC Admin', customerPublicId, payload.text || '', payload.image || null, timeLabel],
+    const replyToJson = payload.replyTo ? JSON.stringify(payload.replyTo) : null;
+
+    const result = await execute(
+      'INSERT INTO chat_messages (sender_role, sender_name, customer_public_id, text, image, time_label, reply_to_json) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [payload.senderRole || 'admin', payload.senderName || 'RRC Admin', customerPublicId, payload.text || '', payload.image || null, timeLabel, replyToJson],
     );
 
     // ── Email notification to customer ──────────────────────────────────────
@@ -247,7 +257,19 @@ router.post('/inquiries', async (req, res) => {
       }
     }
 
-    res.status(201).json({ message: { senderRole: payload.senderRole || 'admin', senderName: payload.senderName || 'RRC Admin', customerPublicId, text: payload.text || '', image: payload.image || null, time: timeLabel } });
+    res.status(201).json({
+      message: {
+        id: result.insertId,
+        senderRole: payload.senderRole || 'admin',
+        senderName: payload.senderName || 'RRC Admin',
+        customerPublicId,
+        text: payload.text || '',
+        image: payload.image || null,
+        time: timeLabel,
+        createdAt: new Date().toISOString(),
+        replyTo: payload.replyTo || null,
+      },
+    });
   } catch (error) {
     res.status(500).json({ error: error.message || 'Unable to post reply' });
   }

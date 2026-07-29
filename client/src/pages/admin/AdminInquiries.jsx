@@ -2,6 +2,29 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, markConversationRead, deleteConversation } from '../../api/api';
 
+function getMessageDateHeader(createdAt, timeLabel) {
+  if (!createdAt) return null;
+  const msgDate = new Date(createdAt);
+  if (isNaN(msgDate.getTime())) return null;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const targetDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
+
+  if (targetDay.getTime() === today.getTime()) {
+    return 'Today';
+  } else if (targetDay.getTime() === yesterday.getTime()) {
+    return 'Yesterday';
+  } else if (now.getFullYear() === msgDate.getFullYear()) {
+    return msgDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  } else {
+    return msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+}
+
 export default function AdminInquiries() {
   const [messages, setMessages] = useState([]);
   const [activeConv, setActiveConv] = useState('');
@@ -13,6 +36,8 @@ export default function AdminInquiries() {
   const [adminRequests, setAdminRequests] = useState([]);
   const [receiptPromptMsgIndex, setReceiptPromptMsgIndex] = useState(null);
   const [customerAvatars, setCustomerAvatars] = useState({});
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [highlightedId, setHighlightedId] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
@@ -274,9 +299,24 @@ export default function AdminInquiries() {
     }
   };
 
+  const scrollToMessage = (targetId) => {
+    const el = document.getElementById(`msg-${targetId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedId(targetId);
+      setTimeout(() => setHighlightedId(null), 2000);
+    }
+  };
+
   const handleReply = async () => {
     if (!reply.trim() || !activeConv) return;
     const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const currentReply = replyingTo ? {
+      id: replyingTo.id,
+      senderName: replyingTo.senderName,
+      text: replyingTo.text,
+      image: replyingTo.image ? '📷 Photo' : null
+    } : null;
 
     const payload = {
       senderRole: 'admin',
@@ -284,12 +324,15 @@ export default function AdminInquiries() {
       customerPublicId: activeConv,   // links reply to this customer's thread
       text: reply.trim(),
       time: timeLabel,
+      replyTo: currentReply,
     };
+
+    setReply('');
+    setReplyingTo(null);
 
     try {
       const response = await sendAdminInquiryReply(payload);
       setMessages((prev) => [...prev, response.message]);
-      setReply('');
     } catch {}
   };
 
@@ -301,6 +344,12 @@ export default function AdminInquiries() {
       const base64Str = reader.result;
       if (!activeConv) return;
       const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const currentReply = replyingTo ? {
+        id: replyingTo.id,
+        senderName: replyingTo.senderName,
+        text: replyingTo.text,
+        image: replyingTo.image ? '📷 Photo' : null
+      } : null;
 
       const payload = {
         senderRole: 'admin',
@@ -309,7 +358,10 @@ export default function AdminInquiries() {
         text: '',
         image: base64Str,
         time: timeLabel,
+        replyTo: currentReply,
       };
+
+      setReplyingTo(null);
 
       try {
         const response = await sendAdminInquiryReply(payload);
@@ -441,9 +493,21 @@ export default function AdminInquiries() {
               {activeMessages.map((msg, index) => {
                 const isOutgoing = msg.senderRole === 'admin';
                 const isReceiptImage = !isOutgoing && msg.image;
+                const currentDateHeader = getMessageDateHeader(msg.createdAt, msg.time);
+                const prevDateHeader = index > 0 ? getMessageDateHeader(activeMessages[index - 1].createdAt, activeMessages[index - 1].time) : null;
+                const showDateHeader = currentDateHeader && currentDateHeader !== prevDateHeader;
+
                 return (
-                  <React.Fragment key={index}>
-                    <div className={`msg-row ${isOutgoing ? 'outgoing' : 'incoming'}`}>
+                  <React.Fragment key={msg.id || index}>
+                    {showDateHeader && (
+                      <div className="date-separator">
+                        <span>{currentDateHeader}</span>
+                      </div>
+                    )}
+                    <div
+                      id={`msg-${msg.id || index}`}
+                      className={`msg-row ${isOutgoing ? 'outgoing' : 'incoming'} ${highlightedId === msg.id ? 'highlight-msg' : ''}`}
+                    >
                       {!isOutgoing && (
                         <div className="msg-avatar">
                           {customerAvatars[msg.customerPublicId]
@@ -452,6 +516,19 @@ export default function AdminInquiries() {
                         </div>
                       )}
                       <div className={`bubble ${msg.image ? 'image-bubble' : ''}`}>
+                        {/* Quoted Reply Box */}
+                        {msg.replyTo && (
+                          <div
+                            className="reply-quote-box"
+                            onClick={() => msg.replyTo.id && scrollToMessage(msg.replyTo.id)}
+                            title="Click to view original message"
+                          >
+                            <div className="reply-quote-name">{msg.replyTo.senderName}</div>
+                            <div className="reply-quote-text">
+                              {msg.replyTo.text || (msg.replyTo.image ? '📷 Photo' : 'Message')}
+                            </div>
+                          </div>
+                        )}
                         {msg.text && <div>{msg.text}</div>}
                         {msg.image && <img src={msg.image} alt="Attachment" />}
                         <div className="bubble-meta">
@@ -459,6 +536,15 @@ export default function AdminInquiries() {
                           {isOutgoing && <span className="read-tick">✓</span>}
                         </div>
                       </div>
+                      <button
+                        className="reply-trigger-btn"
+                        title="Reply"
+                        onClick={() => setReplyingTo(msg)}
+                      >
+                        <svg viewBox="0 0 24 24">
+                          <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
+                        </svg>
+                      </button>
                     </div>
                     {isReceiptImage && activeBookingRequest && receiptPromptMsgIndex !== index && (
                       <div className="receipt-prompt">
@@ -487,6 +573,24 @@ export default function AdminInquiries() {
               })}
               <div ref={messagesEndRef} />
             </div>
+
+            {/* Reply Preview Bar above input bar */}
+            {replyingTo && (
+              <div className="reply-preview-bar">
+                <div className="reply-preview-content">
+                  <div className="reply-preview-title">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
+                    </svg>
+                    <span>Replying to {replyingTo.senderName}</span>
+                  </div>
+                  <div className="reply-preview-snippet">
+                    {replyingTo.text || (replyingTo.image ? '📷 Photo' : 'Message')}
+                  </div>
+                </div>
+                <button className="reply-preview-close" onClick={() => setReplyingTo(null)} title="Cancel reply">&times;</button>
+              </div>
+            )}
 
             <div className="chat-input-bar">
               <input

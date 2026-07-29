@@ -43,30 +43,45 @@
     background-position: center;
 }
 
-/* Date separator */
+/* Date separator (Messenger Meta Style) */
 .date-separator {
     text-align: center;
-    margin: 14px 0 10px;
+    margin: 16px 0 10px;
     position: relative;
+    user-select: none;
 }
 
 .date-separator span {
-    background: rgba(255,255,255,0.22);
-    color: rgba(255,255,255,0.9);
-    font-family: 'Garet', sans-serif;
-    font-size: 12px;
+    background: rgba(0, 0, 0, 0.25);
+    color: #ffffff;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
     padding: 4px 14px;
     border-radius: 12px;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 
 /* Bubble rows */
 .msg-row {
     display: flex;
     align-items: flex-end;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 4px;
     animation: msgIn 0.2s ease;
+    position: relative;
+}
+
+.msg-row.highlight-msg .bubble {
+    animation: highlightPulse 1.8s ease;
+}
+
+@keyframes highlightPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(74, 112, 169, 0.7); }
+    30% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(74, 112, 169, 0.3); }
+    100% { transform: scale(1); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 }
 
 @keyframes msgIn {
@@ -76,7 +91,136 @@
 
 /* Received (admin → customer): left side */
 .msg-row.incoming { justify-content: flex-start; }
-.msg-row.outgoing { justify-content: flex-end; }
+.msg-row.outgoing { justify-content: flex-end; flex-direction: row-reverse; }
+
+/* Reply trigger button on hover/tap */
+.reply-trigger-btn {
+    background: rgba(255,255,255,0.85);
+    border: none;
+    border-radius: 50%;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.18s, transform 0.15s, background 0.15s;
+    color: var(--text-dark);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    flex-shrink: 0;
+    align-self: center;
+}
+.msg-row:hover .reply-trigger-btn,
+.msg-row:focus-within .reply-trigger-btn {
+    opacity: 1;
+}
+.reply-trigger-btn:hover {
+    background: #ffffff;
+    transform: scale(1.1);
+}
+.reply-trigger-btn svg {
+    width: 14px; height: 14px;
+    fill: currentColor;
+}
+
+/* Quoted Reply Box inside bubble */
+.reply-quote-box {
+    background: rgba(0, 0, 0, 0.06);
+    border-left: 3.5px solid var(--dark-blue);
+    border-radius: 8px;
+    padding: 5px 10px;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.msg-row.incoming .reply-quote-box {
+    background: rgba(74, 112, 169, 0.08);
+    border-left-color: var(--dark-blue);
+}
+.msg-row.outgoing .reply-quote-box {
+    background: rgba(0, 0, 0, 0.07);
+    border-left-color: #333;
+}
+.reply-quote-box:hover {
+    background: rgba(0, 0, 0, 0.12);
+}
+.reply-quote-name {
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--dark-blue);
+    margin-bottom: 2px;
+}
+.msg-row.outgoing .reply-quote-name {
+    color: #222;
+}
+.reply-quote-text {
+    color: #444;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+}
+
+/* ── Reply Bar (above input bar) ── */
+.reply-preview-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 18px;
+    background: #f0f4fa;
+    border-top: 1.5px solid #e0e7f3;
+    border-left: 4px solid var(--dark-blue);
+    font-size: 13px;
+    animation: slideUp 0.18s ease;
+}
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.reply-preview-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+.reply-preview-title {
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 11.5px;
+    font-weight: 900;
+    color: var(--dark-blue);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.reply-preview-title svg {
+    width: 12px; height: 12px;
+    fill: currentColor;
+}
+.reply-preview-snippet {
+    color: #555;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+    font-size: 12.5px;
+}
+.reply-preview-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #888;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 50%;
+    transition: color 0.15s, background 0.15s;
+    margin-left: 10px;
+}
+.reply-preview-close:hover {
+    color: #111;
+    background: #e2e8f5;
+}
 
 /* Avatar for incoming */
 .msg-avatar {

@@ -3,12 +3,37 @@ import { useAuth } from '../context/AuthContext';
 import { fetchChatMessages, postChatMessage } from '../api/api';
 import '../styles/chat.css';
 
+function getMessageDateHeader(createdAt, timeLabel) {
+  if (!createdAt) return null;
+  const msgDate = new Date(createdAt);
+  if (isNaN(msgDate.getTime())) return null;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const targetDay = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
+
+  if (targetDay.getTime() === today.getTime()) {
+    return 'Today';
+  } else if (targetDay.getTime() === yesterday.getTime()) {
+    return 'Yesterday';
+  } else if (now.getFullYear() === msgDate.getFullYear()) {
+    return msgDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  } else {
+    return msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+}
+
 export default function ChatPage() {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [highlightedId, setHighlightedId] = useState(null);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -23,20 +48,46 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const scrollToMessage = (targetId) => {
+    const el = document.getElementById(`msg-${targetId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedId(targetId);
+      setTimeout(() => setHighlightedId(null), 2000);
+    }
+  };
+
   const handleSend = async () => {
     if (!text.trim()) return;
+    const currentReply = replyingTo ? {
+      id: replyingTo.id,
+      senderName: replyingTo.senderName,
+      text: replyingTo.text,
+      image: replyingTo.image ? '📷 Photo' : null
+    } : null;
+
     const newMessage = {
       type: 'sent',
       senderRole: 'customer',
       senderName: user?.username || 'Customer',
       customerPublicId: user?.id || null,
       text: text.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString(),
+      replyTo: currentReply,
     };
+
     setMessages((prev) => [...prev, newMessage]);
     setText('');
+    setReplyingTo(null);
+
     try {
-      await postChatMessage(newMessage);
+      const res = await postChatMessage(newMessage);
+      if (res?.message?.id) {
+        setMessages((prev) =>
+          prev.map((m) => (m === newMessage ? { ...m, id: res.message.id } : m))
+        );
+      }
     } catch {
       setError('Unable to send message.');
     }
@@ -48,6 +99,13 @@ export default function ChatPage() {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64Str = reader.result;
+      const currentReply = replyingTo ? {
+        id: replyingTo.id,
+        senderName: replyingTo.senderName,
+        text: replyingTo.text,
+        image: replyingTo.image ? '📷 Photo' : null
+      } : null;
+
       const newMessage = {
         type: 'sent',
         senderRole: 'customer',
@@ -55,11 +113,21 @@ export default function ChatPage() {
         customerPublicId: user?.id || null,
         text: '',
         image: base64Str,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAt: new Date().toISOString(),
+        replyTo: currentReply,
       };
+
       setMessages((prev) => [...prev, newMessage]);
+      setReplyingTo(null);
+
       try {
-        await postChatMessage(newMessage);
+        const res = await postChatMessage(newMessage);
+        if (res?.message?.id) {
+          setMessages((prev) =>
+            prev.map((m) => (m === newMessage ? { ...m, id: res.message.id } : m))
+          );
+        }
       } catch {
         setError('Unable to send photo.');
       }
@@ -80,33 +148,88 @@ export default function ChatPage() {
         <div className="chat-messages">
           {filteredMessages.map((message, index) => {
             const isOutgoing = message.type === 'sent';
+            const currentDateHeader = getMessageDateHeader(message.createdAt, message.time);
+            const prevDateHeader = index > 0 ? getMessageDateHeader(filteredMessages[index - 1].createdAt, filteredMessages[index - 1].time) : null;
+            const showDateHeader = currentDateHeader && currentDateHeader !== prevDateHeader;
+
             return (
-              <div key={index} className={`msg-row ${isOutgoing ? 'outgoing' : 'incoming'}`}>
-                {!isOutgoing && (
-                  <div className="msg-avatar">
-                    {message.senderName?.substring(0, 2).toUpperCase() || 'AD'}
+              <div key={message.id || index} style={{ display: 'contents' }}>
+                {showDateHeader && (
+                  <div className="date-separator">
+                    <span>{currentDateHeader}</span>
                   </div>
                 )}
-                <div className={`bubble ${message.image ? 'image-bubble' : ''}`}>
-                  {message.text && <div>{message.text}</div>}
-                  {message.image && <img src={message.image} alt="Attachment" />}
-                  <div className="bubble-meta">
-                    <span className="bubble-time">{message.time}</span>
-                    {isOutgoing && <span className="read-tick">✓</span>}
+                <div
+                  id={`msg-${message.id || index}`}
+                  className={`msg-row ${isOutgoing ? 'outgoing' : 'incoming'} ${highlightedId === message.id ? 'highlight-msg' : ''}`}
+                >
+                  {!isOutgoing && (
+                    <div className="msg-avatar">
+                      {message.senderName?.substring(0, 2).toUpperCase() || 'AD'}
+                    </div>
+                  )}
+                  <div className={`bubble ${message.image ? 'image-bubble' : ''}`}>
+                    {/* Quoted Reply Box */}
+                    {message.replyTo && (
+                      <div
+                        className="reply-quote-box"
+                        onClick={() => message.replyTo.id && scrollToMessage(message.replyTo.id)}
+                        title="Click to view original message"
+                      >
+                        <div className="reply-quote-name">{message.replyTo.senderName}</div>
+                        <div className="reply-quote-text">
+                          {message.replyTo.text || (message.replyTo.image ? '📷 Photo' : 'Message')}
+                        </div>
+                      </div>
+                    )}
+                    {message.text && <div>{message.text}</div>}
+                    {message.image && <img src={message.image} alt="Attachment" />}
+                    <div className="bubble-meta">
+                      <span className="bubble-time">{message.time}</span>
+                      {isOutgoing && <span className="read-tick">✓</span>}
+                    </div>
                   </div>
+                  <button
+                    className="reply-trigger-btn"
+                    title="Reply"
+                    onClick={() => setReplyingTo(message)}
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
+                    </svg>
+                  </button>
+                  {isOutgoing && (
+                    <div className="msg-avatar msg-avatar-self">
+                      {user?.avatar
+                        ? <img src={user.avatar} alt="You" className="msg-avatar-img" />
+                        : (user?.username?.substring(0, 2).toUpperCase() || 'ME')}
+                    </div>
+                  )}
                 </div>
-                {isOutgoing && (
-                  <div className="msg-avatar msg-avatar-self">
-                    {user?.avatar
-                      ? <img src={user.avatar} alt="You" className="msg-avatar-img" />
-                      : (user?.username?.substring(0, 2).toUpperCase() || 'ME')}
-                  </div>
-                )}
               </div>
             );
           })}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Reply Preview Bar above input bar */}
+        {replyingTo && (
+          <div className="reply-preview-bar">
+            <div className="reply-preview-content">
+              <div className="reply-preview-title">
+                <svg viewBox="0 0 24 24">
+                  <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
+                </svg>
+                <span>Replying to {replyingTo.senderName}</span>
+              </div>
+              <div className="reply-preview-snippet">
+                {replyingTo.text || (replyingTo.image ? '📷 Photo' : 'Message')}
+              </div>
+            </div>
+            <button className="reply-preview-close" onClick={() => setReplyingTo(null)} title="Cancel reply">&times;</button>
+          </div>
+        )}
+
         <div className="chat-input-bar">
           <input
             type="file"
@@ -122,7 +245,7 @@ export default function ChatPage() {
           </div>
           <input
             className="chat-input"
-            placeholder="Type your message..."
+            placeholder={replyingTo ? `Replying to ${replyingTo.senderName}…` : 'Type your message...'}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
