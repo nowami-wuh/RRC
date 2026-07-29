@@ -44,6 +44,9 @@ export default function AdminInventory() {
     unitName: '',
   });
 
+  // UI state for flipped cards (array of category ids)
+  const [flippedCards, setFlippedCards] = useState([]);
+
   // Package edit mode inputs
   const [pkgEditInputs, setPkgEditInputs] = useState({
     name: '',
@@ -110,6 +113,24 @@ export default function AdminInventory() {
     }
   };
 
+  // Build summary aggregation for a category (items array)
+  const buildSummary = (items) => {
+    const map = {};
+    items.forEach((item) => {
+      const variation = getItemDisplayName(item.name);
+      const units = parseNotes(item.notes);
+      units.forEach((u) => {
+        if (!map[variation]) map[variation] = { variation, inoperational: 0, operational: 0, inUse: 0, total: 0 };
+        const row = map[variation];
+        row.total++;
+        if (u.condition === 'Inoperational' || u.condition === 'Inoperative') row.inoperational++;
+        else row.operational++;
+        if (u.inUse) row.inUse++;
+      });
+    });
+    return Object.values(map).map((r) => ({ ...r, available: Math.max(0, r.operational - r.inUse) }));
+  };
+
   // Toggle unit condition
   const handleToggleCondition = async (item, unitId, newCondition) => {
     const units = parseNotes(item.notes);
@@ -140,6 +161,28 @@ export default function AdminInventory() {
     } catch (err) {
       showToast(err.message || 'Failed to remove unit', true);
     }
+  };
+
+  // Remove entire category (all inventory items under a subcategory)
+  const handleRemoveCategory = async (subCat) => {
+    if (!window.confirm(`Remove category "${subCat}" and all its equipment?`)) return;
+    try {
+      const itemsToRemove = filteredInventory.filter((it) => getSubCategory(it.name) === subCat);
+      await Promise.all(itemsToRemove.map((it) => deleteAdminInventoryItem(it.id)));
+      loadAllData();
+      showToast(`"${subCat}" category removed.`);
+    } catch (err) {
+      showToast(err.message || 'Failed to remove category', true);
+    }
+  };
+
+  const toggleFlip = (catId) => {
+    setFlippedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(catId)) next.delete(catId);
+      else next.add(catId);
+      return Array.from(next);
+    });
   };
 
   // Open Add Unit Modal
@@ -491,22 +534,22 @@ export default function AdminInventory() {
                                   {unit.name}
                                   {unit.inUse && <span className="in-use-badge">In-Use</span>}
                                 </td>
-                                <td className="col-condition">
-                                  <div className="condition-toggle">
-                                    <button
-                                      className={`condition-btn op ${unit.condition === 'Operational' ? 'selected' : ''}`}
-                                      onClick={() => handleToggleCondition(item, unit.id, 'Operational')}
-                                    >
-                                      Operational
-                                    </button>
-                                    <button
-                                      className={`condition-btn inop ${unit.condition !== 'Operational' ? 'selected' : ''}`}
-                                      onClick={() => handleToggleCondition(item, unit.id, 'Inoperative')}
-                                    >
-                                      Inoperational
-                                    </button>
-                                  </div>
-                                </td>
+                                  <td className="col-condition">
+                                    <div className="condition-toggle">
+                                      <button
+                                        className={`condition-btn op ${unit.condition === 'Operational' ? 'selected' : ''}`}
+                                        onClick={() => handleToggleCondition(item, unit.id, 'Operational')}
+                                      >
+                                        Operational
+                                      </button>
+                                      <button
+                                        className={`condition-btn inop ${unit.condition !== 'Operational' ? 'selected' : ''}`}
+                                        onClick={() => handleToggleCondition(item, unit.id, 'Inoperational')}
+                                      >
+                                        Inoperational
+                                      </button>
+                                    </div>
+                                  </td>
                               </tr>
                             ));
                           })}
@@ -522,81 +565,104 @@ export default function AdminInventory() {
                             </td>
                           </tr>
                         </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        /* ── Package Rate Dashboard ── */
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {currentPkgSection === null ? (
-            <div className="pkg-rate-menu">
-              <button className="pkg-rate-menu-btn" onClick={() => setCurrentPkgSection('cosupplier')}>
-                Packages
-              </button>
-              <button className="pkg-rate-menu-btn" onClick={() => setCurrentPkgSection('equipment')}>
-                Equipment Add-ons
-              </button>
-              <button className="pkg-rate-menu-btn" onClick={() => setCurrentPkgSection('effects')}>
-                Special Effects Add-ons
-              </button>
-              <button className="pkg-rate-menu-btn" onClick={() => setCurrentPkgSection('misc')}>
-                Miscellaneous
-              </button>
-            </div>
-          ) : (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '20px 30px 0' }}>
-                <button
-                  className="back-btn"
-                  onClick={() => {
-                    setCurrentPkgSection(null);
-                    setSelectedPackage(null);
-                  }}
-                >
-                  ← Back
-                </button>
-              </div>
+                          {Object.keys(groupedInventory).map((subCat) => {
+                            const itemsInSubCat = groupedInventory[subCat];
+                            const summary = buildSummary(itemsInSubCat);
+                            const isFlipped = flippedCards.includes(subCat);
+                            return (
+                              <div key={subCat} className={`category-card ${isFlipped ? 'flipped' : ''}`} data-cat-id={subCat}>
+                                <div className="category-card-inner">
+                                  <div className="card-face front">
+                                    <div className="card-header-row">
+                                      <span className="category-title">{subCat}</span>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <span className="flip-hint" onClick={() => toggleFlip(subCat)} style={{ cursor: 'pointer' }}>
+                                          View Details
+                                        </span>
+                                        <button className="category-remove-btn" onClick={() => handleRemoveCategory(subCat)} title="Remove category">&times;</button>
+                                      </div>
+                                    </div>
+                                    <div className="summary-table-wrap">
+                                      <div className="summary-table-title">Inventory Summary</div>
+                                      {summary.length === 0 ? (
+                                        <p className="summary-empty">No equipment yet. Flip the card to add some.</p>
+                                      ) : (
+                                        <table className="summary-table">
+                                          <thead>
+                                            <tr>
+                                              <th>VARIATION</th>
+                                              <th>INOPERATIONAL</th>
+                                              <th>OPERATIONAL</th>
+                                              <th>IN USE</th>
+                                              <th>AVAILABLE</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {summary.map((row) => (
+                                              <tr key={row.variation}>
+                                                <td>{row.variation}</td>
+                                                <td>{row.inoperational}</td>
+                                                <td>{row.operational}</td>
+                                                <td>{row.inUse || '-'}</td>
+                                                <td>{row.available}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      )}
+                                    </div>
+                                  </div>
 
-              {/* ── PACKAGES (CO-SUPPLIER) SECTION ── */}
-              {currentPkgSection === 'cosupplier' && (
-                <div>
-                  {/* Selection tabs */}
-                  <div style={{ display: 'flex', gap: '8px', padding: '10px 30px', flexWrap: 'wrap' }}>
-                    {packages
-                      .filter((p) => p.section === 'cosupplier')
-                      .map((p) => (
-                        <button
-                          key={p.id}
-                          className={`add-category-btn`}
-                          style={{
-                            background: selectedPackage?.id === p.id ? 'var(--dark-blue)' : '#111',
-                          }}
-                          onClick={() => handleSelectPackage(p)}
-                        >
-                          {p.name}
-                        </button>
-                      ))}
-                  </div>
-
-                  {selectedPackage ? (
-                    <div className="pkg-edit-card">
-                      <div className="pkg-edit-header">
-                        <div className="pkg-edit-title-group">
-                          <input
-                            type="text"
-                            className="m-input pkg-edit-title"
-                            style={{ border: 'none', background: 'transparent', padding: '4px 0' }}
-                            value={pkgEditInputs.name}
-                            onChange={(e) => updatePkgField('name', e.target.value)}
-                          />
-                          <input
-                            type="text"
-                            className="m-input"
+                                  <div className="card-face back">
+                                    <div className="card-header-row">
+                                      <span className="category-title">{subCat}</span>
+                                      <span className="flip-hint" onClick={() => toggleFlip(subCat)} style={{ cursor: 'pointer' }}>Back to Summary</span>
+                                    </div>
+                                    <table className="detail-table">
+                                      <thead>
+                                        <tr>
+                                          <th>VARIATION</th>
+                                          <th>NAME</th>
+                                          <th className="col-condition">CONDITION</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {itemsInSubCat.flatMap((item) => {
+                                          const units = parseNotes(item.notes);
+                                          return units.map((u) => (
+                                            <tr key={u.id} data-unit-id={u.id}>
+                                              <td>
+                                                <div className="variation-cell">
+                                                  <span>{getItemDisplayName(item.name)}</span>
+                                                  <button className="unit-remove-x" onClick={() => handleRemoveUnit(item, u.id)} title="Remove unit">&times;</button>
+                                                </div>
+                                              </td>
+                                              <td className="unit-id-cell">
+                                                {u.name} {u.inUse && <span className="in-use-badge">● In Use</span>}
+                                              </td>
+                                              <td>
+                                                <div className="condition-toggle">
+                                                  <button className={`condition-btn op ${u.condition === 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Operational')}>Operational</button>
+                                                  <button className={`condition-btn inop ${u.condition !== 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Inoperational')}>Inoperational</button>
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          ));
+                                        })}
+                                        <tr>
+                                          <td colSpan="3">
+                                            <button className="add-unit-row" onClick={() => openAddUnitModal(subCat, itemsInSubCat)}>
+                                              <em>Add Equipment</em> <span className="plus">+</span>
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                             style={{
                               border: 'none',
                               background: 'transparent',
@@ -989,8 +1055,8 @@ export default function AdminInventory() {
                   <input
                     type="radio"
                     name="modal-cond"
-                    checked={addUnitModal.condition !== 'Operational'}
-                    onChange={() => setAddUnitModal((prev) => ({ ...prev, condition: 'Inoperative' }))}
+                      checked={addUnitModal.condition !== 'Operational'}
+                      onChange={() => setAddUnitModal((prev) => ({ ...prev, condition: 'Inoperational' }))}
                   />
                   Inoperative
                 </label>
