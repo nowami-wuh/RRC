@@ -141,6 +141,20 @@ export default function HomePage() {
 
   return (
     <>
+      <header className="page-header">
+        <h1 className="page-title">EVENTS CALENDAR</h1>
+        <div className="header-legend">
+          <span className="legend-item">
+            <span className="legend-dot today"></span>
+            Today
+          </span>
+          <span className="legend-item">
+            <span className="legend-dot has-event"></span>
+            Has event
+          </span>
+        </div>
+      </header>
+
       <div className="content-wrapper">
         <section className="calendar-section">
           <div className="calendar-header">
