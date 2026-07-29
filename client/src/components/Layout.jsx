@@ -134,7 +134,6 @@ export default function Layout() {
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="sidebar-brand-icons">
-              <img src="/light-icon.png" alt="RRC light icon" className="sidebar-light-icon" />
               <img src="/rrc-logo.jpg" alt="RRC Logo" className="sidebar-logo" />
             </div>
             <h1 className="sidebar-title">
