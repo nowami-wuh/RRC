@@ -432,11 +432,19 @@ export default function AdminInventory() {
     }
   };
 
-  // Filter items by category tab (normalize casing and whitespace)
+  const normalizeCategory = (category = '') => {
+    return category
+      .toString()
+      .trim()
+      .toLowerCase()
+      .split(/–|-/)[0]
+      .trim();
+  };
+
+  // Filter items by category tab (normalize casing, whitespace, and subcategory prefixes)
   const categoryFilter = activeTab === 'sounds' ? 'audio' : 'lights';
   const filteredInventory = inventoryItems.filter((item) => {
-    const cat = (item.category || '').toString().trim().toLowerCase();
-    return cat === categoryFilter;
+    return normalizeCategory(item.category) === categoryFilter;
   });
 
   // Group items by their subcategory (prefix before bracket)
