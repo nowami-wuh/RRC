@@ -64,6 +64,40 @@ export default function AdminInquiries() {
     setTouchCurrentX(0);
     setSwipingMsgId(null);
   };
+
+  // Long-press on conversation items
+  const [longPressConvId, setLongPressConvId] = useState(null);
+  const [longPressPos, setLongPressPos] = useState({ x: 0, y: 0 });
+  const longPressTimer = useRef(null);
+
+  const handleConvPressStart = (e, convId) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    longPressTimer.current = setTimeout(() => {
+      setLongPressConvId(convId);
+      setLongPressPos({ x: clientX, y: clientY });
+    }, 600);
+  };
+
+  const handleConvPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleConvLongPressDelete = () => {
+    if (longPressConvId) {
+      const previousActiveConv = activeConv;
+      // temporarily set activeConv to the long-pressed one so handleDeleteConversation targets it
+      setActiveConv(longPressConvId);
+      setTimeout(() => {
+        handleDeleteConversation();
+      }, 0);
+    }
+    setLongPressConvId(null);
+  };
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
@@ -431,8 +465,19 @@ export default function AdminInquiries() {
             return (
               <div
                 key={conv.id}
-                className={`conv-item ${isUnread ? 'unread' : ''}`}
-                onClick={() => handleSelectConversation(conv.id)}
+                className={`conv-item ${isUnread ? 'unread' : ''} ${longPressConvId === conv.id ? 'long-pressed' : ''}`}
+                onClick={() => { if (!longPressConvId) handleSelectConversation(conv.id); }}
+                onMouseDown={(e) => handleConvPressStart(e, conv.id)}
+                onMouseUp={handleConvPressEnd}
+                onMouseLeave={handleConvPressEnd}
+                onTouchStart={(e) => handleConvPressStart(e, conv.id)}
+                onTouchEnd={handleConvPressEnd}
+                onTouchCancel={handleConvPressEnd}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setLongPressConvId(conv.id);
+                  setLongPressPos({ x: e.clientX, y: e.clientY });
+                }}
               >
                 <div className="conv-avatar">
                   {customerAvatars[conv.id]
@@ -681,6 +726,47 @@ export default function AdminInquiries() {
           </div>
         )}
       </div>
+      {/* Long-press context menu for conversation items */}
+      {longPressConvId && (
+        <div
+          className="conv-context-overlay"
+          onClick={() => setLongPressConvId(null)}
+        >
+          <div
+            className="conv-context-menu"
+            style={{
+              top: Math.min(longPressPos.y, window.innerHeight - 120),
+              left: Math.min(longPressPos.x, window.innerWidth - 180),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="conv-context-item conv-context-delete"
+              onClick={handleConvLongPressDelete}
+            >
+              <svg viewBox="0 0 24 24">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+              </svg>
+              Delete Conversation
+            </button>
+            <button
+              className="conv-context-item"
+              onClick={() => { setLongPressConvId(null); handleSelectConversation(longPressConvId); }}
+            >
+              <svg viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+              </svg>
+              Open Chat
+            </button>
+            <button
+              className="conv-context-item conv-context-cancel"
+              onClick={() => setLongPressConvId(null)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {showInfo && (
         <div className="info-modal" onClick={() => setShowInfo(false)}>
           <div className="info-panel" onClick={(e) => e.stopPropagation()}>

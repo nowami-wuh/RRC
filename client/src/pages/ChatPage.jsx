@@ -245,13 +245,6 @@ export default function ChatPage() {
                       </svg>
                     </button>
                   )}
-                  {isOutgoing && (
-                    <div className="msg-avatar msg-avatar-self">
-                      {user?.avatar
-                        ? <img src={user.avatar} alt="You" className="msg-avatar-img" />
-                        : (user?.username?.substring(0, 2).toUpperCase() || 'ME')}
-                    </div>
-                  )}
                 </div>
               </div>
             );

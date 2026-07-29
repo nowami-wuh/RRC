@@ -266,15 +266,14 @@
     display: block;
 }
 
-/* Outgoing self-avatar (right side of sent messages) */
+/* Outgoing self-avatar — hidden, no longer rendered */
 .msg-avatar-self {
-    background: var(--dark-blue);
-    overflow: hidden;
+    display: none;
 }
 
 /* Bubble */
 .bubble {
-    max-width: 62%;
+    max-width: 78%;
     padding: 10px 14px;
     border-radius: 18px;
     font-size: 14px;

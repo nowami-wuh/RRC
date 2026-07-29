@@ -1594,6 +1594,58 @@ body {
     position: relative;
 }
 .conv-item:hover { background: var(--conv-hover); }
+.conv-item { user-select: none; -webkit-user-select: none; }
+.conv-item.long-pressed { background: #f0f4ff; }
+
+/* ── Conversation Long-Press Context Menu ── */
+.conv-context-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: rgba(0, 0, 0, 0.2);
+}
+.conv-context-menu {
+    position: fixed;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+    min-width: 185px;
+    z-index: 3001;
+    animation: contextMenuIn 0.15s ease;
+}
+@keyframes contextMenuIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+}
+.conv-context-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 13px 18px;
+    background: transparent;
+    border: none;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.conv-context-item:hover { background: #f1f5f9; }
+.conv-context-item svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    flex-shrink: 0;
+    color: #64748b;
+}
+.conv-context-delete { color: #dc2626; border-bottom: 1px solid #fee2e2; }
+.conv-context-delete svg { color: #dc2626; }
+.conv-context-delete:hover { background: #fff0f0; }
+.conv-context-cancel { color: #64748b; border-top: 1px solid #f1f5f9; font-size: 13px; }
+
 
 /* Avatar */
 .conv-avatar {
@@ -2274,7 +2326,7 @@ body {
 
 /* Bubble */
 .bubble {
-    max-width: 62%;
+    max-width: 78%;
     padding: 10px 14px;
     border-radius: 18px;
     font-size: 14px;
