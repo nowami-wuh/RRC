@@ -4,6 +4,7 @@ import {
   createAdminPackage,
   updateAdminPackage,
   deleteAdminPackage,
+  fetchAdminInventory,
 } from '../../api/api';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -53,9 +54,10 @@ export default function AdminPackages() {
   const { toast, show: showToast } = useToast();
 
   // ── data ──
-  const [allPackages, setAllPackages] = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState('');
+  const [allPackages, setAllPackages]     = useState([]);
+  const [inventoryList, setInventoryList] = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState('');
 
   // ── tabs: 'packages' | 'addons' | 'misc' ──
   const [activeTab, setActiveTab] = useState('packages');
@@ -92,13 +94,26 @@ export default function AdminPackages() {
     setLoading(true);
     setError('');
     try {
-      const data = await fetchAdminPackages();
-      setAllPackages(data.packages || []);
+      const [pkgData, invData] = await Promise.all([
+        fetchAdminPackages(),
+        fetchAdminInventory().catch(() => ({ items: [] })),
+      ]);
+      setAllPackages(pkgData.packages || []);
+      setInventoryList(invData.items || []);
     } catch (e) {
       setError(e.message || 'Failed to load packages');
     } finally {
       setLoading(false);
     }
+  }
+
+  function getAvailable(name) {
+    if (!name) return null;
+    const match = inventoryList.find(
+      (inv) => inv.name.toLowerCase().trim() === name.toLowerCase().trim()
+    );
+    if (!match) return null;
+    return match.quantityOperational ?? match.quantityTotal ?? 0;
   }
 
   // ── derived slices ──
@@ -485,9 +500,11 @@ export default function AdminPackages() {
                               <span>Unit</span>
                             </div>
                             {(group.items || []).map((item, iIdx) => {
-                              const parts  = item.qty.split(' ');
-                              const qNum   = parseInt(parts[0], 10) || 1;
-                              const qUnit  = parts.slice(1).join(' ') || 'pc';
+                              const parts     = item.qty.split(' ');
+                              const qNum      = parseInt(parts[0], 10) || 1;
+                              const qUnit     = parts.slice(1).join(' ') || 'pc';
+                              const available = getAvailable(item.name);
+                              const ok        = available === null ? null : qNum <= available;
                               return (
                                 <div key={iIdx} className="apm-equip-row">
                                   <button
@@ -508,9 +525,11 @@ export default function AdminPackages() {
                                       <button className="apm-step" onClick={() => changeQty(pkg.id, gIdx, iIdx, 1)}>▲</button>
                                       <button className="apm-step" onClick={() => changeQty(pkg.id, gIdx, iIdx, -1)}>▼</button>
                                     </span>
-                                    <span className="apm-qty-val">{qNum} / —</span>
+                                    <span className="apm-qty-val">{qNum} / {available === null ? '—' : available}</span>
                                   </span>
-                                  <span className="apm-qty-check ok">✓</span>
+                                  <span className={`apm-qty-check${ok === null ? '' : ok ? ' ok' : ' no'}`}>
+                                    {ok === null ? '?' : ok ? '✓' : '✗'}
+                                  </span>
                                   <span className="apm-unit">{qUnit}</span>
                                 </div>
                               );
@@ -723,12 +742,35 @@ export default function AdminPackages() {
           </div>
           <div className="apm-modal-bd">
             <label className="m-label">Equipment Name</label>
+            {inventoryList.length > 0 && (
+              <select
+                className="m-input"
+                style={{ marginBottom: 8 }}
+                value={inventoryList.some(inv => inv.name.toLowerCase().trim() === equipModal.name.toLowerCase().trim()) ? equipModal.name : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) setEquipModal((p) => ({ ...p, name: val }));
+                }}
+              >
+                <option value="">Select from inventory…</option>
+                {inventoryList.map((inv) => (
+                  <option key={inv.id || inv.itemCode || inv.name} value={inv.name}>
+                    {inv.name} ({inv.quantityOperational ?? 0} available)
+                  </option>
+                ))}
+              </select>
+            )}
             <input
               className="m-input"
               value={equipModal.name}
               onChange={(e) => setEquipModal((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Main Powered Speaker"
+              placeholder="e.g. Main Powered Speaker Single 15 inch"
             />
+            {getAvailable(equipModal.name) !== null && (
+              <p style={{ marginTop: 6, fontSize: '12.5px', fontStyle: 'italic', color: '#666' }}>
+                Available stock in inventory: {getAvailable(equipModal.name)} units
+              </p>
+            )}
             <label className="m-label" style={{ marginTop: 14 }}>Category</label>
             <select
               className="m-input"
