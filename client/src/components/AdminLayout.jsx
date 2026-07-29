@@ -27,7 +27,12 @@ const navItems = [
     label: 'Inventory',
     icon: (
       <svg className="nav-icon" viewBox="0 0 24 24">
-        <path d="M20 4.58L12 1 4 4.58v10.84L12 23l8-7.58V4.58zM12 3l6 3.42-6 3.43-6-3.43L12 3zM6 14.28V7.59l5 2.85v6.69l-5-2.85zm12 0l-5 2.85v-6.69l5-2.85v6.69z" />
+        <path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d="M0 4.6A2.6 2.6 0 0 1 2.6 2h18.8A2.6 2.6 0 0 1 24 4.6v.8A2.6 2.6 0 0 1 21.4 8H21v10.6c0 1.33-1.07 2.4-2.4 2.4H5.4C4.07 21 3 19.93 3 18.6V8h-.4A2.6 2.6 0 0 1 0 5.4v-.8ZM2.6 4a.6.6 0 0 0-.6.6v.8a.6.6 0 0 0 .6.6h18.8a.6.6 0 0 0 .6-.6v-.8a.6.6 0 0 0-.6-.6H2.6ZM8 10a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"
+          fill="#ffffff"
+        />
       </svg>
     ),
   },
@@ -36,22 +41,31 @@ const navItems = [
     label: 'Inquiries',
     icon: (
       <svg className="nav-icon" viewBox="0 0 24 24">
-        <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z" />
+        <path
+          d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 13.5997 2.37562 15.1116 3.04346 16.4525C3.22094 16.8088 3.28001 17.2161 3.17712 17.6006L2.58151 19.8267C2.32295 20.793 3.20701 21.677 4.17335 21.4185L6.39939 20.8229C6.78393 20.72 7.19121 20.7791 7.54753 20.9565C8.88837 21.6244 10.4003 22 12 22Z"
+          fill="#ffffff"
+        />
+        <path d="M15 12C15 12.5523 15.4477 13 16 13C16.5523 13 17 12.5523 17 12C17 11.4477 16.5523 11 16 11C15.4477 11 15 11.4477 15 12Z" fill="black" />
+        <path d="M11 12C11 12.5523 11.4477 13 12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12Z" fill="black" />
+        <path d="M7 12C7 12.5523 7.44772 13 8 13C8.55228 13 9 12.5523 9 12C9 11.4477 8.55228 11 8 11C7.44772 11 7 11.4477 7 12Z" fill="black" />
       </svg>
     ),
   },
   {
     path: '/admin/packages',
-    label: 'Packages',
+    label: 'Package Rate',
     icon: (
-      <svg className="nav-icon" viewBox="0 0 24 24">
-        <path d="M20.5 8.94l-8.5-4.5a1 1 0 0 0-.92 0l-8.5 4.5A1 1 0 0 0 3 9.82v4.36a1 1 0 0 0 .53.88l8.5 4.5a1 1 0 0 0 .92 0l8.5-4.5a1 1 0 0 0 .53-.88V9.82a1 1 0 0 0-.53-.88zM12 5.03l6.96 3.69L12 12.4 5.04 8.72 12 5.03zm-6 4.55v-2.2l6 3.18v4.73L6 13.58zm8 6.71v-4.73l6-3.18v2.2l-6 3.71z" />
+      <svg className="nav-icon" viewBox="0 0 36 36">
+        <path d="M14.18,13.8V16h9.45a5.26,5.26,0,0,0,.08-.89,4.72,4.72,0,0,0-.2-1.31Z" fill="currentColor" />
+        <path d="M14.18,19.7h5.19a4.28,4.28,0,0,0,3.5-1.9H14.18Z" fill="currentColor" />
+        <path d="M19.37,10.51H14.18V12h8.37A4.21,4.21,0,0,0,19.37,10.51Z" fill="currentColor" />
+        <path d="M17.67,2a16,16,0,1,0,16,16A16,16,0,0,0,17.67,2Zm10.5,15.8H25.7a6.87,6.87,0,0,1-6.33,4.4H14.18v6.54a1.25,1.25,0,1,1-2.5,0V17.8H8.76a.9.9,0,1,1,0-1.8h2.92V13.8H8.76a.9.9,0,1,1,0-1.8h2.92V9.26A1.25,1.25,0,0,1,12.93,8h6.44a6.84,6.84,0,0,1,6.15,4h2.65a.9.9,0,0,1,0,1.8H26.09a6.91,6.91,0,0,1,.12,1.3,6.8,6.8,0,0,1-.06.9h2a.9.9,0,0,1,0,1.8Z" fill="currentColor" />
       </svg>
     ),
   },
   {
     path: '/admin/my-account',
-    label: 'Account',
+    label: 'My Account',
     icon: (
       <svg className="nav-icon" viewBox="0 0 24 24">
         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -94,16 +108,6 @@ export default function AdminLayout() {
               <span className="title-lights">Lights &amp; Sounds</span>
               <span className="title-booking">BOOKING</span>
             </h1>
-          </div>
-
-          <div className="sidebar-header-actions">
-            <button className="logout-btn sidebar-icon-btn" onClick={handleLogout} title="Logout" aria-label="Logout">
-              <svg className="logout-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </button>
           </div>
         </div>
         <nav className="sidebar-nav">
