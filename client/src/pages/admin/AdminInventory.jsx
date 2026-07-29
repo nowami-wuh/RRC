@@ -1,98 +1,105 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   fetchAdminInventory,
   updateAdminInventoryItem,
   createAdminInventoryItem,
   deleteAdminInventoryItem,
-  fetchAdminPackages,
-  updateAdminPackage,
-  deleteAdminPackage,
-  createAdminPackage,
 } from '../../api/api';
 
+// ── Flip icon SVG ──────────────────────────────────────────────
+const FlipIcon = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+    <path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47zm1.01 5.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32zM13 4.07V1L8.45 5.55 13 10V6.09c2.84.48 5 2.94 5 5.91s-2.16 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93s-3.05-7.44-7-7.93z" />
+  </svg>
+);
+
+// ── Helpers ────────────────────────────────────────────────────
+const getSubCategory = (name) => {
+  const match = name.match(/^(.*?)\s*\(/);
+  return match ? match[1].trim() : name;
+};
+
+const getVariationName = (name) => {
+  const match = name.match(/\((.*?)\)/);
+  return match ? match[1].trim() : name;
+};
+
+const parseUnits = (notesStr) => {
+  try {
+    return notesStr ? JSON.parse(notesStr) : [];
+  } catch {
+    return [];
+  }
+};
+
+const buildSummary = (items) => {
+  const map = {};
+  items.forEach((item) => {
+    const variation = getVariationName(item.name);
+    const units = parseUnits(item.notes);
+    units.forEach((u) => {
+      if (!map[variation]) {
+        map[variation] = { variation, inoperational: 0, operational: 0, inUse: 0, total: 0 };
+      }
+      const row = map[variation];
+      row.total++;
+      if (u.condition === 'Inoperational' || u.condition === 'Inoperative') row.inoperational++;
+      else row.operational++;
+      if (u.inUse) row.inUse++;
+    });
+  });
+  return Object.values(map).map((r) => ({ ...r, available: Math.max(0, r.operational - r.inUse) }));
+};
+
+// ── Toast ──────────────────────────────────────────────────────
+function Toast({ toast }) {
+  return (
+    <div className={`inv-toast${toast.show ? ' show' : ''}${toast.isError ? ' is-error' : ''}`}>
+      {toast.message}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ══════════════════════════════════════════════════════════════
 export default function AdminInventory() {
-  // Tabs: 'sounds' | 'lights' | 'packages'
   const [activeTab, setActiveTab] = useState('sounds');
   const [inventoryItems, setInventoryItems] = useState([]);
-  const [packages, setPackages] = useState([]);
-
-  // Package rates menu section: null | 'cosupplier' | 'equipment' | 'effects' | 'misc'
-  const [currentPkgSection, setCurrentPkgSection] = useState(null);
-  // Selected package for details/edit view
-  const [selectedPackage, setSelectedPackage] = useState(null);
-
-  // Toast notifications
+  const [flippedCards, setFlippedCards] = useState(new Set());
   const [toast, setToast] = useState({ show: false, message: '', isError: false });
 
-  // Add unit modal state
+  // ── Add Category Modal ──
+  const [addCatModal, setAddCatModal] = useState({ show: false, name: '', error: '' });
+  const addCatInputRef = useRef(null);
+
+  // ── Add Equipment (Unit) Modal ──
   const [addUnitModal, setAddUnitModal] = useState({
     show: false,
     subCategory: '',
-    items: [],
-    selectedItemId: '',
-    isNewVariation: false,
-    newVariationName: '',
-    unitName: '',
+    items: [],           // existing items in this subCategory
+    variation: '',       // typed variation / model name
+    unitId: '',          // typed unit ID
     condition: 'Operational',
+    error: '',
   });
+  const addUnitVarRef = useRef(null);
 
-  // Add category modal state
-  const [addCategoryModal, setAddCategoryModal] = useState({
-    show: false,
-    categoryName: '',
-    variationName: '',
-    unitName: '',
-  });
-
+  // ── Remove Unit Modal ──
   const [removeUnitModal, setRemoveUnitModal] = useState({
     show: false,
     item: null,
     unitId: '',
-    unitName: '',
+    unitLabel: '',
   });
 
-  // UI state for flipped cards (array of category ids)
-  const [flippedCards, setFlippedCards] = useState([]);
+  // ── Load ──
+  useEffect(() => { loadInventory(); }, []);
 
-  // Package edit mode inputs
-  const [pkgEditInputs, setPkgEditInputs] = useState({
-    name: '',
-    subtitle: '',
-    occasion: '',
-    price: 0,
-    promo: 0,
-    note: '',
-    groups: [],
-  });
-
-  // For adding package items
-  const [showAddPkgItem, setShowAddPkgItem] = useState(false);
-  const [newPkgItem, setNewPkgItem] = useState({ qty: '1 pc', name: '' });
-
-  // Add addon package modal
-  const [addAddonModal, setAddAddonModal] = useState({
-    show: false,
-    id: null,
-    name: '',
-    subtitle: '',
-    price: 0,
-    promo: 0,
-  });
-
-  useEffect(() => {
-    loadAllData();
-  }, []);
-
-  const loadAllData = () => {
-    Promise.all([fetchAdminInventory(), fetchAdminPackages()])
-      .then(([invData, pkgData]) => {
-        setInventoryItems(invData.items || []);
-        setPackages(pkgData.packages || []);
-      })
-      .catch((err) => {
-        console.error('Failed to load data', err);
-        showToast('Error loading inventory and packages', true);
-      });
+  const loadInventory = () => {
+    fetchAdminInventory()
+      .then((data) => setInventoryItems(data.items || []))
+      .catch((err) => showToast(err.message || 'Failed to load inventory', true));
   };
 
   const showToast = (message, isError = false) => {
@@ -100,394 +107,252 @@ export default function AdminInventory() {
     setTimeout(() => setToast({ show: false, message: '', isError: false }), 3000);
   };
 
-  // Helper parsers for inventory subcategory and variation name
-  const getSubCategory = (name) => {
-    const match = name.match(/^(.*?)\s*\(/);
-    return match ? match[1].trim() : name;
+  // ── Derived data ──
+  const normalizeCategory = (cat = '') =>
+    cat.toString().trim().toLowerCase().split(/[–-]/)[0].trim();
+
+  const categoryFilter = activeTab === 'sounds' ? 'audio' : 'lights';
+
+  const filteredItems = inventoryItems.filter(
+    (item) => normalizeCategory(item.category) === categoryFilter
+  );
+
+  const groupedInventory = {};
+  filteredItems.forEach((item) => {
+    const sub = getSubCategory(item.name);
+    if (!groupedInventory[sub]) groupedInventory[sub] = [];
+    groupedInventory[sub].push(item);
+  });
+
+  // ── Tab switch ──
+  const handleTabSwitch = (tab) => {
+    setActiveTab(tab);
+    setFlippedCards(new Set());
   };
 
-  const getItemDisplayName = (name) => {
-    const match = name.match(/\((.*?)\)/);
-    return match ? match[1].trim() : name;
-  };
-
-  // Safe parsing of notes JSON
-  const parseNotes = (notesStr) => {
-    try {
-      return notesStr ? JSON.parse(notesStr) : [];
-    } catch {
-      return [];
-    }
-  };
-
-  // Build summary aggregation for a category (items array)
-  const buildSummary = (items) => {
-    const map = {};
-    items.forEach((item) => {
-      const variation = getItemDisplayName(item.name);
-      const units = parseNotes(item.notes);
-      units.forEach((u) => {
-        if (!map[variation]) map[variation] = { variation, inoperational: 0, operational: 0, inUse: 0, total: 0 };
-        const row = map[variation];
-        row.total++;
-        if (u.condition === 'Inoperational' || u.condition === 'Inoperative') row.inoperational++;
-        else row.operational++;
-        if (u.inUse) row.inUse++;
-      });
+  // ── Flip ──
+  const toggleFlip = (subCat) => {
+    setFlippedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(subCat)) next.delete(subCat);
+      else next.add(subCat);
+      return next;
     });
-    return Object.values(map).map((r) => ({ ...r, available: Math.max(0, r.operational - r.inUse) }));
   };
 
-  // Toggle unit condition
+  // ── Condition toggle ──
   const handleToggleCondition = async (item, unitId, newCondition) => {
-    const units = parseNotes(item.notes);
-    const updatedUnits = units.map((u) => (u.id === unitId ? { ...u, condition: newCondition } : u));
+    const units = parseUnits(item.notes);
+    const updated = units.map((u) => (u.id === unitId ? { ...u, condition: newCondition } : u));
     try {
-      await updateAdminInventoryItem(item.id, { notes: JSON.stringify(updatedUnits) });
+      await updateAdminInventoryItem(item.id, { notes: JSON.stringify(updated) });
       setInventoryItems((prev) =>
-        prev.map((i) => (i.id === item.id ? { ...i, notes: JSON.stringify(updatedUnits) } : i))
+        prev.map((i) => (i.id === item.id ? { ...i, notes: JSON.stringify(updated) } : i))
       );
-      showToast('Unit condition updated');
+      showToast('Condition updated');
     } catch (err) {
       showToast(err.message || 'Failed to update condition', true);
     }
   };
 
-  // Show remove unit confirmation
-  const handleRemoveUnit = (item, unitId, unitName) => {
-    setRemoveUnitModal({ show: true, item, unitId, unitName });
-  };
-
-  const confirmRemoveUnit = async () => {
-    const { item, unitId } = removeUnitModal;
-    if (!item || !unitId) return;
-
-    try {
-      const units = parseNotes(item.notes);
-      const updatedUnits = units.filter((u) => u.id !== unitId);
-      const newStock = updatedUnits.length;
-      await updateAdminInventoryItem(item.id, { stock: newStock, notes: JSON.stringify(updatedUnits) });
-      setInventoryItems((prev) =>
-        prev.map((i) => (i.id === item.id ? { ...i, stock: newStock, notes: JSON.stringify(updatedUnits) } : i))
-      );
-      setRemoveUnitModal({ show: false, item: null, unitId: '', unitName: '' });
-      showToast('Unit removed successfully');
-    } catch (err) {
-      showToast(err.message || 'Failed to remove unit', true);
-    }
-  };
-
-  const closeRemoveUnitModal = () => {
-    setRemoveUnitModal({ show: false, item: null, unitId: '', unitName: '' });
-  };
-
-  // Remove entire category (all inventory items under a subcategory)
+  // ── Remove category ──
   const handleRemoveCategory = async (subCat) => {
     if (!window.confirm(`Remove category "${subCat}" and all its equipment?`)) return;
     try {
-      const itemsToRemove = filteredInventory.filter((it) => getSubCategory(it.name) === subCat);
-      await Promise.all(itemsToRemove.map((it) => deleteAdminInventoryItem(it.id)));
-      loadAllData();
+      const toRemove = filteredItems.filter((it) => getSubCategory(it.name) === subCat);
+      await Promise.all(toRemove.map((it) => deleteAdminInventoryItem(it.id)));
+      setFlippedCards((prev) => { const n = new Set(prev); n.delete(subCat); return n; });
+      loadInventory();
       showToast(`"${subCat}" category removed.`);
     } catch (err) {
       showToast(err.message || 'Failed to remove category', true);
     }
   };
 
-  const toggleFlip = (catId) => {
-    setFlippedCards((prev) => {
-      const next = new Set(prev);
-      if (next.has(catId)) next.delete(catId);
-      else next.add(catId);
-      return Array.from(next);
-    });
+  // ════════════════════════════════════════════
+  // ADD CATEGORY MODAL handlers
+  // ════════════════════════════════════════════
+  const openAddCatModal = () => {
+    setAddCatModal({ show: true, name: '', error: '' });
+    setTimeout(() => addCatInputRef.current?.focus(), 60);
+  };
+  const closeAddCatModal = () => setAddCatModal({ show: false, name: '', error: '' });
+
+  const handleAddCategory = async () => {
+    const name = addCatModal.name.trim();
+    if (!name) {
+      setAddCatModal((p) => ({ ...p, error: 'Category name is required.' }));
+      return;
+    }
+    const exists = Object.keys(groupedInventory).some(
+      (k) => k.toLowerCase() === name.toLowerCase()
+    );
+    if (exists) {
+      setAddCatModal((p) => ({ ...p, error: 'A category with this name already exists.' }));
+      return;
+    }
+    // We can't create a bare category without at least one variation/unit — open it flipped
+    // so the user can add units immediately. Store a pending "empty" category in state.
+    // Actually for the backend we just track by name prefix; we'll open the flip side.
+    // Signal it by flipping the card after creation (show in flipped state).
+    // We don't create a DB record until the first unit is added.
+    const newKey = name;
+    setFlippedCards((prev) => new Set([...prev, newKey]));
+    closeAddCatModal();
+    showToast(`"${name}" category added.`);
+    // Optimistically inject a placeholder so the card renders
+    setInventoryItems((prev) => [
+      ...prev,
+      {
+        id: `_pending_${Date.now()}`,
+        category: activeTab === 'sounds' ? 'Audio' : 'Lights',
+        name: `${name} (__placeholder__)`,
+        stock: 0,
+        notes: JSON.stringify([]),
+      },
+    ]);
   };
 
-  // Open Add Unit Modal
-  const openAddUnitModal = (subCategory, itemsInSubCategory) => {
-    const totalUnits = itemsInSubCategory.reduce((acc, item) => acc + parseNotes(item.notes).length, 0);
-    // Suggest a unit code based on category initials e.g. Main Speaker -> MS1
-    const prefix = subCategory
-      .split(' ')
-      .map((w) => w[0])
-      .join('')
-      .toUpperCase();
-    const suggestedName = `${prefix}${totalUnits + 1}`;
-
+  // ════════════════════════════════════════════
+  // ADD UNIT MODAL handlers
+  // ════════════════════════════════════════════
+  const openAddUnitModal = (subCat, items) => {
+    const allUnits = items.flatMap((i) => parseUnits(i.notes));
+    const prefix = subCat.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2) || 'EQ';
+    let n = allUnits.length + 1;
+    let suggested = `${prefix}${n}`;
+    while (allUnits.some((u) => u.id === suggested || u.name === suggested)) {
+      n++;
+      suggested = `${prefix}${n}`;
+    }
     setAddUnitModal({
       show: true,
-      subCategory,
-      items: itemsInSubCategory,
-      selectedItemId: itemsInSubCategory[0]?.id || '',
-      isNewVariation: false,
-      newVariationName: '',
-      unitName: suggestedName,
+      subCategory: subCat,
+      items,
+      variation: '',
+      unitId: suggested,
       condition: 'Operational',
+      error: '',
     });
+    setTimeout(() => addUnitVarRef.current?.focus(), 60);
   };
 
-  // Save unit
+  const closeAddUnitModal = () =>
+    setAddUnitModal((p) => ({ ...p, show: false, error: '' }));
+
   const handleSaveUnit = async () => {
-    const { selectedItemId, isNewVariation, newVariationName, unitName, condition, subCategory } = addUnitModal;
-    if (!unitName.trim()) {
-      showToast('Unit name is required', true);
+    const { subCategory, items, variation, unitId, condition } = addUnitModal;
+    const varName = variation.trim();
+    const uid = unitId.trim();
+
+    if (!varName) {
+      setAddUnitModal((p) => ({ ...p, error: 'Variation / model name is required.' }));
       return;
     }
 
+    // Find or create item with this variation name
+    const fullName = `${subCategory} (${varName})`;
+
+    // Check unit ID uniqueness across all units in category
+    const allUnits = items.flatMap((i) => parseUnits(i.notes));
+    if (uid && allUnits.some((u) => (u.id || u.name)?.toLowerCase() === uid.toLowerCase())) {
+      setAddUnitModal((p) => ({ ...p, error: `Unit ID "${uid}" already exists in this category.` }));
+      return;
+    }
+
+    const newUnit = { id: uid, name: uid, condition, inUse: false };
+
     try {
-      if (isNewVariation) {
-        if (!newVariationName.trim()) {
-          showToast('Variation name is required', true);
-          return;
-        }
-        const fullName = `${subCategory} (${newVariationName.trim()})`;
-        const newUnit = { id: `U-${Date.now()}`, name: unitName.trim(), condition, inUse: false };
+      // Check if a backend item with this exact variation already exists
+      const existingItem = items.find(
+        (i) => i.name.toLowerCase() === fullName.toLowerCase()
+      );
+      // Also check placeholder
+      const placeholder = items.find((i) => i.id?.startsWith('_pending_'));
+
+      if (existingItem) {
+        const units = parseUnits(existingItem.notes);
+        const updatedUnits = [...units, newUnit];
+        await updateAdminInventoryItem(existingItem.id, {
+          stock: updatedUnits.length,
+          notes: JSON.stringify(updatedUnits),
+        });
+      } else if (placeholder) {
+        // Replace placeholder with real item
         await createAdminInventoryItem({
           category: activeTab === 'sounds' ? 'Audio' : 'Lights',
           name: fullName,
           stock: 1,
           notes: JSON.stringify([newUnit]),
         });
+        // Remove placeholder from local state
+        setInventoryItems((prev) => prev.filter((i) => !i.id?.startsWith('_pending_')));
       } else {
-        const item = inventoryItems.find((i) => i.id === selectedItemId);
-        if (!item) return;
-        const units = parseNotes(item.notes);
-        const newUnit = { id: `U-${Date.now()}`, name: unitName.trim(), condition, inUse: false };
-        const updatedUnits = [...units, newUnit];
-        await updateAdminInventoryItem(item.id, {
-          stock: updatedUnits.length,
-          notes: JSON.stringify(updatedUnits),
+        await createAdminInventoryItem({
+          category: activeTab === 'sounds' ? 'Audio' : 'Lights',
+          name: fullName,
+          stock: 1,
+          notes: JSON.stringify([newUnit]),
         });
       }
-      loadAllData();
-      setAddUnitModal((prev) => ({ ...prev, show: false }));
-      showToast('Unit added successfully');
+
+      loadInventory();
+      closeAddUnitModal();
+      showToast(`Unit ${uid} added to "${subCategory}".`);
     } catch (err) {
-      showToast(err.message || 'Failed to add unit', true);
+      setAddUnitModal((p) => ({ ...p, error: err.message || 'Failed to add unit.' }));
     }
   };
 
-  // Save Equipment Category
-  const handleSaveCategory = async () => {
-    const { categoryName, variationName, unitName } = addCategoryModal;
-    if (!categoryName.trim() || !variationName.trim() || !unitName.trim()) {
-      showToast('All fields are required', true);
-      return;
-    }
+  // ════════════════════════════════════════════
+  // REMOVE UNIT MODAL handlers
+  // ════════════════════════════════════════════
+  const openRemoveUnitModal = (item, unitId, unitLabel) => {
+    setRemoveUnitModal({ show: true, item, unitId, unitLabel });
+  };
+  const closeRemoveUnitModal = () =>
+    setRemoveUnitModal({ show: false, item: null, unitId: '', unitLabel: '' });
 
+  const handleConfirmRemoveUnit = async () => {
+    const { item, unitId } = removeUnitModal;
+    if (!item || !unitId) return;
     try {
-      const fullName = `${categoryName.trim()} (${variationName.trim()})`;
-      const newUnit = { id: `U-${Date.now()}`, name: unitName.trim(), condition: 'Operational', inUse: false };
-      await createAdminInventoryItem({
-        category: activeTab === 'sounds' ? 'Audio' : 'Lights',
-        name: fullName,
-        stock: 1,
-        notes: JSON.stringify([newUnit]),
+      const units = parseUnits(item.notes);
+      const updatedUnits = units.filter((u) => u.id !== unitId);
+      await updateAdminInventoryItem(item.id, {
+        stock: updatedUnits.length,
+        notes: JSON.stringify(updatedUnits),
       });
-      loadAllData();
-      setAddCategoryModal({ show: false, categoryName: '', variationName: '', unitName: '' });
-      showToast('Category created successfully');
+      setInventoryItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id ? { ...i, stock: updatedUnits.length, notes: JSON.stringify(updatedUnits) } : i
+        )
+      );
+      showToast(`Unit ${unitId} removed.`);
+      closeRemoveUnitModal();
     } catch (err) {
-      showToast(err.message || 'Failed to create category', true);
+      showToast(err.message || 'Failed to remove unit', true);
+      closeRemoveUnitModal();
     }
   };
 
-  // Setup package editing
-  const handleSelectPackage = (pkg) => {
-    setSelectedPackage(pkg);
-    setPkgEditInputs({
-      name: pkg.name || '',
-      subtitle: pkg.subtitle || '',
-      occasion: pkg.occasion || '',
-      price: pkg.price || 0,
-      promo: pkg.promo || 0,
-      note: pkg.note || '',
-      groups: pkg.groups || [],
-    });
-    setShowAddPkgItem(false);
-  };
-
-  // Update a field in current package inputs
-  const updatePkgField = (key, value) => {
-    setPkgEditInputs((prev) => ({ ...prev, [key]: value }));
-  };
-
-  // Adjust package item qty needed
-  const handleAdjustPkgItemQty = (groupIndex, itemIndex, delta) => {
-    const groupsCopy = JSON.parse(JSON.stringify(pkgEditInputs.groups));
-    const item = groupsCopy[groupIndex]?.items?.[itemIndex];
-    if (!item) return;
-
-    const currentVal = parseInt(item.qty) || 0;
-    const nextVal = Math.max(1, currentVal + delta);
-    const unitLabel = item.qty.includes('pcs') ? 'pcs' : item.qty.includes('pcs') ? 'pcs' : item.qty.replace(/[0-9\s]/g, '') || 'pc';
-    item.qty = `${nextVal} ${unitLabel.trim()}`;
-
-    updatePkgField('groups', groupsCopy);
-  };
-
-  // Delete package item
-  const handleDeletePkgItem = (groupIndex, itemIndex) => {
-    const groupsCopy = JSON.parse(JSON.stringify(pkgEditInputs.groups));
-    groupsCopy[groupIndex].items = groupsCopy[groupIndex].items.filter((_, idx) => idx !== itemIndex);
-    updatePkgField('groups', groupsCopy);
-  };
-
-  // Add item to package group
-  const handleAddPkgItem = () => {
-    if (!newPkgItem.name.trim()) {
-      showToast('Item description is required', true);
-      return;
-    }
-    const groupsCopy = JSON.parse(JSON.stringify(pkgEditInputs.groups));
-    if (groupsCopy.length === 0) {
-      groupsCopy.push({ category: 'SOUNDS', items: [] });
-    }
-    groupsCopy[0].items.push({ qty: newPkgItem.qty, name: newPkgItem.name.trim() });
-    updatePkgField('groups', groupsCopy);
-    setNewPkgItem({ qty: '1 pc', name: '' });
-    setShowAddPkgItem(false);
-  };
-
-  // Save package rates modifications
-  const handleSavePackageUpdates = async () => {
-    if (!selectedPackage?.id) return;
-    try {
-      await updateAdminPackage(selectedPackage.id, pkgEditInputs);
-      loadAllData();
-      showToast('Package updated successfully');
-      setSelectedPackage(null);
-    } catch (err) {
-      showToast(err.message || 'Failed to update package', true);
-    }
-  };
-
-  // Add package (co-supplier primary package)
-  const handleAddPackage = async () => {
-    try {
-      await createAdminPackage({
-        section: 'cosupplier',
-        name: 'NEW PACKAGE',
-        subtitle: 'New Subtitle',
-        occasion: 'General Occasion',
-        note: 'Default description notes.',
-        price: 5000,
-        promo: 4500,
-        color: 'blue',
-        groups: [{ category: 'SOUNDS', items: [] }],
-      });
-      loadAllData();
-      showToast('New package created. Click to edit it.');
-    } catch (err) {
-      showToast(err.message || 'Failed to add package', true);
-    }
-  };
-
-  // Open add addon package modal
-  const openAddAddon = (addon = null) => {
-    if (addon) {
-      setAddAddonModal({
-        show: true,
-        id: addon.id,
-        name: addon.name,
-        subtitle: addon.subtitle,
-        price: addon.price,
-        promo: addon.promo,
-      });
-    } else {
-      setAddAddonModal({
-        show: true,
-        id: null,
-        name: '',
-        subtitle: '',
-        price: 0,
-        promo: 0,
-      });
-    }
-  };
-
-  // Save addon package (equipment, special effect, or misc)
-  const handleSaveAddon = async () => {
-    const { id, name, subtitle, price, promo } = addAddonModal;
-    if (!name.trim()) {
-      showToast('Name is required', true);
-      return;
-    }
-    try {
-      if (id) {
-        await updateAdminPackage(id, { name, subtitle, price, promo });
-        showToast('Addon updated successfully');
-      } else {
-        await createAdminPackage({
-          section: currentPkgSection,
-          name,
-          subtitle,
-          occasion: 'Addon',
-          note: subtitle,
-          price,
-          promo,
-          color: 'blue',
-          groups: [],
-        });
-        showToast('Addon created successfully');
-      }
-      loadAllData();
-      setAddAddonModal((prev) => ({ ...prev, show: false }));
-    } catch (err) {
-      showToast(err.message || 'Failed to save addon', true);
-    }
-  };
-
-  // Delete addon package
-  const handleDeleteAddon = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this item?')) return;
-    try {
-      await deleteAdminPackage(id);
-      loadAllData();
-      showToast('Item deleted successfully');
-    } catch (err) {
-      showToast(err.message || 'Failed to delete item', true);
-    }
-  };
-
-  const normalizeCategory = (category = '') => {
-    return category
-      .toString()
-      .trim()
-      .toLowerCase()
-      .split(/–|-/)[0]
-      .trim();
-  };
-
-  // Filter items by category tab (normalize casing, whitespace, and subcategory prefixes)
-  const categoryFilter = activeTab === 'sounds' ? 'audio' : 'lights';
-  const filteredInventory = inventoryItems.filter((item) => {
-    return normalizeCategory(item.category) === categoryFilter;
-  });
-
-  // Group items by their subcategory (prefix before bracket)
-  const groupedInventory = {};
-  filteredInventory.forEach((item) => {
-    const subCat = getSubCategory(item.name);
-    if (!groupedInventory[subCat]) {
-      groupedInventory[subCat] = [];
-    }
-    groupedInventory[subCat].push(item);
-  });
-
+  // ════════════════════════════════════════════
+  // RENDER
+  // ════════════════════════════════════════════
   return (
-    <section className="main-content inventory-page">
+    <section className="inventory-page">
+
       {/* ── Equipment Type Tabs ── */}
       <div className="equip-tabs">
         <button
-          className={`equip-tab ${activeTab === 'sounds' ? 'active' : ''}`}
-          onClick={() => setActiveTab('sounds')}
+          className={`equip-tab${activeTab === 'sounds' ? ' active' : ''}`}
+          onClick={() => handleTabSwitch('sounds')}
         >
           Sounds Equipment
         </button>
         <button
-          className={`equip-tab ${activeTab === 'lights' ? 'active' : ''}`}
-          onClick={() => setActiveTab('lights')}
+          className={`equip-tab${activeTab === 'lights' ? ' active' : ''}`}
+          onClick={() => handleTabSwitch('lights')}
         >
           Lights Equipment
         </button>
@@ -495,46 +360,62 @@ export default function AdminInventory() {
 
       {/* ── Toolbar ── */}
       <div className="inventory-toolbar">
-        <button
-          className="add-category-btn"
-          onClick={() => setAddCategoryModal((prev) => ({ ...prev, show: true }))}
-        >
+        <button className="add-category-btn" onClick={openAddCatModal}>
           Add Equipment Category
         </button>
       </div>
 
-      {/* ── Category List ── */}
-      <div className="category-list">
+      {/* ── Category Cards ── */}
+      <div className="inv-category-list">
         {Object.keys(groupedInventory).length === 0 ? (
-          <div className="summary-empty" style={{ padding: '80px 0' }}>
+          <p className="inv-summary-empty" style={{ padding: '80px 0', textAlign: 'center' }}>
             No categories yet. Add one using the button above.
-          </div>
+          </p>
         ) : (
           Object.keys(groupedInventory).map((subCat) => {
-            const itemsInSubCat = groupedInventory[subCat];
-            const summary = buildSummary(itemsInSubCat);
-            const isFlipped = flippedCards.includes(subCat);
+            const items = groupedInventory[subCat];
+            // Filter out placeholder items for display purposes
+            const realItems = items.filter((i) => !i.id?.startsWith('_pending_'));
+            const summary = buildSummary(realItems);
+            const isFlipped = flippedCards.has(subCat);
+
             return (
-              <div key={subCat} className={`category-card ${isFlipped ? 'flipped' : ''}`} data-cat-id={subCat}>
-                <div className="category-card-inner">
-                  <div className="card-face front">
-                    <div className="card-header-row">
-                      <span className="category-title">{subCat}</span>
-                      <div className="category-actions">
-                        <button type="button" className="flip-toggle-btn" onClick={() => toggleFlip(subCat)}>
+              <div
+                key={subCat}
+                className={`inv-category-card${isFlipped ? ' flipped' : ''}`}
+              >
+                <div className="inv-card-inner">
+
+                  {/* ──── FRONT FACE ──── */}
+                  <div className="inv-card-face front">
+                    <div className="inv-card-header">
+                      <span className="inv-category-title">{subCat}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <button
+                          className="inv-flip-hint"
+                          onClick={() => toggleFlip(subCat)}
+                        >
+                          <FlipIcon />
                           View Details
                         </button>
-                        <button className="category-remove-btn" onClick={() => handleRemoveCategory(subCat)} title="Remove category">
+                        <button
+                          className="inv-cat-remove-btn"
+                          onClick={() => handleRemoveCategory(subCat)}
+                          title="Remove category"
+                        >
                           &times;
                         </button>
                       </div>
                     </div>
-                    <div className="summary-table-wrap">
-                      <div className="summary-table-title">Inventory Summary</div>
+
+                    <div className="inv-summary-wrap">
+                      <div className="inv-summary-title">Inventory Summary</div>
                       {summary.length === 0 ? (
-                        <p className="summary-empty">No equipment yet. Flip the card to add some.</p>
+                        <p className="inv-summary-empty">
+                          No equipment yet. Flip the card to add some.
+                        </p>
                       ) : (
-                        <table className="summary-table">
+                        <table className="inv-summary-table">
                           <thead>
                             <tr>
                               <th>VARIATION</th>
@@ -560,349 +441,208 @@ export default function AdminInventory() {
                     </div>
                   </div>
 
-                  <div className="card-face back">
-                    <div className="card-header-row">
-                      <span className="category-title">{subCat}</span>
-                      <button type="button" className="flip-toggle-btn back" onClick={() => toggleFlip(subCat)}>
+                  {/* ──── BACK FACE ──── */}
+                  <div className="inv-card-face back">
+                    <div className="inv-card-header">
+                      <span className="inv-category-title">{subCat}</span>
+                      <button
+                        className="inv-flip-hint"
+                        onClick={() => toggleFlip(subCat)}
+                      >
+                        <FlipIcon />
                         Back to Summary
                       </button>
                     </div>
-                    <div className="detail-table-wrap">
-                      <table className="detail-table">
-                        <thead>
-                          <tr>
-                            <th>VARIATION</th>
-                            <th>NAME</th>
-                            <th className="col-condition">CONDITION</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {itemsInSubCat.flatMap((item) => {
-                            const units = parseNotes(item.notes);
-                            return units.map((u) => (
-                              <tr key={u.id} data-unit-id={u.id}>
-                                <td>
-                                  <div className="variation-cell">
-                                    <span>{getItemDisplayName(item.name)}</span>
-                                    <button className="unit-remove-x" onClick={() => handleRemoveUnit(item, u.id, u.name)} title="Remove unit">
-                                      &times;
-                                    </button>
-                                  </div>
-                                </td>
-                                <td className="unit-id-cell">
-                                  {u.name} {u.inUse && <span className="in-use-badge">● In Use</span>}
-                                </td>
-                                <td>
-                                  <div className="condition-toggle">
-                                    <button className={`condition-btn op ${u.condition === 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Operational')}>
-                                      Operational
-                                    </button>
-                                    <button className={`condition-btn inop ${u.condition !== 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Inoperational')}>
-                                      Inoperational
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ));
-                          })}
-                          <tr>
-                            <td colSpan="3">
-                              <button className="add-unit-row" onClick={() => openAddUnitModal(subCat, itemsInSubCat)}>
-                                <em>Add Equipment</em> <span className="plus">+</span>
-                              </button>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+
+                    <table className="inv-detail-table">
+                      <thead>
+                        <tr>
+                          <th>VARIATION</th>
+                          <th>NAME</th>
+                          <th className="col-condition">CONDITION</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {realItems.flatMap((item) => {
+                          const units = parseUnits(item.notes);
+                          return units.map((u) => (
+                            <tr key={u.id}>
+                              <td>
+                                <div className="inv-variation-cell">
+                                  <span>{getVariationName(item.name)}</span>
+                                  <button
+                                    className="inv-unit-remove-x"
+                                    onClick={() => openRemoveUnitModal(item, u.id, u.name || u.id)}
+                                    title="Remove unit"
+                                  >
+                                    &times;
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="inv-unit-id-cell">
+                                {u.name || u.id}
+                                {u.inUse && (
+                                  <span className="inv-in-use-badge">● In Use</span>
+                                )}
+                              </td>
+                              <td>
+                                <div className="inv-condition-toggle">
+                                  <button
+                                    className={`inv-condition-btn op${u.condition === 'Operational' ? ' selected' : ''}`}
+                                    onClick={() => handleToggleCondition(item, u.id, 'Operational')}
+                                  >
+                                    Operational
+                                  </button>
+                                  <button
+                                    className={`inv-condition-btn inop${u.condition !== 'Operational' ? ' selected' : ''}`}
+                                    onClick={() => handleToggleCondition(item, u.id, 'Inoperational')}
+                                  >
+                                    Inoperational
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ));
+                        })}
+                        <tr>
+                          <td colSpan="3">
+                            <button
+                              className="inv-add-unit-row"
+                              onClick={() => openAddUnitModal(subCat, items)}
+                            >
+                              <em>Add Equipment</em>
+                              <span className="inv-plus">+</span>
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
+
                 </div>
               </div>
             );
-          })}
+          })
         )}
       </div>
-      {/* ══════════════════════════════
-         MODALS
-      ══════════════════════════════ */}
 
-      {/* ── Add Unit Modal ── */}
-      <div className={`modal-overlay ${addUnitModal.show ? 'active' : ''}`}>
-        <div className="modal">
-          <div className="modal-header">
-            <span className="modal-title">Add Equipment Unit</span>
-            <button
-              className="modal-close"
-              onClick={() => setAddUnitModal((prev) => ({ ...prev, show: false }))}
-            >
-              ×
-            </button>
+      {/* ════════════════════════════════════════════
+          ADD CATEGORY MODAL
+      ════════════════════════════════════════════ */}
+      <div className={`inv-modal-overlay${addCatModal.show ? ' active' : ''}`}
+        onClick={(e) => { if (e.target === e.currentTarget) closeAddCatModal(); }}>
+        <div className="inv-modal">
+          <div className="inv-modal-header">
+            <h2 className="inv-modal-title">Add Equipment Category</h2>
+            <button className="inv-modal-close" onClick={closeAddCatModal}>&times;</button>
           </div>
-          <div className="modal-body">
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">Category Name</span>
-              <input className="m-input" type="text" value={addUnitModal.subCategory} disabled />
-            </div>
-
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">Variation Selection</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label className="condition-radio">
-                  <input
-                    type="radio"
-                    checked={!addUnitModal.isNewVariation}
-                    onChange={() => setAddUnitModal((prev) => ({ ...prev, isNewVariation: false }))}
-                  />
-                  Choose Existing
-                </label>
-                {!addUnitModal.isNewVariation && (
-                  <select
-                    className="m-input"
-                    value={addUnitModal.selectedItemId}
-                    onChange={(e) => setAddUnitModal((prev) => ({ ...prev, selectedItemId: e.target.value }))}
-                  >
-                    {addUnitModal.items.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {getItemDisplayName(item.name)}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
-                <label className="condition-radio">
-                  <input
-                    type="radio"
-                    checked={addUnitModal.isNewVariation}
-                    onChange={() => setAddUnitModal((prev) => ({ ...prev, isNewVariation: true }))}
-                  />
-                  Create New Variation
-                </label>
-                {addUnitModal.isNewVariation && (
-                  <input
-                    type="text"
-                    className="m-input"
-                    placeholder="E.g. Kevler VRX-932A Line Array Speaker"
-                    value={addUnitModal.newVariationName}
-                    onChange={(e) =>
-                      setAddUnitModal((prev) => ({ ...prev, newVariationName: e.target.value }))
-                    }
-                  />
-                )}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">Unit Code/Name</span>
-              <input
-                className="m-input"
-                type="text"
-                placeholder="E.g. MS7"
-                value={addUnitModal.unitName}
-                onChange={(e) => setAddUnitModal((prev) => ({ ...prev, unitName: e.target.value }))}
-              />
-            </div>
-
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">Initial Condition</span>
-              <div className="condition-radio-group">
-                <label className="condition-radio">
-                  <input
-                    type="radio"
-                    name="modal-cond"
-                    checked={addUnitModal.condition === 'Operational'}
-                    onChange={() => setAddUnitModal((prev) => ({ ...prev, condition: 'Operational' }))}
-                  />
-                  Operational
-                </label>
-                <label className="condition-radio">
-                  <input
-                    type="radio"
-                    name="modal-cond"
-                      checked={addUnitModal.condition !== 'Operational'}
-                      onChange={() => setAddUnitModal((prev) => ({ ...prev, condition: 'Inoperational' }))}
-                  />
-                  Inoperative
-                </label>
-              </div>
-            </div>
-
-            <div className="m-actions">
-              <button
-                className="m-btn-cancel"
-                onClick={() => setAddUnitModal((prev) => ({ ...prev, show: false }))}
-              >
-                Cancel
-              </button>
-              <button className="m-btn-save" onClick={handleSaveUnit}>
-                Save Unit
-              </button>
+          <div className="inv-modal-body">
+            <label className="inv-m-label">Category Name</label>
+            <input
+              ref={addCatInputRef}
+              type="text"
+              className={`inv-m-input${addCatModal.error ? ' error' : ''}`}
+              placeholder="e.g. Main Speaker"
+              value={addCatModal.name}
+              onChange={(e) => setAddCatModal((p) => ({ ...p, name: e.target.value, error: '' }))}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAddCategory(); }}
+            />
+            <p className="inv-m-error">{addCatModal.error}</p>
+            <div className="inv-m-actions">
+              <button className="inv-m-btn-cancel" onClick={closeAddCatModal}>Cancel</button>
+              <button className="inv-m-btn-save" onClick={handleAddCategory}>Add Category</button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Add Category Modal ── */}
-      <div className={`modal-overlay ${addCategoryModal.show ? 'active' : ''}`}>
-        <div className="modal">
-          <div className="modal-header">
-            <span className="modal-title">Add Equipment Category</span>
-            <button
-              className="modal-close"
-              onClick={() => setAddCategoryModal({ show: false, categoryName: '', variationName: '', unitName: '' })}
-            >
-              ×
-            </button>
+      {/* ════════════════════════════════════════════
+          ADD EQUIPMENT UNIT MODAL
+      ════════════════════════════════════════════ */}
+      <div className={`inv-modal-overlay${addUnitModal.show ? ' active' : ''}`}
+        onClick={(e) => { if (e.target === e.currentTarget) closeAddUnitModal(); }}>
+        <div className="inv-modal">
+          <div className="inv-modal-header">
+            <h2 className="inv-modal-title">Add Equipment</h2>
+            <button className="inv-modal-close" onClick={closeAddUnitModal}>&times;</button>
           </div>
-          <div className="modal-body">
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">Category Name</span>
-              <input
-                className="m-input"
-                type="text"
-                placeholder="E.g. Main Speaker"
-                value={addCategoryModal.categoryName}
-                onChange={(e) => setAddCategoryModal((prev) => ({ ...prev, categoryName: e.target.value }))}
-              />
+          <div className="inv-modal-body">
+            <label className="inv-m-label">Variation / Model</label>
+            <input
+              ref={addUnitVarRef}
+              type="text"
+              className={`inv-m-input${addUnitModal.error && !addUnitModal.variation.trim() ? ' error' : ''}`}
+              placeholder="e.g. Kevler VRX-932A Line Array Speaker"
+              value={addUnitModal.variation}
+              onChange={(e) => setAddUnitModal((p) => ({ ...p, variation: e.target.value, error: '' }))}
+            />
+
+            <label className="inv-m-label" style={{ marginTop: '14px' }}>Unit ID</label>
+            <input
+              type="text"
+              className="inv-m-input"
+              placeholder="e.g. MS7 (auto-suggested if left blank)"
+              value={addUnitModal.unitId}
+              onChange={(e) => setAddUnitModal((p) => ({ ...p, unitId: e.target.value, error: '' }))}
+            />
+
+            <label className="inv-m-label" style={{ marginTop: '14px' }}>Initial Condition</label>
+            <div className="inv-condition-radio-group">
+              <label className="inv-condition-radio">
+                <input
+                  type="radio"
+                  name="newUnitCondition"
+                  value="Operational"
+                  checked={addUnitModal.condition === 'Operational'}
+                  onChange={() => setAddUnitModal((p) => ({ ...p, condition: 'Operational' }))}
+                />
+                Operational
+              </label>
+              <label className="inv-condition-radio">
+                <input
+                  type="radio"
+                  name="newUnitCondition"
+                  value="Inoperational"
+                  checked={addUnitModal.condition === 'Inoperational'}
+                  onChange={() => setAddUnitModal((p) => ({ ...p, condition: 'Inoperational' }))}
+                />
+                Inoperational
+              </label>
             </div>
 
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">First Variation Name</span>
-              <input
-                className="m-input"
-                type="text"
-                placeholder="E.g. Kevler VRX-932A Line Array Speaker"
-                value={addCategoryModal.variationName}
-                onChange={(e) => setAddCategoryModal((prev) => ({ ...prev, variationName: e.target.value }))}
-              />
-            </div>
-
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">First Unit ID/Code</span>
-              <input
-                className="m-input"
-                type="text"
-                placeholder="E.g. MS1"
-                value={addCategoryModal.unitName}
-                onChange={(e) => setAddCategoryModal((prev) => ({ ...prev, unitName: e.target.value }))}
-              />
-            </div>
-
-            <div className="m-actions">
-              <button
-                className="m-btn-cancel"
-                onClick={() =>
-                  setAddCategoryModal({ show: false, categoryName: '', variationName: '', unitName: '' })
-                }
-              >
-                Cancel
-              </button>
-              <button className="m-btn-save" onClick={handleSaveCategory}>
-                Create Category
-              </button>
+            <p className="inv-m-error">{addUnitModal.error}</p>
+            <div className="inv-m-actions">
+              <button className="inv-m-btn-cancel" onClick={closeAddUnitModal}>Cancel</button>
+              <button className="inv-m-btn-save" onClick={handleSaveUnit}>Add</button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Remove Unit Confirmation Modal ── */}
-      <div className={`modal-overlay ${removeUnitModal.show ? 'active' : ''}`}>
-        <div className="modal">
-          <div className="modal-header">
-            <span className="modal-title">Remove Equipment Unit</span>
-            <button className="modal-close" onClick={closeRemoveUnitModal}>
-              ×
-            </button>
+      {/* ════════════════════════════════════════════
+          REMOVE UNIT CONFIRM MODAL
+      ════════════════════════════════════════════ */}
+      <div className={`inv-modal-overlay${removeUnitModal.show ? ' active' : ''}`}
+        onClick={(e) => { if (e.target === e.currentTarget) closeRemoveUnitModal(); }}>
+        <div className="inv-modal">
+          <div className="inv-modal-header">
+            <h2 className="inv-modal-title">Remove Equipment</h2>
+            <button className="inv-modal-close" onClick={closeRemoveUnitModal}>&times;</button>
           </div>
-          <div className="modal-body">
-            <p className="confirm-msg">
-              Remove <strong>{removeUnitModal.unitName}</strong> from <strong>{getItemDisplayName(removeUnitModal.item?.name || '')}</strong>?
+          <div className="inv-modal-body">
+            <p className="inv-confirm-text">
+              Remove unit <strong>{removeUnitModal.unitLabel}</strong> from inventory? This cannot be undone.
             </p>
-            <div className="m-actions">
-              <button className="m-btn-cancel" onClick={closeRemoveUnitModal}>
-                Cancel
-              </button>
-              <button className="m-btn-save" onClick={confirmRemoveUnit}>
-                Remove Unit
-              </button>
+            <div className="inv-m-actions">
+              <button className="inv-m-btn-cancel" onClick={closeRemoveUnitModal}>Cancel</button>
+              <button className="inv-m-btn-reject" onClick={handleConfirmRemoveUnit}>Remove</button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Add/Edit Addon Modal ── */}
-      <div className={`modal-overlay ${addAddonModal.show ? 'active' : ''}`}>
-        <div className="modal">
-          <div className="modal-header">
-            <span className="modal-title">{addAddonModal.id ? 'Edit Addon Item' : 'Add Addon Item'}</span>
-            <button
-              className="modal-close"
-              onClick={() => setAddAddonModal((prev) => ({ ...prev, show: false }))}
-            >
-              ×
-            </button>
-          </div>
-          <div className="modal-body">
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">Name</span>
-              <input
-                className="m-input"
-                type="text"
-                placeholder="E.g. Projector + Wide Screen"
-                value={addAddonModal.name}
-                onChange={(e) => setAddAddonModal((prev) => ({ ...prev, name: e.target.value }))}
-              />
-            </div>
-
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">Description / Subtitle</span>
-              <input
-                className="m-input"
-                type="text"
-                placeholder="E.g. w/ HDMI Cable"
-                value={addAddonModal.subtitle}
-                onChange={(e) => setAddAddonModal((prev) => ({ ...prev, subtitle: e.target.value }))}
-              />
-            </div>
-
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">Price (Php)</span>
-              <input
-                className="m-input"
-                type="number"
-                value={addAddonModal.price === 0 ? '' : addAddonModal.price}
-                onChange={(e) => setAddAddonModal((prev) => ({ ...prev, price: Number(e.target.value) }))}
-              />
-            </div>
-
-            <div style={{ marginBottom: '14px' }}>
-              <span className="m-label">Promo Price (Optional)</span>
-              <input
-                className="m-input"
-                type="number"
-                value={addAddonModal.promo === 0 ? '' : addAddonModal.promo}
-                onChange={(e) => setAddAddonModal((prev) => ({ ...prev, promo: Number(e.target.value) }))}
-              />
-            </div>
-
-            <div className="m-actions">
-              <button
-                className="m-btn-cancel"
-                onClick={() => setAddAddonModal((prev) => ({ ...prev, show: false }))}
-              >
-                Cancel
-              </button>
-              <button className="m-btn-save" onClick={handleSaveAddon}>
-                Save Item
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Toast Element ── */}
-      <div className={`toast ${toast.show ? 'show' : ''} ${toast.isError ? 'is-error' : ''}`}>
-        {toast.message}
-      </div>
+      {/* ── Toast ── */}
+      <Toast toast={toast} />
     </section>
   );
 }
