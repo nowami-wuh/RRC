@@ -394,25 +394,31 @@ export default function AdminPackages() {
     <section className="main-content apm-root">
 
       {/* ── Top Tabs ── */}
-      <div className="equip-tabs">
+      <div className="apm-top-tabs">
         <button
-          className={`equip-tab${activeTab === 'packages' ? ' active' : ''}`}
+          className={`apm-top-tab apm-tab-0${activeTab === 'packages' ? ' active' : ''}`}
           onClick={() => setActiveTab('packages')}
         >
           PACKAGES
         </button>
         <button
-          className={`equip-tab${activeTab === 'addons' ? ' active' : ''}`}
+          className={`apm-top-tab apm-tab-1${activeTab === 'addons' ? ' active' : ''}`}
           onClick={() => setActiveTab('addons')}
         >
           ADD-ONS
         </button>
         <button
-          className={`equip-tab${activeTab === 'misc' ? ' active' : ''}`}
+          className={`apm-top-tab apm-tab-2${activeTab === 'misc' ? ' active' : ''}`}
           onClick={() => setActiveTab('misc')}
         >
           MISCELLANEOUS
         </button>
+      </div>
+      <div className="apm-tab-track">
+        <div
+          className="apm-tab-indicator"
+          style={{ left: tabPositions[activeTab] }}
+        />
       </div>
 
       {/* ── Tab Body ── */}
@@ -465,83 +471,85 @@ export default function AdminPackages() {
                     </div>
 
                     {/* Expandable content */}
-                    {!isCollapsed && (
-                      <div className="apm-content">
-                        {/* Equipment groups */}
-                        {(pkg.groups || []).map((group, gIdx) => (
-                          <div key={gIdx} className="apm-equip-section">
-                            <div className="apm-cat-sidebar">{group.category}</div>
-                            <div className="apm-equip-table">
-                              <div className="apm-equip-head">
-                                <span />
-                                <span>Equipment Type</span>
-                                <span>Qty</span>
-                                <span>Unit</span>
-                              </div>
-                              {(group.items || []).map((item, iIdx) => {
-                                const parts = item.qty.split(' ');
-                                const qNum  = parts[0] || '1';
-                                const qUnit = parts.slice(1).join(' ') || 'pc';
-                                return (
-                                  <div key={iIdx} className="apm-equip-row">
-                                    <button
-                                      className="apm-remove-x"
-                                      title="Remove"
-                                      onClick={() => removeEquip(pkg.id, gIdx, iIdx)}
-                                    >
-                                      &times;
-                                    </button>
-                                    <span
-                                      className="apm-equip-name"
-                                      onClick={() => openEditEquip(pkg.id, gIdx, iIdx)}
-                                    >
-                                      {item.name}
-                                    </span>
-                                    <span className="apm-qty-wrap">
-                                      <span className="apm-stepper">
-                                        <button className="apm-step" onClick={() => changeQty(pkg.id, gIdx, iIdx, 1)}>▲</button>
-                                        <button className="apm-step" onClick={() => changeQty(pkg.id, gIdx, iIdx, -1)}>▼</button>
-                                      </span>
-                                      <span className="apm-qty-val">{qNum}</span>
-                                    </span>
-                                    <span className="apm-unit">{qUnit}</span>
-                                  </div>
-                                );
-                              })}
+                    <div className="apm-content">
+                      {/* Equipment groups */}
+                      {(pkg.groups || []).map((group, gIdx) => (
+                        <div key={gIdx} className="apm-equip-section">
+                          <div className="apm-cat-sidebar">{group.category}</div>
+                          <div className="apm-equip-table">
+                            <div className="apm-equip-head">
+                              <span />
+                              <span>Equipment Type</span>
+                              <span>Qty. Needed / Available</span>
+                              <span />
+                              <span>Unit</span>
                             </div>
+                            {(group.items || []).map((item, iIdx) => {
+                              const parts  = item.qty.split(' ');
+                              const qNum   = parseInt(parts[0], 10) || 1;
+                              const qUnit  = parts.slice(1).join(' ') || 'pc';
+                              return (
+                                <div key={iIdx} className="apm-equip-row">
+                                  <button
+                                    className="apm-remove-x"
+                                    title="Remove"
+                                    onClick={() => removeEquip(pkg.id, gIdx, iIdx)}
+                                  >
+                                    &times;
+                                  </button>
+                                  <span
+                                    className="apm-equip-name"
+                                    onClick={() => openEditEquip(pkg.id, gIdx, iIdx)}
+                                  >
+                                    {item.name}
+                                  </span>
+                                  <span className="apm-qty-wrap">
+                                    <span className="apm-stepper">
+                                      <button className="apm-step" onClick={() => changeQty(pkg.id, gIdx, iIdx, 1)}>▲</button>
+                                      <button className="apm-step" onClick={() => changeQty(pkg.id, gIdx, iIdx, -1)}>▼</button>
+                                    </span>
+                                    <span className="apm-qty-val">{qNum} / —</span>
+                                  </span>
+                                  <span className="apm-qty-check ok">✓</span>
+                                  <span className="apm-unit">{qUnit}</span>
+                                </div>
+                              );
+                            })}
                           </div>
-                        ))}
-
-                        <button
-                          className="apm-add-equip-link"
-                          onClick={() => openAddEquip(pkg.id)}
-                        >
-                          <em>Add Equipment</em> <span>+</span>
-                        </button>
-
-                        {/* Notes */}
-                        {pkg.note && (
-                          <div className="apm-notes-block">
-                            <span className="apm-notes-label">Notes:</span>
-                            <div className="apm-notes-box">
-                              {pkg.note.split('\n').filter(Boolean).map((n, ni) => (
-                                <p key={ni} className="apm-note-line">{n}</p>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Delete */}
-                        <div className="apm-card-actions">
-                          <button
-                            className="apm-btn-delete"
-                            onClick={() => confirmDelete(pkg)}
-                          >
-                            Delete Package
-                          </button>
                         </div>
+                      ))}
+
+                      <button
+                        className="apm-add-equip-link"
+                        onClick={() => openAddEquip(pkg.id)}
+                      >
+                        <em>Add Equipments</em> <span>+</span>
+                      </button>
+
+                      {/* Notes */}
+                      {pkg.note && (
+                        <div className="apm-notes-block">
+                          <span className="apm-notes-label">Notes:</span>
+                          <div className="apm-notes-box">
+                            <ul>
+                              {pkg.note.split('\n').filter(Boolean).map((n, ni) => (
+                                <li key={ni}>{n}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Delete */}
+                      <div className="apm-card-actions">
+                        <button
+                          className="apm-btn-delete"
+                          onClick={() => confirmDelete(pkg)}
+                        >
+                          Delete Package
+                        </button>
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}
@@ -645,6 +653,7 @@ export default function AdminPackages() {
         )}
 
       </div>{/* /tab-body */}
+
 
       {/* ════ MODALS ════ */}
 

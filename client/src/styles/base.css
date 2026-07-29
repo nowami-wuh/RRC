@@ -236,11 +236,11 @@ img {
 
 .mr-notif-bell svg,
 .mr-notif-icon {
-  width: 20px;
-  height: 20px;
-  stroke: var(--dark-blue, #4A70A9) !important;
+  width: 22px;
+  height: 22px;
   color: var(--dark-blue, #4A70A9) !important;
-  fill: none;
+  fill: var(--dark-blue, #4A70A9) !important;
+  stroke: none !important;
   transition: all 0.2s ease;
 }
 
@@ -258,8 +258,9 @@ img {
 .mr-notif-bell:hover .mr-notif-icon,
 .mr-notif-bell:active svg,
 .mr-notif-bell:active .mr-notif-icon {
-  stroke: #ffffff !important;
   color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: none !important;
 }
 
 .logout-btn {

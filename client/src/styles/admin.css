@@ -3089,12 +3089,15 @@ body {
     --apm-blue-lt: #8FABD4;
     --apm-red: #c62828;
     --apm-green: #2e7d32;
+    --apm-ok: #6FAE7A;
+    --apm-no: #D88A8A;
 }
 
 .apm-root {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    background: var(--bg-beige);
 }
 
 /* ── Top Tabs ── */
@@ -3107,7 +3110,7 @@ body {
 .apm-top-tab {
     background: none; border: none;
     font-family: 'Garet Heavy', sans-serif;
-    font-size: 16px; font-weight: 900;
+    font-size: 17px; font-weight: 900;
     color: #999; letter-spacing: 0.5px;
     padding: 6px 0 14px;
     cursor: pointer;
@@ -3155,8 +3158,8 @@ body {
     display: inline-block;
     background: var(--apm-blue); color: white;
     font-family: 'Garet Heavy', sans-serif;
-    font-size: 15px; font-weight: 900;
-    padding: 11px 26px; cursor: pointer;
+    font-size: 16px; font-weight: 900;
+    padding: 12px 26px; cursor: pointer;
     margin-left: -2px;
     border-radius: 10px 10px 0 0;
     user-select: none;
@@ -3173,22 +3176,20 @@ body {
 .apm-pkg-occasion { font-size: 13px; font-style: italic; color: #2b2b2b; }
 .apm-btn-edit {
     background: var(--apm-blue); color: white;
-    border: none; padding: 9px 20px; border-radius: 6px;
+    border: none; padding: 9px 22px; border-radius: 6px;
     font-family: 'Garet Heavy', sans-serif;
     font-size: 13px; cursor: pointer; transition: background 0.2s; flex-shrink: 0;
 }
 .apm-btn-edit:hover { background: #3a5a8a; }
 .apm-price-block {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0;
 }
 .apm-price { font-family: 'Garet Heavy', sans-serif; font-size: 15px; font-weight: 900; color: var(--text-dark); }
 .apm-promo  { font-size: 12.5px; font-style: italic; color: var(--apm-blue); }
 
 /* Expandable content */
 .apm-content { padding: 20px 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.apm-card.collapsed .apm-content { display: none; }
 
 /* Equipment section */
 .apm-equip-section {
@@ -3199,7 +3200,7 @@ body {
     writing-mode: vertical-rl; text-orientation: upright;
     background: var(--apm-blue-lt); color: var(--text-dark);
     font-family: 'Garet Heavy', sans-serif;
-    font-size: 13px; font-weight: 900; letter-spacing: 4px;
+    font-size: 14px; font-weight: 900; letter-spacing: 4px;
     padding: 14px 10px;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0; border-radius: 10px 0 0 10px;
@@ -3207,14 +3208,15 @@ body {
 .apm-equip-table { flex: 1; padding: 14px 16px; }
 .apm-equip-head {
     display: grid;
-    grid-template-columns: 20px 1fr 100px 80px;
+    grid-template-columns: 20px 1fr 200px 20px 60px;
     font-family: 'Garet Heavy', sans-serif;
-    font-size: 12px; font-weight: 900;
+    font-size: 13px; font-weight: 900;
     color: var(--text-dark); padding-bottom: 8px; gap: 10px;
 }
+.apm-equip-head span:nth-child(3) { text-align: center; }
 .apm-equip-row {
     display: grid;
-    grid-template-columns: 20px 1fr 100px 80px;
+    grid-template-columns: 20px 1fr 200px 20px 60px;
     align-items: center; gap: 10px;
     padding: 7px 0; font-size: 14px; color: var(--text-dark);
     border-bottom: 1px solid #f5f5f5;
@@ -3227,29 +3229,34 @@ body {
 .apm-remove-x:hover { color: var(--apm-red); }
 .apm-equip-name { cursor: pointer; transition: color 0.15s; }
 .apm-equip-name:hover { text-decoration: underline; color: var(--apm-blue); }
-.apm-qty-wrap { display: flex; align-items: center; gap: 5px; }
+.apm-qty-wrap { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .apm-stepper  { display: flex; flex-direction: column; gap: 1px; }
-.apm-step { background: none; border: none; cursor: pointer; color: var(--text-dark); font-size: 9px; line-height: 1; padding: 0; opacity: 0.6; }
+.apm-step { background: none; border: none; cursor: pointer; color: var(--text-dark); font-size: 10px; line-height: 1; padding: 0; opacity: 0.6; }
 .apm-step:hover { opacity: 1; }
-.apm-qty-val { font-family: 'Garet Heavy', sans-serif; font-size: 14px; }
-.apm-unit { color: #555; font-size: 13px; }
+.apm-qty-val { font-family: 'Garet Heavy', sans-serif; font-size: 14px; white-space: nowrap; }
+.apm-qty-check { text-align: center; font-weight: 900; font-size: 15px; }
+.apm-qty-check.ok { color: var(--apm-ok); }
+.apm-qty-check.no { color: var(--apm-no); }
+.apm-unit { text-align: center; color: #555; font-size: 13px; }
 
 .apm-add-equip-link {
     background: none; border: none;
     font-family: 'Garet', sans-serif;
     color: #2b2b2b; font-size: 14px;
-    cursor: pointer; padding: 4px 0 0 30px;
+    cursor: pointer; padding: 8px 0 0 30px;
     text-align: left; transition: color 0.2s;
 }
 .apm-add-equip-link:hover { color: #111; }
 .apm-add-equip-link em { font-style: italic; text-decoration: underline; }
+.apm-add-equip-link span { font-size: 16px; }
 
 /* Notes */
 .apm-notes-block { display: flex; flex-direction: column; gap: 8px; }
 .apm-notes-label { font-size: 14px; font-style: italic; color: var(--text-dark); }
-.apm-notes-box { border: 1.5px solid #ccc; border-radius: 8px; padding: 12px 16px; }
-.apm-note-line { font-size: 13.5px; font-style: italic; color: var(--text-dark); line-height: 1.5; margin-bottom: 4px; }
-.apm-note-line:last-child { margin-bottom: 0; }
+.apm-notes-box { border: 1.5px solid #ccc; border-radius: 8px; padding: 14px 18px; }
+.apm-notes-box ul { list-style: disc; padding-left: 18px; }
+.apm-notes-box li { font-size: 13.5px; font-style: italic; color: var(--text-dark); margin-bottom: 4px; line-height: 1.5; }
+.apm-notes-box li:last-child { margin-bottom: 0; }
 
 /* Card actions + delete */
 .apm-card-actions { display: flex; justify-content: flex-end; padding-top: 4px; }
@@ -3283,13 +3290,13 @@ body {
 .apm-addon-rows { display: flex; flex-direction: column; }
 .apm-addon-row {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 13px 22px; border-bottom: 1px solid #f0f0f0; gap: 16px;
+    padding: 14px 22px; border-bottom: 1px solid #f0f0f0; gap: 16px;
 }
 .apm-addon-row:last-child { border-bottom: none; }
 .apm-addon-left { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .apm-addon-name { font-size: 15px; color: var(--text-dark); }
 .apm-addon-desc { font-size: 12.5px; font-style: italic; color: var(--text-gray); }
-.apm-addon-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.apm-addon-right { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
 .apm-addon-edit {
     background: none; border: none;
     font-family: 'Garet', sans-serif; color: var(--apm-blue);
@@ -3297,11 +3304,7 @@ body {
     cursor: pointer; transition: color 0.2s;
 }
 .apm-addon-edit:hover { color: #2d4a73; }
-.apm-addon-price-block {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
+.apm-addon-price-block { display: flex; flex-direction: column; align-items: flex-end; }
 .apm-addon-price { font-size: 15px; font-family: 'Garet Heavy', sans-serif; color: var(--text-dark); white-space: nowrap; }
 .apm-addon-promo { font-size: 12px; color: var(--apm-blue); white-space: nowrap; }
 .apm-addon-del {
@@ -3318,6 +3321,7 @@ body {
 }
 .apm-add-row-btn:hover { color: var(--apm-blue); }
 .apm-add-row-btn em { font-style: italic; }
+.apm-add-row-btn span { font-size: 16px; }
 
 /* ── Misc Tab ── */
 .apm-misc-card { border: 2px solid var(--apm-blue); border-radius: 12px; overflow: hidden; background: white; }
@@ -3400,6 +3404,33 @@ body {
     pointer-events: none; z-index: 999; white-space: nowrap;
 }
 .apm-toast.show    { opacity: 1; transform: translateX(-50%) translateY(0); }
+.apm-toast.is-error { background: var(--apm-red); }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .apm-equip-section { flex-direction: column; }
+    .apm-cat-sidebar { writing-mode: horizontal-tb; border-radius: 10px 10px 0 0; letter-spacing: 1px; }
+    .apm-equip-head,
+    .apm-equip-row { grid-template-columns: 16px 1fr 100px 16px 40px; font-size: 12px; }
+}
+@media (max-width: 768px) {
+    .apm-top-tabs { padding: 16px 16px 0; }
+    .apm-tab-track { margin: 0 16px; }
+    .apm-tab-body { padding: 16px; }
+    .apm-header-strip { flex-wrap: wrap; }
+    .apm-addon-row { flex-wrap: wrap; }
+}
+@media (max-width: 480px) {
+    .apm-top-tabs { padding: 12px 10px 0; }
+    .apm-top-tab { font-size: 13px; }
+    .apm-tab-track { margin: 0 10px; }
+    .apm-tab-body { padding: 12px 10px; }
+    .apm-card-tab { font-size: 14px; padding: 10px 18px; }
+    .apm-equip-head,
+    .apm-equip-row { grid-template-columns: 14px 1fr 80px 14px 36px; font-size: 11px; }
+}
+
+
 .apm-toast.is-error { background: var(--apm-red); }
 
 /* ── Admin Requests Page (mirrors reference styling) ── */
