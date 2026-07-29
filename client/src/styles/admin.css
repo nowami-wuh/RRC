@@ -399,6 +399,168 @@ body {
     color: white;
 }
 
+/* Request page specific styles (from reference) */
+.main-content {
+    flex: 1;
+    background-color: var(--bg-beige);
+    overflow-y: auto;
+    padding: 28px 36px;
+}
+
+.status-bar { margin-bottom: 18px; }
+
+.status-tabs {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+}
+.status-tab {
+    background: none; border: none;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 13px; font-weight: 900;
+    color: #999; letter-spacing: 0.3px;
+    padding: 6px 0 12px;
+    cursor: pointer;
+    transition: color 0.2s;
+    text-align: center;
+    white-space: nowrap;
+}
+.status-tab:hover { color: var(--text-dark); }
+.status-tab.active { color: var(--text-dark); }
+
+.progress-track {
+    position: relative;
+    height: 8px;
+    background: white;
+    border: 1.5px solid #ccc;
+    border-radius: 20px;
+    overflow: hidden;
+}
+.progress-fill {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    width: 16.666%;
+    background: var(--dark-blue);
+    border-radius: 20px;
+    transition: left 0.3s ease, width 0.3s ease;
+}
+
+.list-area { display: flex; flex-direction: column; gap: 14px; }
+
+.sort-row { display: flex; justify-content: flex-end; }
+.sort-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: none;
+    color: var(--text-gray); font-size: 14px;
+    font-family: 'Garet', sans-serif;
+    font-weight: 700;
+    cursor: pointer; padding: 6px 4px;
+    transition: color 0.2s;
+}
+.sort-icon {
+    transition: transform 0.25s ease;
+}
+.sort-btn:hover { color: var(--dark-blue); }
+
+.booking-list { display: flex; flex-direction: column; gap: 16px; }
+
+.empty-msg {
+    text-align: center;
+    color: var(--text-gray);
+    padding: 50px 0;
+    font-size: 15px;
+}
+
+.booking-card {
+    background: white;
+    border: 2px solid var(--dark-blue);
+    border-radius: 12px;
+    padding: 18px 22px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    animation: cardIn 0.25s ease;
+}
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.bc-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+}
+.bc-id-label {
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 15px; font-weight: 900;
+    color: var(--text-dark);
+}
+.bc-id-value {
+    font-style: italic; font-size: 15px;
+    color: var(--text-dark); margin-left: 8px;
+}
+.type-badge {
+    display: inline-flex; align-items: center;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 10.5px; font-weight: 900;
+    letter-spacing: 0.5px;
+    padding: 3px 10px; border-radius: 20px;
+    margin-left: 12px;
+    vertical-align: middle;
+}
+.type-badge.booking { background: #e8f0fb; color: var(--dark-blue); border: 1px solid #c4d7f0; }
+.type-badge.rent { background: #fdf0e0; color: #b06a17; border: 1px solid #f3d9a8; }
+
+.bc-view-link {
+    color: var(--dark-blue);
+    font-style: italic; font-size: 14px;
+    text-decoration: underline;
+    background: none; border: none;
+    cursor: pointer;
+    font-family: 'Garet', sans-serif;
+    transition: color 0.2s;
+}
+.bc-view-link:hover { color: #2d4a73; }
+
+.bc-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 12px; color: var(--text-dark);
+    letter-spacing: 0.5px;
+    padding-bottom: 8px;
+    border-bottom: 1.5px solid #eee;
+}
+.bc-cols span:nth-child(2) { text-align: center; }
+.bc-cols span:nth-child(3) { text-align: right; }
+
+.bc-vals {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    font-size: 14px; color: var(--text-dark);
+    padding-top: 10px;
+}
+.bc-vals span:nth-child(2) { text-align: center; }
+.bc-vals span:nth-child(3) { text-align: right; }
+
+/* Detail and other components already styled above; additional responsive tweaks */
+@media (max-width: 900px) {
+    .details-grid { grid-template-columns: 1fr; }
+    .bc-cols, .bc-vals { font-size: 12px; }
+    .status-tab { font-size: 11px; }
+}
+@media (max-width: 768px) {
+    body { flex-direction: column; overflow: auto; height: auto; }
+    .sidebar { width: 100%; padding: 16px 20px; }
+    .sidebar-nav { flex-direction: row; overflow-x: auto; gap: 8px; }
+    .nav-item { white-space: nowrap; font-size: 13px; padding: 9px 12px; }
+    .main-content { padding: 16px; overflow: visible; }
+    .detail-card { padding: 18px; }
+    .billing-actions { flex-direction: column; gap: 12px; align-items: stretch; }
+    .final-btns { justify-content: flex-end; }
+    .status-tabs { overflow-x: auto; }
+    .status-tab { font-size: 10px; padding: 6px 2px 10px; }
+    .status-banner { flex-direction: column; align-items: stretch; gap: 10px; }
+}
+
 .calendar-day.selected.has-event::after {
     background-color: white;
 }
