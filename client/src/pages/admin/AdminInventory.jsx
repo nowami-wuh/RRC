@@ -496,211 +496,111 @@ export default function AdminInventory() {
 
           {/* ── Category List ── */}
           <div className="category-list">
-            {Object.keys(groupedInventory).map((subCat) => {
-              const itemsInSubCat = groupedInventory[subCat];
-              return (
-                <div key={subCat} className="category-card">
-                  <div className="card-face">
-                    <div className="card-header-row">
-                      <span className="category-title">{subCat}</span>
-                    </div>
-
-                    <div className="detail-table-wrap">
-                      <table className="detail-table">
-                        <thead>
-                          <tr>
-                            <th className="col-var-name">Variation</th>
-                            <th className="col-unit-id">Name</th>
-                            <th className="col-condition">Condition</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {itemsInSubCat.flatMap((item) => {
-                            const units = parseNotes(item.notes);
-                            return units.map((unit) => (
-                              <tr key={unit.id}>
-                                <td>
-                                  <div className="variation-cell">
-                                    <span>{getItemDisplayName(item.name)}</span>
-                                    <button
-                                      className="unit-remove-x"
-                                      onClick={() => handleRemoveUnit(item, unit.id)}
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                </td>
-                                <td className="unit-id-cell col-unit-id">
-                                  {unit.name}
-                                  {unit.inUse && <span className="in-use-badge">In-Use</span>}
-                                </td>
-                                  <td className="col-condition">
-                                    <div className="condition-toggle">
-                                      <button
-                                        className={`condition-btn op ${unit.condition === 'Operational' ? 'selected' : ''}`}
-                                        onClick={() => handleToggleCondition(item, unit.id, 'Operational')}
-                                      >
-                                        Operational
-                                      </button>
-                                      <button
-                                        className={`condition-btn inop ${unit.condition !== 'Operational' ? 'selected' : ''}`}
-                                        onClick={() => handleToggleCondition(item, unit.id, 'Inoperational')}
-                                      >
-                                        Inoperational
-                                      </button>
-                                    </div>
-                                  </td>
-                              </tr>
-                            ));
-                          })}
-
-                          <tr>
-                            <td colSpan="3">
-                              <button
-                                className="add-unit-row"
-                                onClick={() => openAddUnitModal(subCat, itemsInSubCat)}
-                              >
-                                <em>Add Equipment</em> <span className="plus">+</span>
-                              </button>
-                            </td>
-                          </tr>
-                        </tbody>
-                          {Object.keys(groupedInventory).map((subCat) => {
-                            const itemsInSubCat = groupedInventory[subCat];
-                            const summary = buildSummary(itemsInSubCat);
-                            const isFlipped = flippedCards.includes(subCat);
-                            return (
-                              <div key={subCat} className={`category-card ${isFlipped ? 'flipped' : ''}`} data-cat-id={subCat}>
-                                <div className="category-card-inner">
-                                  <div className="card-face front">
-                                    <div className="card-header-row">
-                                      <span className="category-title">{subCat}</span>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <span className="flip-hint" onClick={() => toggleFlip(subCat)} style={{ cursor: 'pointer' }}>
-                                          View Details
-                                        </span>
-                                        <button className="category-remove-btn" onClick={() => handleRemoveCategory(subCat)} title="Remove category">&times;</button>
-                                      </div>
-                                    </div>
-                                    <div className="summary-table-wrap">
-                                      <div className="summary-table-title">Inventory Summary</div>
-                                      {summary.length === 0 ? (
-                                        <p className="summary-empty">No equipment yet. Flip the card to add some.</p>
-                                      ) : (
-                                        <table className="summary-table">
-                                          <thead>
-                                            <tr>
-                                              <th>VARIATION</th>
-                                              <th>INOPERATIONAL</th>
-                                              <th>OPERATIONAL</th>
-                                              <th>IN USE</th>
-                                              <th>AVAILABLE</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {summary.map((row) => (
-                                              <tr key={row.variation}>
-                                                <td>{row.variation}</td>
-                                                <td>{row.inoperational}</td>
-                                                <td>{row.operational}</td>
-                                                <td>{row.inUse || '-'}</td>
-                                                <td>{row.available}</td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="card-face back">
-                                    <div className="card-header-row">
-                                      <span className="category-title">{subCat}</span>
-                                      <span className="flip-hint" onClick={() => toggleFlip(subCat)} style={{ cursor: 'pointer' }}>Back to Summary</span>
-                                    </div>
-                                    <table className="detail-table">
-                                      <thead>
-                                        <tr>
-                                          <th>VARIATION</th>
-                                          <th>NAME</th>
-                                          <th className="col-condition">CONDITION</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {itemsInSubCat.flatMap((item) => {
-                                          const units = parseNotes(item.notes);
-                                          return units.map((u) => (
-                                            <tr key={u.id} data-unit-id={u.id}>
-                                              <td>
-                                                <div className="variation-cell">
-                                                  <span>{getItemDisplayName(item.name)}</span>
-                                                  <button className="unit-remove-x" onClick={() => handleRemoveUnit(item, u.id)} title="Remove unit">&times;</button>
-                                                </div>
-                                              </td>
-                                              <td className="unit-id-cell">
-                                                {u.name} {u.inUse && <span className="in-use-badge">● In Use</span>}
-                                              </td>
-                                              <td>
-                                                <div className="condition-toggle">
-                                                  <button className={`condition-btn op ${u.condition === 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Operational')}>Operational</button>
-                                                  <button className={`condition-btn inop ${u.condition !== 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Inoperational')}>Inoperational</button>
-                                                </div>
-                                              </td>
-                                            </tr>
-                                          ));
-                                        })}
-                                        <tr>
-                                          <td colSpan="3">
-                                            <button className="add-unit-row" onClick={() => openAddUnitModal(subCat, itemsInSubCat)}>
-                                              <em>Add Equipment</em> <span className="plus">+</span>
-                                            </button>
-                                          </td>
-                                        </tr>
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                            style={{
-                              border: 'none',
-                              background: 'transparent',
-                              fontSize: '14px',
-                              fontStyle: 'italic',
-                              padding: '2px 0',
-                            }}
-                            value={pkgEditInputs.subtitle}
-                            onChange={(e) => updatePkgField('subtitle', e.target.value)}
-                          />
+            {Object.keys(groupedInventory).length === 0 ? (
+              <div className="summary-empty" style={{ padding: '80px 0' }}>
+                No categories yet. Add one using the button above.
+              </div>
+            ) : (
+              Object.keys(groupedInventory).map((subCat) => {
+                const itemsInSubCat = groupedInventory[subCat];
+                const summary = buildSummary(itemsInSubCat);
+                const isFlipped = flippedCards.includes(subCat);
+                return (
+                  <div key={subCat} className={`category-card ${isFlipped ? 'flipped' : ''}`} data-cat-id={subCat}>
+                    <div className="category-card-inner">
+                      <div className="card-face front">
+                        <div className="card-header-row">
+                          <span className="category-title">{subCat}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span className="flip-hint" onClick={() => toggleFlip(subCat)} style={{ cursor: 'pointer' }}>
+                              View Details
+                            </span>
+                            <button className="category-remove-btn" onClick={() => handleRemoveCategory(subCat)} title="Remove category">&times;</button>
+                          </div>
                         </div>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '14px' }}>Php</span>
-                            <input
-                              type="number"
-                              className="m-input pkg-edit-price"
-                              style={{ width: '120px', padding: '6px' }}
-                              value={pkgEditInputs.price === 0 ? '' : pkgEditInputs.price}
-                              onChange={(e) => updatePkgField('price', Number(e.target.value))}
-                            />
-                          </div>
-                          <div
-                            className="pkg-edit-promo"
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}
-                          >
-                            <span>(promo Php</span>
-                            <input
-                              type="number"
-                              className="m-input"
-                              style={{ width: '80px', padding: '4px', fontSize: '12px' }}
-                              value={pkgEditInputs.promo === 0 ? '' : pkgEditInputs.promo}
-                              onChange={(e) => updatePkgField('promo', Number(e.target.value))}
-                            />
-                            <span>)</span>
-                          </div>
+                        <div className="summary-table-wrap">
+                          <div className="summary-table-title">Inventory Summary</div>
+                          {summary.length === 0 ? (
+                            <p className="summary-empty">No equipment yet. Flip the card to add some.</p>
+                          ) : (
+                            <table className="summary-table">
+                              <thead>
+                                <tr>
+                                  <th>VARIATION</th>
+                                  <th>INOPERATIONAL</th>
+                                  <th>OPERATIONAL</th>
+                                  <th>IN USE</th>
+                                  <th>AVAILABLE</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {summary.map((row) => (
+                                  <tr key={row.variation}>
+                                    <td>{row.variation}</td>
+                                    <td>{row.inoperational}</td>
+                                    <td>{row.operational}</td>
+                                    <td>{row.inUse || '-'}</td>
+                                    <td>{row.available}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
                         </div>
                       </div>
+
+                      <div className="card-face back">
+                        <div className="card-header-row">
+                          <span className="category-title">{subCat}</span>
+                          <span className="flip-hint" onClick={() => toggleFlip(subCat)} style={{ cursor: 'pointer' }}>Back to Summary</span>
+                        </div>
+                        <table className="detail-table">
+                          <thead>
+                            <tr>
+                              <th>VARIATION</th>
+                              <th>NAME</th>
+                              <th className="col-condition">CONDITION</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {itemsInSubCat.flatMap((item) => {
+                              const units = parseNotes(item.notes);
+                              return units.map((u) => (
+                                <tr key={u.id} data-unit-id={u.id}>
+                                  <td>
+                                    <div className="variation-cell">
+                                      <span>{getItemDisplayName(item.name)}</span>
+                                      <button className="unit-remove-x" onClick={() => handleRemoveUnit(item, u.id)} title="Remove unit">&times;</button>
+                                    </div>
+                                  </td>
+                                  <td className="unit-id-cell">
+                                    {u.name} {u.inUse && <span className="in-use-badge">● In Use</span>}
+                                  </td>
+                                  <td>
+                                    <div className="condition-toggle">
+                                      <button className={`condition-btn op ${u.condition === 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Operational')}>Operational</button>
+                                      <button className={`condition-btn inop ${u.condition !== 'Operational' ? 'selected' : ''}`} onClick={() => handleToggleCondition(item, u.id, 'Inoperational')}>Inoperational</button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ));
+                            })}
+                            <tr>
+                              <td colSpan="3">
+                                <button className="add-unit-row" onClick={() => openAddUnitModal(subCat, itemsInSubCat)}>
+                                  <em>Add Equipment</em> <span className="plus">+</span>
+                                </button>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
 
                       <div className="pkg-tbl-wrap">
                         <div className="pkg-tbl-side">SOUNDS</div>
