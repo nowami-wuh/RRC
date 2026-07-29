@@ -934,14 +934,33 @@ body {
     }
 
     .status-tabs {
-        grid-template-columns: 1fr 1fr 1fr;
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 8px;
+        padding: 4px 2px 8px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
     }
-
+    .status-tabs::-webkit-scrollbar { display: none; }
     .status-tab {
+        flex: 0 0 auto;
+        padding: 7px 14px;
+        border: 1.5px solid #d5dce6;
+        border-radius: 999px;
+        background: #ffffff;
+        color: #555555;
         font-size: 11px;
-        padding: 5px 0 8px;
-        letter-spacing: 0;
+        font-weight: 700;
+        letter-spacing: 0.5px;
     }
+    .status-tab.active {
+        background: var(--dark-blue, #4A70A9);
+        color: #ffffff;
+        border-color: var(--dark-blue, #4A70A9);
+        box-shadow: 0 2px 8px rgba(74, 112, 169, 0.35);
+    }
+    .progress-track { display: none !important; }
 
     .booking-card {
         padding: 12px 14px;
@@ -2837,23 +2856,8 @@ body {
     position: relative;
     transition: color 0.2s ease;
 }
-.status-tab::after {
-    content: '';
-    position: absolute;
-    left: 20%;
-    right: 20%;
-    bottom: 8px;
-    height: 4px;
-    background: transparent;
-    border-radius: 999px;
-    transition: background 0.2s ease, transform 0.2s ease;
-}
 .status-tab.active {
     color: var(--text-dark);
-}
-.status-tab.active::after {
-    background: var(--dark-blue);
-    transform: scaleX(1);
 }
 .status-tab:hover { color: var(--text-dark); }
 
@@ -4399,47 +4403,46 @@ body {
     .requests-admin-page .detail-card { padding: 18px; }
     .requests-admin-page .billing-actions { flex-direction: column; gap: 12px; align-items: stretch; }
     .requests-admin-page .final-btns { justify-content: flex-end; }
-    .requests-admin-page .status-tabs { overflow-x: auto; }
-    .requests-admin-page .status-tab { font-size: 10px; padding: 6px 2px 10px; }
     .requests-admin-page .status-banner { flex-direction: column; align-items: stretch; gap: 10px; }
 }
 
-@media (max-width: 360px) {
-    .requests-admin-page .main-content { padding: 10px; }
+@media (max-width: 640px) {
+    .requests-admin-page .main-content { padding: 12px; }
     .requests-admin-page .status-bar {
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         padding: 0;
     }
     .requests-admin-page .status-tabs {
         display: flex;
         flex-wrap: nowrap;
         overflow-x: auto;
-        gap: 6px;
-        padding: 2px 0 6px;
-        scroll-snap-type: x proximity;
+        gap: 8px;
+        padding: 4px 2px 8px;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
     }
     .requests-admin-page .status-tabs::-webkit-scrollbar { display: none; }
     .requests-admin-page .status-tab {
         flex: 0 0 auto;
-        min-width: 70px;
-        padding: 8px 10px 9px;
-        border: 1px solid #d5dce6;
+        padding: 8px 14px;
+        border: 1.5px solid #d5dce6;
         border-radius: 999px;
-        background: #f7f8fa;
-        font-size: 9px;
-        line-height: 1.1;
-        scroll-snap-align: start;
+        background: #ffffff;
+        color: #555555;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        line-height: 1.2;
+        transition: all 0.15s ease;
     }
     .requests-admin-page .status-tab.active {
-        background: var(--dark-blue);
-        color: white;
-        border-color: var(--dark-blue);
+        background: var(--dark-blue, #4A70A9);
+        color: #ffffff;
+        border-color: var(--dark-blue, #4A70A9);
+        box-shadow: 0 2px 8px rgba(74, 112, 169, 0.35);
     }
-    .requests-admin-page .progress-track,
-    .requests-admin-page .sort-row {
-        display: none;
+    .requests-admin-page .progress-track {
+        display: none !important;
     }
 }
 @media (max-width: 768px) {
