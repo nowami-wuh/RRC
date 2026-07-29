@@ -454,69 +454,71 @@ export default function AdminInventory() {
                       </button>
                     </div>
 
-                    <table className="inv-detail-table">
-                      <thead>
-                        <tr>
-                          <th>VARIATION</th>
-                          <th>NAME</th>
-                          <th className="col-condition">CONDITION</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {realItems.flatMap((item) => {
-                          const units = parseUnits(item.notes);
-                          return units.map((u) => (
-                            <tr key={u.id}>
-                              <td>
-                                <div className="inv-variation-cell">
-                                  <span>{getVariationName(item.name)}</span>
-                                  <button
-                                    className="inv-unit-remove-x"
-                                    onClick={() => openRemoveUnitModal(item, u.id, u.name || u.id)}
-                                    title="Remove unit"
-                                  >
-                                    &times;
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="inv-unit-id-cell">
-                                {u.name || u.id}
-                                {u.inUse && (
-                                  <span className="inv-in-use-badge">● In Use</span>
-                                )}
-                              </td>
-                              <td>
-                                <div className="inv-condition-toggle">
-                                  <button
-                                    className={`inv-condition-btn op${u.condition === 'Operational' ? ' selected' : ''}`}
-                                    onClick={() => handleToggleCondition(item, u.id, 'Operational')}
-                                  >
-                                    Operational
-                                  </button>
-                                  <button
-                                    className={`inv-condition-btn inop${u.condition !== 'Operational' ? ' selected' : ''}`}
-                                    onClick={() => handleToggleCondition(item, u.id, 'Inoperational')}
-                                  >
-                                    Inoperational
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ));
-                        })}
-                        <tr>
-                          <td colSpan="3">
-                            <button
-                              className="inv-add-unit-row"
-                              onClick={() => openAddUnitModal(subCat, items)}
-                            >
-                              <em>Add Equipment</em>
-                              <span className="inv-plus">+</span>
-                            </button>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <div className="inv-detail-wrap">
+                      <table className="inv-detail-table">
+                        <thead>
+                          <tr>
+                            <th>VARIATION</th>
+                            <th>NAME</th>
+                            <th className="col-condition">CONDITION</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {realItems.flatMap((item) => {
+                            const units = parseUnits(item.notes);
+                            return units.map((u) => (
+                              <tr key={u.id}>
+                                <td>
+                                  <div className="inv-variation-cell">
+                                    <span>{getVariationName(item.name)}</span>
+                                    <button
+                                      className="inv-unit-remove-x"
+                                      onClick={() => openRemoveUnitModal(item, u.id, u.name || u.id)}
+                                      title="Remove unit"
+                                    >
+                                      &times;
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="inv-unit-id-cell">
+                                  {u.name || u.id}
+                                  {u.inUse && (
+                                    <span className="inv-in-use-badge">● In Use</span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div className="inv-condition-toggle">
+                                    <button
+                                      className={`inv-condition-btn op${u.condition === 'Operational' ? ' selected' : ''}`}
+                                      onClick={() => handleToggleCondition(item, u.id, 'Operational')}
+                                    >
+                                      Operational
+                                    </button>
+                                    <button
+                                      className={`inv-condition-btn inop${u.condition !== 'Operational' ? ' selected' : ''}`}
+                                      onClick={() => handleToggleCondition(item, u.id, 'Inoperational')}
+                                    >
+                                      Inoperational
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ));
+                          })}
+                          <tr>
+                            <td colSpan="3">
+                              <button
+                                className="inv-add-unit-row"
+                                onClick={() => openAddUnitModal(subCat, items)}
+                              >
+                                <em>Add Equipment</em>
+                                <span className="inv-plus">+</span>
+                              </button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                 </div>
