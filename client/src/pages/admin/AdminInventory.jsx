@@ -60,6 +60,68 @@ function Toast({ toast }) {
   );
 }
 
+// ── Scrollable Container with Indicator ────────────────────────
+function ScrollableContainer({ children, className, triggerCheck }) {
+  const containerRef = useRef(null);
+  const [showIndicator, setShowIndicator] = useState(false);
+
+  const checkScroll = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    const isScrollable = el.scrollHeight - el.clientHeight > 15;
+    const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 15;
+    setShowIndicator(isScrollable && !isAtBottom);
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const el = containerRef.current;
+    if (!el) return;
+
+    const timer = setTimeout(checkScroll, 350);
+    const observer = new ResizeObserver(() => checkScroll());
+    observer.observe(el);
+    if (el.firstElementChild) {
+      observer.observe(el.firstElementChild);
+    }
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [children, triggerCheck]);
+
+  const handleScrollMore = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollBy({ top: 140, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <div className={`inv-scroll-root${showIndicator ? ' has-overflow' : ''}`}>
+      <div
+        ref={containerRef}
+        className={className}
+        onScroll={checkScroll}
+      >
+        {children}
+      </div>
+      {showIndicator && (
+        <button
+          type="button"
+          className="inv-scroll-more-indicator"
+          onClick={handleScrollMore}
+          title="Scroll down for more items"
+        >
+          <span>More items below</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════
@@ -408,7 +470,7 @@ export default function AdminInventory() {
                       </div>
                     </div>
 
-                    <div className="inv-summary-wrap">
+                    <ScrollableContainer className="inv-summary-wrap" triggerCheck={isFlipped}>
                       <div className="inv-summary-title">Inventory Summary</div>
                       {summary.length === 0 ? (
                         <p className="inv-summary-empty">
@@ -438,7 +500,7 @@ export default function AdminInventory() {
                           </tbody>
                         </table>
                       )}
-                    </div>
+                    </ScrollableContainer>
                   </div>
 
                   {/* ──── BACK FACE ──── */}
@@ -454,7 +516,7 @@ export default function AdminInventory() {
                       </button>
                     </div>
 
-                    <div className="inv-detail-wrap">
+                    <ScrollableContainer className="inv-detail-wrap" triggerCheck={isFlipped}>
                       <table className="inv-detail-table">
                         <thead>
                           <tr>
@@ -518,7 +580,7 @@ export default function AdminInventory() {
                           </tr>
                         </tbody>
                       </table>
-                    </div>
+                    </ScrollableContainer>
                   </div>
 
                 </div>
