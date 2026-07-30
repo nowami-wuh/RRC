@@ -52,32 +52,66 @@ export default function AdminDashboard() {
   useEffect(() => {
     Promise.all([fetchEvents(), fetchAdminRequests()])
       .then(([eventsData, requestsData]) => {
-        // Start with base event data
-        const allEvents = { ...(eventsData.eventsByDate || {}) };
-
-        // Merge in request events
         const requests = requestsData.requests || [];
+
+        // Map request_code -> request object for fast status lookup
+        const requestMap = {};
         requests.forEach((req) => {
-          if (req.event && req.event.date) {
-            // Only show fully confirmed or paid requests
-            if (!isVisibleCalendarRequest(req.status)) return;
+          if (req.id) {
+            requestMap[req.id] = req;
+          }
+        });
 
-            const dateKey = normalizeDate(req.event.date);
-            if (!allEvents[dateKey]) {
-              allEvents[dateKey] = [];
+        const allEvents = {};
+
+        // 1. Process base events from DB, excluding any whose associated request is not upcoming/completed
+        const rawEventsByDate = eventsData.eventsByDate || {};
+        Object.keys(rawEventsByDate).forEach((dateKey) => {
+          const list = rawEventsByDate[dateKey] || [];
+          const validList = list.filter((e) => {
+            if (e.bookingId && requestMap[e.bookingId]) {
+              return isVisibleCalendarRequest(requestMap[e.bookingId].status);
             }
+            return true;
+          });
 
-            const exists = allEvents[dateKey].some((e) => e.bookingId === req.id);
-            if (!exists) {
-              allEvents[dateKey].push({
-                bookingId: req.id,
-                title: req.event.title || 'Event',
-                time: req.event.timeStart && req.event.timeEnd
-                  ? `${req.event.timeStart} - ${req.event.timeEnd}`
-                  : req.event.timeStart || req.event.timeEnd || 'All Day',
-                location: req.event.venue || '',
-                status: req.status,
-              });
+          if (validList.length > 0) {
+            allEvents[dateKey] = validList.map((e) => {
+              if (e.bookingId && requestMap[e.bookingId]) {
+                const req = requestMap[e.bookingId];
+                return {
+                  ...e,
+                  title: e.title || req.event?.title || 'Event',
+                  location: e.location || req.event?.venue || '',
+                  time: e.time || (req.event?.timeStart && req.event?.timeEnd ? `${req.event.timeStart} - ${req.event.timeEnd}` : req.event?.timeStart || 'All Day'),
+                };
+              }
+              return e;
+            });
+          }
+        });
+
+        // 2. Merge in all upcoming/completed/paid requests from requests data
+        requests.forEach((req) => {
+          if (req.event && req.event.date && isVisibleCalendarRequest(req.status)) {
+            const dateKey = normalizeDate(req.event.date);
+            if (dateKey) {
+              if (!allEvents[dateKey]) {
+                allEvents[dateKey] = [];
+              }
+
+              const exists = allEvents[dateKey].some((e) => e.bookingId === req.id);
+              if (!exists) {
+                allEvents[dateKey].push({
+                  bookingId: req.id,
+                  title: req.event.title || 'Event',
+                  time: req.event.timeStart && req.event.timeEnd
+                    ? `${req.event.timeStart} - ${req.event.timeEnd}`
+                    : req.event.timeStart || req.event.timeEnd || 'All Day',
+                  location: req.event.venue || '',
+                  status: req.status,
+                });
+              }
             }
           }
         });

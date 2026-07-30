@@ -120,22 +120,28 @@ router.patch('/requests/:requestCode', async (req, res) => {
 
     const updated = rows[0] ? formatRequest(rows[0]) : null;
 
-    // ── Auto-update Events Calendar when moving to 'upcoming' ──────────────
-    if (status === 'upcoming' && updated) {
+    // ── Auto-update Events Calendar when status changes ──────────────────────
+    if (updated && status !== undefined) {
       try {
         const ev = updated.event || {};
         const dateKey = ev.date ? formatYMD(ev.date) : null;
         if (dateKey) {
-          const timeLabel = `${ev.timeStart || ''} - ${ev.timeEnd || ''}`;
-
+          const isCalendarVisible = ['upcoming', 'completed', 'paid', 'confirmed'].includes(String(status).toLowerCase());
           const existing = await query('SELECT events_json FROM events WHERE event_date = ? LIMIT 1', [dateKey]);
           if (existing.length > 0) {
             const eventsArr = parseJson(existing[0].events_json, []);
-            // Remove old entry for this requestCode if exists
             const filtered = eventsArr.filter((e) => e.bookingId !== requestCode);
-            filtered.push({ time: timeLabel, title: ev.title || 'Event', location: ev.venue || '', bookingId: requestCode });
-            await execute('UPDATE events SET events_json = ? WHERE event_date = ?', [safeJson(filtered), dateKey]);
-          } else {
+            if (isCalendarVisible) {
+              const timeLabel = ev.timeStart && ev.timeEnd ? `${ev.timeStart} - ${ev.timeEnd}` : ev.timeStart || 'All Day';
+              filtered.push({ time: timeLabel, title: ev.title || 'Event', location: ev.venue || '', bookingId: requestCode });
+            }
+            if (filtered.length > 0) {
+              await execute('UPDATE events SET events_json = ? WHERE event_date = ?', [safeJson(filtered), dateKey]);
+            } else {
+              await execute('DELETE FROM events WHERE event_date = ?', [dateKey]);
+            }
+          } else if (isCalendarVisible) {
+            const timeLabel = ev.timeStart && ev.timeEnd ? `${ev.timeStart} - ${ev.timeEnd}` : ev.timeStart || 'All Day';
             const newEntry = [{ time: timeLabel, title: ev.title || 'Event', location: ev.venue || '', bookingId: requestCode }];
             await execute('INSERT INTO events (event_date, events_json) VALUES (?, ?)', [dateKey, safeJson(newEntry)]);
           }
