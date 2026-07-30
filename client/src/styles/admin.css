@@ -646,6 +646,19 @@ body {
     font-style: italic;
 }
 
+.clickable-event-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.clickable-event-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.13);
+    border-left-color: var(--dark-blue, #1a3a5c);
+}
+.clickable-event-card:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px var(--shadow);
+}
+
 .no-events {
     text-align: center;
     color: var(--text-gray);

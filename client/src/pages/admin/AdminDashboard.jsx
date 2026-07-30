@@ -75,6 +75,7 @@ export default function AdminDashboard() {
                 time: req.event.timeStart && req.event.timeEnd
                   ? `${req.event.timeStart} - ${req.event.timeEnd}`
                   : req.event.timeStart || req.event.timeEnd || 'All Day',
+                location: req.event.venue || '',
                 status: req.status,
               });
             }
@@ -231,7 +232,7 @@ export default function AdminDashboard() {
               selectedEvents.map((event, index) => (
                 <div
                   key={index}
-                  className="event-item clickable-event-card"
+                  className={`event-item${event.bookingId ? ' clickable-event-card' : ''}`}
                   style={{ cursor: event.bookingId ? 'pointer' : 'default' }}
                   onClick={() => {
                     if (event.bookingId) {
@@ -239,8 +240,24 @@ export default function AdminDashboard() {
                     }
                   }}
                 >
-                  <div className="event-title">{event.title}</div>
                   {event.time && <div className="event-time">{event.time}</div>}
+                  <div className="event-title">{event.title}</div>
+                  {event.location && (
+                    <div className="event-location">
+                      <svg viewBox="0 0 24 24" width="13" height="13" style={{ marginRight: 4, verticalAlign: 'middle', fill: 'var(--text-gray)' }}>
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                      </svg>
+                      {event.location}
+                    </div>
+                  )}
+                  {event.bookingId && (
+                    <div className="event-id">
+                      Booking ID: {event.bookingId}
+                      <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--event-blue)', fontStyle: 'normal' }}>
+                        — tap to view ↗
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
           </div>
