@@ -110,10 +110,14 @@ export default function AdminInquiries() {
         // Auto-select the conversation passed from AdminRequests
         if (selectCustomerId) {
           setActiveConv(selectCustomerId);
+          // Clear location state so a refresh or back-nav doesn't re-apply it
+          navigate('/admin/inquiries', { replace: true, state: {} });
         }
       })
       .catch(() => {});
-  }, []);
+  // Re-run whenever a new selectCustomerId is injected via navigation state
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectCustomerId]);
 
   // Filter out seed/dummy data
   const filteredMessages = messages.filter(

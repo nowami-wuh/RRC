@@ -322,6 +322,7 @@ export default function AdminRequests() {
               id: req.id,
               event: req.event?.title || 'Event',
               requestDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '',
+              customerId: req.customerId || null,  // real public_id — used for chat navigation
               client: {
                 username: req.customerName || req.customerId || 'Customer',
                 phone: req.customerPhone || '',
@@ -733,7 +734,18 @@ export default function AdminRequests() {
                     className="chat-btn"
                     onClick={() => {
                       const client = selectedBooking?.booking.client;
-                      if (client) {
+                      // Use the real customerPublicId (stored on the booking as customerId)
+                      // so AdminInquiries can match the existing conversation thread.
+                      const customerId = selectedBooking?.booking.customerId;
+                      if (client && customerId) {
+                        navigate('/admin/inquiries', {
+                          state: {
+                            selectCustomerId: customerId,
+                            selectCustomerName: client.username,
+                          },
+                        });
+                      } else if (client) {
+                        // Fallback for legacy/seed data that has no real customerId
                         navigate('/admin/inquiries', {
                           state: {
                             selectCustomerId: client.email || client.username,
@@ -797,7 +809,25 @@ export default function AdminRequests() {
                 <div className="banner-text">
                   <strong>This booking was cancelled by the client.</strong> No reason was given in-app — chat with the client to find out why.
                 </div>
-                <button className="btn-chat-small" onClick={() => showToastMessage('Opening chat with client...')}>Chat with Client</button>
+                <button
+                  className="btn-chat-small"
+                  onClick={() => {
+                    const customerId = selectedBooking?.booking.customerId;
+                    const client = selectedBooking?.booking.client;
+                    if (customerId) {
+                      navigate('/admin/inquiries', {
+                        state: {
+                          selectCustomerId: customerId,
+                          selectCustomerName: client?.username,
+                        },
+                      });
+                    } else {
+                      showToastMessage('No client info to open chat.', true);
+                    }
+                  }}
+                >
+                  Chat with Client
+                </button>
               </div>
             )}
 
