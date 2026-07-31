@@ -59,33 +59,65 @@ export default function HomePage() {
 
     Promise.all([fetchEvents(), allRequestsFetch])
       .then(([eventsData, allRequestsData]) => {
-        // Correct key from /api/events response
-        const allEvents = { ...(eventsData.eventsByDate || {}) };
-
-        // Merge ALL booking requests into the calendar (public view)
         const requests = allRequestsData.requests || [];
+
+        // Map request_code -> request object for fast status lookup
+        const requestMap = {};
         requests.forEach((req) => {
-          if (req.event && req.event.date) {
-            // Only show requests that are confirmed, upcoming, completed, or paid
-            if (!isVisibleCalendarRequest(req.status)) return;
+          if (req.id) {
+            requestMap[req.id] = req;
+          }
+        });
 
+        const allEvents = {};
+
+        // 1. Process base events from DB, excluding any whose associated request is not upcoming/completed/paid/confirmed
+        const rawEventsByDate = eventsData.eventsByDate || {};
+        Object.keys(rawEventsByDate).forEach((dateKey) => {
+          const list = rawEventsByDate[dateKey] || [];
+          const validList = list.filter((e) => {
+            if (e.bookingId && requestMap[e.bookingId]) {
+              return isVisibleCalendarRequest(requestMap[e.bookingId].status);
+            }
+            return true;
+          });
+
+          if (validList.length > 0) {
+            allEvents[dateKey] = validList.map((e) => {
+              if (e.bookingId && requestMap[e.bookingId]) {
+                const req = requestMap[e.bookingId];
+                return {
+                  ...e,
+                  title: e.title || req.event?.title || 'Event',
+                  location: e.location || req.event?.venue || '',
+                  time: e.time || (req.event?.timeStart && req.event?.timeEnd ? `${req.event.timeStart} - ${req.event.timeEnd}` : req.event?.timeStart || 'All Day'),
+                };
+              }
+              return e;
+            });
+          }
+        });
+
+        // 2. Merge in all visible booking requests into the calendar (public view)
+        requests.forEach((req) => {
+          if (req.event && req.event.date && isVisibleCalendarRequest(req.status)) {
             const dateKey = normalizeDate(req.event.date);
-            if (!dateKey) return;
+            if (dateKey) {
+              if (!allEvents[dateKey]) allEvents[dateKey] = [];
 
-            if (!allEvents[dateKey]) allEvents[dateKey] = [];
-
-            // Avoid duplicates (in case it was already in the static events table)
-            const exists = allEvents[dateKey].some((e) => e.bookingId === req.id);
-            if (!exists) {
-              allEvents[dateKey].push({
-                bookingId: req.id,
-                title: req.event.title || 'Event',
-                time:
-                  req.event.timeStart && req.event.timeEnd
-                    ? `${req.event.timeStart} - ${req.event.timeEnd}`
-                    : req.event.timeStart || req.event.timeEnd || 'All Day',
-                status: req.status,
-              });
+              const exists = allEvents[dateKey].some((e) => e.bookingId === req.id);
+              if (!exists) {
+                allEvents[dateKey].push({
+                  bookingId: req.id,
+                  title: req.event.title || 'Event',
+                  time:
+                    req.event.timeStart && req.event.timeEnd
+                      ? `${req.event.timeStart} - ${req.event.timeEnd}`
+                      : req.event.timeStart || req.event.timeEnd || 'All Day',
+                  location: req.event.venue || '',
+                  status: req.status,
+                });
+              }
             }
           }
         });
