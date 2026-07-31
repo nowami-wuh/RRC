@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, markConversationRead, deleteConversation } from '../../api/api';
+import { editAdminInquiryMessage, fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, markConversationRead, deleteConversation } from '../../api/api';
 
 function getMessageDateHeader(createdAt, timeLabel) {
   if (!createdAt) return null;
@@ -37,6 +37,8 @@ export default function AdminInquiries() {
   const [receiptPromptMsgIndex, setReceiptPromptMsgIndex] = useState(null);
   const [customerAvatars, setCustomerAvatars] = useState({});
   const [replyingTo, setReplyingTo] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [expandedOriginalId, setExpandedOriginalId] = useState(null);
   const [highlightedId, setHighlightedId] = useState(null);
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchCurrentX, setTouchCurrentX] = useState(0);
@@ -240,18 +242,30 @@ export default function AdminInquiries() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConv, messages]);
 
-  // Fetch and cache customer avatar when switching conversations
+  // Refresh the active customer's avatar so profile changes appear in the inbox promptly.
   useEffect(() => {
     if (!activeConv) return;
-    if (customerAvatars[activeConv] !== undefined) return; // already fetched
-    fetchUser(activeConv)
-      .then((res) => {
-        const avatar = res?.user?.avatar || null;
-        setCustomerAvatars((prev) => ({ ...prev, [activeConv]: avatar }));
-      })
-      .catch(() => {
-        setCustomerAvatars((prev) => ({ ...prev, [activeConv]: null }));
-      });
+
+    let active = true;
+    const refreshAvatar = () => {
+      fetchUser(activeConv)
+        .then((res) => {
+          if (!active) return;
+          const avatar = res?.user?.avatar || null;
+          setCustomerAvatars((prev) => ({ ...prev, [activeConv]: avatar }));
+        })
+        .catch(() => {});
+    };
+
+    refreshAvatar();
+    const interval = window.setInterval(refreshAvatar, 5000);
+    window.addEventListener('focus', refreshAvatar);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshAvatar);
+    };
   }, [activeConv]);
 
   const activeConversation = conversationMap[activeConv];
@@ -386,6 +400,31 @@ export default function AdminInquiries() {
       setHighlightedId(targetId);
       setTimeout(() => setHighlightedId(null), 2000);
     }
+  };
+
+  const startEditing = (message) => {
+    if (message.senderRole !== 'admin' || message.image || !message.id) return;
+    setEditingMessage(message);
+    setReply(message.text || '');
+    setReplyingTo(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingMessage(null);
+    setReply('');
+  };
+
+  const handleEdit = async () => {
+    if (!editingMessage || !reply.trim()) return;
+    try {
+      const response = await editAdminInquiryMessage(editingMessage.id, {
+        text: reply.trim(),
+        senderRole: 'admin',
+        customerPublicId: activeConv,
+      });
+      setMessages((prev) => prev.map((message) => message.id === editingMessage.id ? response.message : message));
+      cancelEditing();
+    } catch (_) {}
   };
 
   const handleReply = async () => {
@@ -639,6 +678,18 @@ export default function AdminInquiries() {
                             </div>
                           </div>
                         )}
+                        {msg.originalText && (
+                          <button
+                            className="edited-indicator"
+                            type="button"
+                            onClick={() => setExpandedOriginalId((id) => id === msg.id ? null : msg.id)}
+                          >
+                            Edited
+                          </button>
+                        )}
+                        {expandedOriginalId === msg.id && msg.originalText && (
+                          <div className="original-message">{msg.originalText}</div>
+                        )}
                         {msg.text && <div>{msg.text}</div>}
                         {msg.image && <img src={msg.image} alt="Attachment" />}
                         <div className="bubble-meta">
@@ -646,6 +697,11 @@ export default function AdminInquiries() {
                           {isOutgoing && <span className="read-tick">✓</span>}
                         </div>
                       </div>
+                      {isOutgoing && !msg.image && msg.id && (
+                        <button className="edit-message-btn" type="button" onClick={() => startEditing(msg)} title="Edit message">
+                          Edit
+                        </button>
+                      )}
                       {!isOutgoing && (
                         <button
                           className="reply-trigger-btn"
@@ -687,7 +743,16 @@ export default function AdminInquiries() {
             </div>
 
             {/* Reply Preview Bar above input bar */}
-            {replyingTo && (
+            {editingMessage && (
+              <div className="reply-preview-bar edit-preview-bar">
+                <div className="reply-preview-content">
+                  <div className="reply-preview-title"><span>Editing message</span></div>
+                  <div className="reply-preview-snippet">{editingMessage.text}</div>
+                </div>
+                <button className="reply-preview-close" onClick={cancelEditing} title="Cancel edit">&times;</button>
+              </div>
+            )}
+            {replyingTo && !editingMessage && (
               <div className="reply-preview-bar">
                 <div className="reply-preview-content">
                   <div className="reply-preview-title">
@@ -720,17 +785,17 @@ export default function AdminInquiries() {
               <input
                 className="chat-input"
                 type="text"
-                placeholder="Type your message..."
+                placeholder={editingMessage ? 'Edit your message...' : 'Type your message...'}
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    handleReply();
+                    editingMessage ? handleEdit() : handleReply();
                   }
                 }}
               />
-              <button className="send-btn" onClick={handleReply} title="Send Message">
+              <button className="send-btn" onClick={editingMessage ? handleEdit : handleReply} title={editingMessage ? 'Save Edit' : 'Send Message'}>
                 <svg viewBox="0 0 24 24">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>

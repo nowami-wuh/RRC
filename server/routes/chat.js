@@ -16,6 +16,8 @@ function formatMessage(row) {
     customerPublicId: row.customer_public_id,
     text: row.text,
     image: row.image,
+    originalText: row.original_text,
+    editedAt: row.edited_at,
     time: row.time_label,
     createdAt: row.created_at || new Date().toISOString(),
     isRead: Boolean(row.is_read),
@@ -70,6 +72,8 @@ router.post('/messages', (req, res) => {
           customerPublicId,
           text: payload.text || '',
           image: payload.image || null,
+          originalText: null,
+          editedAt: null,
           time: timeLabel,
           createdAt: new Date().toISOString(),
           replyTo: payload.replyTo || null,
@@ -77,6 +81,36 @@ router.post('/messages', (req, res) => {
       });
     })
     .catch((error) => { res.status(500).json({ error: error.message || 'Unable to send message' }); });
+});
+
+router.patch('/messages/:id', async (req, res) => {
+  const messageId = Number.parseInt(req.params.id, 10);
+  const { text, senderRole, customerPublicId } = req.body || {};
+  if (!Number.isInteger(messageId) || !String(text || '').trim()) {
+    return res.status(400).json({ error: 'A valid message ID and text are required.' });
+  }
+
+  try {
+    const rows = await query('SELECT * FROM chat_messages WHERE id = ? LIMIT 1', [messageId]);
+    const message = rows[0];
+    if (!message) return res.status(404).json({ error: 'Message not found.' });
+
+    const ownsMessage = message.sender_role === 'admin'
+      ? senderRole === 'admin'
+      : senderRole === 'customer' && message.customer_public_id === customerPublicId;
+    if (!ownsMessage) return res.status(403).json({ error: 'You can only edit your own messages.' });
+    if (message.image && !message.text) return res.status(400).json({ error: 'Photo messages cannot be edited.' });
+
+    const originalText = message.original_text ?? message.text;
+    await execute(
+      'UPDATE chat_messages SET text = ?, original_text = ?, edited_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [String(text).trim(), originalText, messageId],
+    );
+    const updatedRows = await query('SELECT * FROM chat_messages WHERE id = ? LIMIT 1', [messageId]);
+    res.json({ message: formatMessage(updatedRows[0]) });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Unable to edit message.' });
+  }
 });
 
 export default router;

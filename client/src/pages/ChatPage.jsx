@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchChatMessages, postChatMessage } from '../api/api';
+import { editChatMessage, fetchChatMessages, postChatMessage } from '../api/api';
 import '../styles/chat.css';
 
 function getMessageDateHeader(createdAt, timeLabel) {
@@ -33,6 +33,8 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [expandedOriginalId, setExpandedOriginalId] = useState(null);
   const [highlightedId, setHighlightedId] = useState(null);
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchCurrentX, setTouchCurrentX] = useState(0);
@@ -80,6 +82,33 @@ export default function ChatPage() {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setHighlightedId(targetId);
       setTimeout(() => setHighlightedId(null), 2000);
+    }
+  };
+
+  const startEditing = (message) => {
+    if (message.senderRole !== 'customer' || message.image || !message.id) return;
+    setEditingMessage(message);
+    setText(message.text || '');
+    setReplyingTo(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingMessage(null);
+    setText('');
+  };
+
+  const handleEdit = async () => {
+    if (!editingMessage || !text.trim()) return;
+    try {
+      const res = await editChatMessage(editingMessage.id, {
+        text: text.trim(),
+        senderRole: 'customer',
+        customerPublicId: user?.id,
+      });
+      setMessages((prev) => prev.map((message) => message.id === editingMessage.id ? res.message : message));
+      cancelEditing();
+    } catch (err) {
+      setError(err.message || 'Unable to edit message.');
     }
   };
 
@@ -227,6 +256,18 @@ export default function ChatPage() {
                         </div>
                       </div>
                     )}
+                    {message.originalText && (
+                      <button
+                        className="edited-indicator"
+                        type="button"
+                        onClick={() => setExpandedOriginalId((id) => id === message.id ? null : message.id)}
+                      >
+                        Edited
+                      </button>
+                    )}
+                    {expandedOriginalId === message.id && message.originalText && (
+                      <div className="original-message">{message.originalText}</div>
+                    )}
                     {message.text && <div>{message.text}</div>}
                     {message.image && <img src={message.image} alt="Attachment" />}
                     <div className="bubble-meta">
@@ -234,6 +275,11 @@ export default function ChatPage() {
                       {isOutgoing && <span className="read-tick">✓</span>}
                     </div>
                   </div>
+                  {isOutgoing && !message.image && message.id && (
+                    <button className="edit-message-btn" type="button" onClick={() => startEditing(message)} title="Edit message">
+                      Edit
+                    </button>
+                  )}
                   {!isOutgoing && (
                     <button
                       className="reply-trigger-btn"
@@ -253,7 +299,16 @@ export default function ChatPage() {
         </div>
 
         {/* Reply Preview Bar above input bar */}
-        {replyingTo && (
+        {editingMessage && (
+          <div className="reply-preview-bar edit-preview-bar">
+            <div className="reply-preview-content">
+              <div className="reply-preview-title"><span>Editing message</span></div>
+              <div className="reply-preview-snippet">{editingMessage.text}</div>
+            </div>
+            <button className="reply-preview-close" onClick={cancelEditing} title="Cancel edit">&times;</button>
+          </div>
+        )}
+        {replyingTo && !editingMessage && (
           <div className="reply-preview-bar">
             <div className="reply-preview-content">
               <div className="reply-preview-title">
@@ -285,17 +340,17 @@ export default function ChatPage() {
           </div>
           <input
             className="chat-input"
-            placeholder={replyingTo ? `Replying to ${replyingTo.senderName}…` : 'Type your message...'}
+            placeholder={editingMessage ? 'Edit your message...' : replyingTo ? `Replying to ${replyingTo.senderName}…` : 'Type your message...'}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                handleSend();
+                editingMessage ? handleEdit() : handleSend();
               }
             }}
           />
-          <button className="send-btn" onClick={handleSend} title="Send Message">
+          <button className="send-btn" onClick={editingMessage ? handleEdit : handleSend} title={editingMessage ? 'Save Edit' : 'Send Message'}>
             <svg viewBox="0 0 24 24">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
             </svg>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchUser, updateUserProfile, changeUserPassword, checkUsernameAvailability } from '../api/api';
+import { fetchUser, updateUserProfile, removeUserAvatar, changeUserPassword, checkUsernameAvailability } from '../api/api';
 import '../styles/my-account.css';
 
 function isValidPhilippinePhone(phone) {
@@ -130,6 +130,21 @@ export default function MyAccount() {
     reader.readAsDataURL(file);
   };
 
+  const handleRemoveAvatar = async () => {
+    if (!user?.avatar || avatarSaving) return;
+    setAvatarSaving(true);
+    try {
+      const updated = await removeUserAvatar(authUser.id);
+      setUser(updated.user);
+      setAuthUser({ ...authUser, ...updated.user });
+      showMsg('Profile photo removed.');
+    } catch (err) {
+      showMsg(err.message || 'Failed to remove profile photo.', 'error');
+    } finally {
+      setAvatarSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     if (editField === 'username' && usernameAvail.status === 'taken') return;
     setSaving(true);
@@ -202,6 +217,11 @@ export default function MyAccount() {
             <button className="pill-btn" type="button" disabled={avatarSaving} onClick={() => fileInputRef.current?.click()}>
               {avatarSaving ? 'Saving…' : 'Change Photo'}
             </button>
+            {user.avatar && (
+              <button className="pill-btn profile-remove-photo" type="button" disabled={avatarSaving} onClick={handleRemoveAvatar}>
+                Remove Photo
+              </button>
+            )}
             <input
               ref={fileInputRef}
               type="file"

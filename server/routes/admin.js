@@ -237,6 +237,8 @@ router.get('/inquiries', async (req, res) => {
         type: row.sender_role === 'admin' ? 'sent' : 'received',
         text: row.text,
         image: row.image,
+        originalText: row.original_text,
+        editedAt: row.edited_at,
         time: row.time_label,
         createdAt: row.created_at || new Date().toISOString(),
         isRead: Boolean(row.is_read),

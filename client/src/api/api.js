@@ -105,7 +105,7 @@ export function fetchPackages() {
 }
 
 export function fetchUser(userId) {
-  return request(`/user?userId=${encodeURIComponent(userId)}`);
+  return request(`/user?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' });
 }
 
 export function updateUserProfile(userId, profile) {
@@ -113,6 +113,10 @@ export function updateUserProfile(userId, profile) {
     method: 'POST',
     body: JSON.stringify({ userId, ...profile }),
   });
+}
+
+export function removeUserAvatar(userId) {
+  return updateUserProfile(userId, { removeAvatar: true });
 }
 
 export function changeUserPassword(userId, currentPassword, newPassword) {
@@ -146,6 +150,13 @@ export function postChatMessage(message) {
   });
 }
 
+export function editChatMessage(id, payload) {
+  return request(`/chat/messages/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function fetchAdminSummary() {
   return request('/admin/summary');
 }
@@ -174,6 +185,10 @@ export function sendAdminInquiryReply(message) {
     method: 'POST',
     body: JSON.stringify(message),
   });
+}
+
+export function editAdminInquiryMessage(id, payload) {
+  return editChatMessage(id, payload);
 }
 
 export function fetchAdminInventory() {

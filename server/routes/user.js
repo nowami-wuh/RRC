@@ -48,6 +48,7 @@ router.post('/profile', async (req, res) => {
 
   if (typeof userId === 'string' && userId.startsWith('ADMIN-')) {
     const adminId = parseInt(userId.replace('ADMIN-', ''), 10);
+    const removeAvatar = update.removeAvatar === true;
 
     // Check uniqueness for username/email (exclude self)
     if (update.username) {
@@ -80,8 +81,8 @@ router.post('/profile', async (req, res) => {
     }
 
     execute(
-      'UPDATE admins SET username = COALESCE(?, username), email = COALESCE(?, email), full_name = COALESCE(?, full_name), avatar = COALESCE(?, avatar) WHERE id = ?',
-      [update.username || null, update.email ? String(update.email).trim().toLowerCase() : null, update.fullName || null, update.avatar || null, adminId],
+      'UPDATE admins SET username = COALESCE(?, username), email = COALESCE(?, email), full_name = COALESCE(?, full_name), avatar = IF(?, NULL, COALESCE(?, avatar)) WHERE id = ?',
+      [update.username || null, update.email ? String(update.email).trim().toLowerCase() : null, update.fullName || null, removeAvatar, update.avatar || null, adminId],
     )
       .then(async () => {
         const rows = await query('SELECT id, username, email, full_name, avatar FROM admins WHERE id = ? LIMIT 1', [adminId]);
@@ -95,6 +96,7 @@ router.post('/profile', async (req, res) => {
   }
 
   // Customer uniqueness checks
+  const removeAvatar = update.removeAvatar === true;
   if (update.username) {
     const takenCust = await query(
       'SELECT 1 FROM customers WHERE username = ? AND public_id != ? LIMIT 1',
@@ -133,8 +135,8 @@ router.post('/profile', async (req, res) => {
   }
 
   execute(
-    'UPDATE customers SET username = COALESCE(?, username), email = COALESCE(?, email), phone = COALESCE(?, phone), avatar = COALESCE(?, avatar) WHERE public_id = ?',
-    [update.username || null, update.email ? String(update.email).trim().toLowerCase() : null, update.phone || update.contact || null, update.avatar || null, userId],
+    'UPDATE customers SET username = COALESCE(?, username), email = COALESCE(?, email), phone = COALESCE(?, phone), avatar = IF(?, NULL, COALESCE(?, avatar)) WHERE public_id = ?',
+    [update.username || null, update.email ? String(update.email).trim().toLowerCase() : null, update.phone || update.contact || null, removeAvatar, update.avatar || null, userId],
   )
     .then(async () => {
       const rows = await query('SELECT public_id, username, email, phone, avatar FROM customers WHERE public_id = ? LIMIT 1', [userId]);
@@ -150,6 +152,9 @@ router.post('/password', async (req, res) => {
   if (!userId) {
     return res.status(400).json({ error: 'userId is required' });
   }
+  if (!currentPassword) {
+    return res.status(400).json({ error: 'Current password is required.' });
+  }
   if (!newPassword || newPassword.length < 8) {
     return res.status(400).json({ error: 'New password must be at least 8 characters' });
   }
@@ -158,14 +163,11 @@ router.post('/password', async (req, res) => {
     if (typeof userId === 'string' && userId.startsWith('ADMIN-')) {
       const adminId = parseInt(userId.replace('ADMIN-', ''), 10);
 
-      // Verify current password
-      if (currentPassword) {
-        const rows = await query('SELECT password_hash FROM admins WHERE id = ? LIMIT 1', [adminId]);
-        if (!rows[0]) return res.status(404).json({ error: 'Admin not found' });
-        const valid = await bcrypt.compare(currentPassword, rows[0].password_hash);
-        if (!valid) {
-          return res.status(401).json({ error: 'Current password is incorrect.' });
-        }
+      const rows = await query('SELECT password_hash FROM admins WHERE id = ? LIMIT 1', [adminId]);
+      if (!rows[0]) return res.status(404).json({ error: 'Admin not found' });
+      const valid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+      if (!valid) {
+        return res.status(401).json({ error: 'Current password is incorrect.' });
       }
 
       const passwordHash = await bcrypt.hash(newPassword, 10);
@@ -174,13 +176,11 @@ router.post('/password', async (req, res) => {
     }
 
     // Customer — verify current password
-    if (currentPassword) {
-      const rows = await query('SELECT password_hash FROM customers WHERE public_id = ? LIMIT 1', [userId]);
-      if (!rows[0]) return res.status(404).json({ error: 'User not found' });
-      const valid = await bcrypt.compare(currentPassword, rows[0].password_hash);
-      if (!valid) {
-        return res.status(401).json({ error: 'Current password is incorrect.' });
-      }
+    const rows = await query('SELECT password_hash FROM customers WHERE public_id = ? LIMIT 1', [userId]);
+    if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+    const valid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);

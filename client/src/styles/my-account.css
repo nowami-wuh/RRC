@@ -62,6 +62,11 @@
     justify-content: center;
 }
 
+.profile-remove-photo {
+    color: #b42318;
+    border-color: rgba(180, 35, 24, 0.35);
+}
+
 .avatar-overlay {
     position: absolute;
     inset: 0;

@@ -118,6 +118,8 @@ async function ensureTables() {
       text LONGTEXT NULL,
       image LONGTEXT NULL,
       time_label VARCHAR(40) NOT NULL,
+      original_text LONGTEXT NULL,
+      edited_at TIMESTAMP NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -142,6 +144,9 @@ async function ensureTables() {
   } catch (e) {
     // Column already exists — safe to ignore
   }
+
+  try { await execute(`ALTER TABLE chat_messages ADD COLUMN original_text LONGTEXT NULL AFTER time_label`); } catch (_) {}
+  try { await execute(`ALTER TABLE chat_messages ADD COLUMN edited_at TIMESTAMP NULL AFTER original_text`); } catch (_) {}
 
   // Migrate existing tables: add avatar support for users and admins
   try { await execute(`ALTER TABLE customers ADD COLUMN avatar LONGTEXT NULL AFTER phone`); } catch (_) {}
@@ -184,7 +189,7 @@ async function seedAuthData() {
     );
   }
 
-  const adminRows = await query('SELECT 1 FROM admins WHERE username = ? LIMIT 1', ['admin']);
+  const adminRows = await query('SELECT 1 FROM admins LIMIT 1');
   if (adminRows.length === 0) {
     await execute(
       'INSERT INTO admins (username, email, full_name, password_hash) VALUES (?, ?, ?, ?)',
