@@ -425,7 +425,7 @@ export default function AdminRequests() {
 
     const startScrollLeft = tabs.scrollLeft;
     const distance = targetScrollLeft - startScrollLeft;
-    const duration = 700;
+    const duration = 360;
     const startTime = performance.now();
 
     const animateScroll = (now) => {
