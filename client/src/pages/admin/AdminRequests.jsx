@@ -291,6 +291,7 @@ export default function AdminRequests() {
   const [currentStatus, setCurrentStatus] = useState('pending');
   const statusTabsRef = useRef(null);
   const statusTabRefs = useRef({});
+  const statusScrollAnimationRef = useRef(null);
   const [sortAsc, setSortAsc] = useState(false);
   const [detailState, setDetailState] = useState(null);
   const [activeSection, setActiveSection] = useState('approval');
@@ -414,7 +415,37 @@ export default function AdminRequests() {
         ? maxScrollLeft
         : Math.max(0, Math.min(centeredScrollLeft, maxScrollLeft));
 
-    tabs.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
+    if (statusScrollAnimationRef.current) {
+      cancelAnimationFrame(statusScrollAnimationRef.current);
+    }
+
+    const startScrollLeft = tabs.scrollLeft;
+    const distance = targetScrollLeft - startScrollLeft;
+    const duration = 700;
+    const startTime = performance.now();
+
+    const animateScroll = (now) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      const easedProgress = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      tabs.scrollLeft = startScrollLeft + distance * easedProgress;
+
+      if (progress < 1) {
+        statusScrollAnimationRef.current = requestAnimationFrame(animateScroll);
+      } else {
+        statusScrollAnimationRef.current = null;
+      }
+    };
+
+    statusScrollAnimationRef.current = requestAnimationFrame(animateScroll);
+
+    return () => {
+      if (statusScrollAnimationRef.current) {
+        cancelAnimationFrame(statusScrollAnimationRef.current);
+        statusScrollAnimationRef.current = null;
+      }
+    };
   }, [currentStatus]);
 
   const setStatus = (status) => {
