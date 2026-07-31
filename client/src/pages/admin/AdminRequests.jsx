@@ -257,12 +257,12 @@ const inventoryStock = {
 };
 
 const statusTabs = [
-  { key: 'pending', label: 'PENDING' },
-  { key: 'approved', label: 'APPROVED' },
-  { key: 'upcoming', label: 'UPCOMING' },
-  { key: 'completed', label: 'COMPLETED' },
-  { key: 'denied', label: 'DENIED' },
-  { key: 'cancelled', label: 'CANCELLED' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'denied', label: 'Denied' },
+  { key: 'cancelled', label: 'Cancelled' },
 ];
 
 const statusLabels = {
@@ -650,6 +650,9 @@ export default function AdminRequests() {
                   onClick={() => setStatus(tab.key)}
                 >
                   {tab.label}
+                  {(bookings[tab.key] || []).length > 0 && (
+                    <span className="status-tab-count">{bookings[tab.key].length}</span>
+                  )}
                 </button>
               ))}
             </div>
