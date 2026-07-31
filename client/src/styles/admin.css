@@ -2388,6 +2388,32 @@ body {
     cursor: pointer;
 }
 .edited-indicator:hover { text-decoration: underline; }
+.message-menu-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+}
+.message-menu {
+    position: fixed;
+    min-width: 120px;
+    padding: 5px;
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+}
+.message-menu button {
+    display: block;
+    width: 100%;
+    border: none;
+    background: none;
+    padding: 9px 12px;
+    text-align: left;
+    color: #1e293b;
+    cursor: pointer;
+    border-radius: 6px;
+}
+.message-menu button:hover { background: #eff6ff; }
 .original-message {
     padding: 5px 7px;
     margin-bottom: 6px;

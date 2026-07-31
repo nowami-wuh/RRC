@@ -39,12 +39,20 @@ export default function ChatPage() {
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchCurrentX, setTouchCurrentX] = useState(0);
   const [swipingMsgId, setSwipingMsgId] = useState(null);
+  const [messageMenu, setMessageMenu] = useState(null);
+  const messageLongPressTimer = useRef(null);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   const handleTouchStart = (e, msgId) => {
     setTouchStartX(e.touches[0].clientX);
     setSwipingMsgId(msgId);
+    messageLongPressTimer.current = window.setTimeout(() => {
+      const message = messages.find((item) => (item.id || messages.indexOf(item)) === msgId);
+      if (!message) return;
+      setMessageMenu({ message, x: e.touches[0].clientX, y: e.touches[0].clientY });
+      setTouchCurrentX(0);
+    }, 550);
   };
 
   const handleTouchMove = (e) => {
@@ -57,12 +65,21 @@ export default function ChatPage() {
   };
 
   const handleTouchEnd = (msg) => {
+    if (messageLongPressTimer.current) {
+      window.clearTimeout(messageLongPressTimer.current);
+      messageLongPressTimer.current = null;
+    }
     if (swipingMsgId && touchCurrentX > 40) {
       setReplyingTo(msg);
     }
     setTouchStartX(0);
     setTouchCurrentX(0);
     setSwipingMsgId(null);
+  };
+
+  const handleMessageContextMenu = (event, message) => {
+    event.preventDefault();
+    setMessageMenu({ message, x: event.clientX, y: event.clientY });
   };
 
   useEffect(() => {
@@ -220,6 +237,7 @@ export default function ChatPage() {
                   onTouchStart={(e) => handleTouchStart(e, message.id || index)}
                   onTouchMove={handleTouchMove}
                   onTouchEnd={() => handleTouchEnd(message)}
+                  onContextMenu={(e) => handleMessageContextMenu(e, message)}
                   style={
                     swipingMsgId === (message.id || index) && touchCurrentX > 0
                       ? { transform: `translateX(${touchCurrentX}px)`, transition: 'none' }
@@ -357,6 +375,20 @@ export default function ChatPage() {
           </button>
         </div>
       </div>
+      {messageMenu && (
+        <div className="message-menu-overlay" onClick={() => setMessageMenu(null)}>
+          <div
+            className="message-menu"
+            style={{ top: Math.min(messageMenu.y, window.innerHeight - 120), left: Math.min(messageMenu.x, window.innerWidth - 150) }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button type="button" onClick={() => { setReplyingTo(messageMenu.message); setMessageMenu(null); }}>Reply</button>
+            {messageMenu.message.senderRole === 'customer' && !messageMenu.message.image && messageMenu.message.id && (
+              <button type="button" onClick={() => { startEditing(messageMenu.message); setMessageMenu(null); }}>Edit</button>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
