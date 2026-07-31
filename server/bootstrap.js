@@ -92,6 +92,19 @@ async function ensureTables() {
     )
   `);
 
+  await execute(`
+    CREATE TABLE IF NOT EXISTS request_payments (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      request_code VARCHAR(40) NOT NULL UNIQUE,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      amount DECIMAL(10, 2) NULL,
+      payment_method VARCHAR(50) NULL,
+      receipt_message_id INT NULL,
+      recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_request_payments_status (status)
+    )
+  `);
+
   // Safe migrations for existing tables
   try { await execute(`ALTER TABLE requests ADD COLUMN billing_json LONGTEXT NULL AFTER equipment_json`); } catch (_) {}
   try { await execute(`ALTER TABLE requests ADD COLUMN denial_reason TEXT NULL AFTER billing_json`); } catch (_) {}

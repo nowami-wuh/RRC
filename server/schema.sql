@@ -58,6 +58,17 @@ CREATE TABLE IF NOT EXISTS requests (
   INDEX idx_requests_status (status)
 );
 
+CREATE TABLE IF NOT EXISTS request_payments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  request_code VARCHAR(40) NOT NULL UNIQUE,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  amount DECIMAL(10, 2) NULL,
+  payment_method VARCHAR(50) NULL,
+  receipt_message_id INT NULL,
+  recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_request_payments_status (status)
+);
+
 CREATE TABLE IF NOT EXISTS chat_messages (
   id INT AUTO_INCREMENT PRIMARY KEY,
   sender_role VARCHAR(20) NOT NULL,

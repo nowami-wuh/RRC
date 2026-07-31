@@ -102,9 +102,51 @@ router.patch('/requests/:requestCode', async (req, res) => {
     }
     const currentReq = currentRows[0];
 
+    const requestedStatus = status !== undefined ? String(status).toLowerCase() : null;
+    const allowedStatuses = ['pending', 'approved', 'awaitingpayment', 'upcoming', 'confirmed', 'paid', 'completed', 'denied', 'cancelled'];
+    if (requestedStatus && !allowedStatuses.includes(requestedStatus)) {
+      return res.status(400).json({ error: `Invalid request status: ${requestedStatus}.` });
+    }
+
+    const currentBilling = parseJson(currentReq.billing_json, null);
+    const nextBilling = billing !== undefined
+      ? { ...(currentBilling || {}), ...billing }
+      : currentBilling;
+    const hasDownpayment = Boolean(
+      nextBilling && (
+        nextBilling.downpaymentStatus === 'paid'
+        || nextBilling.downpaymentPaid === true
+        || nextBilling.paymentStatus === 'paid'
+      )
+    );
+
+    if (hasDownpayment) {
+      await execute(
+        `INSERT INTO request_payments (request_code, status, amount, payment_method, receipt_message_id)
+         VALUES (?, 'paid', ?, ?, ?)
+         ON DUPLICATE KEY UPDATE status = 'paid', amount = VALUES(amount), payment_method = VALUES(payment_method), receipt_message_id = VALUES(receipt_message_id)`,
+        [requestCode, nextBilling.downpaymentAmount || null, nextBilling.paymentMethod || null, nextBilling.receiptMessageId || null],
+      );
+    }
+
+    const paymentRows = await query(
+      'SELECT 1 FROM request_payments WHERE request_code = ? AND status = \'paid\' LIMIT 1',
+      [requestCode],
+    );
+    const paymentRecorded = paymentRows.length > 0;
+    if (requestedStatus === 'upcoming') {
+      const currentStatus = String(currentReq.status || '').toLowerCase();
+      if (!['approved', 'awaitingpayment'].includes(currentStatus)) {
+        return res.status(400).json({ error: 'A request must be approved and awaiting payment before it can become upcoming.' });
+      }
+      if (!paymentRecorded) {
+        return res.status(400).json({ error: 'Record the customer downpayment before moving this request to upcoming.' });
+      }
+    }
+
     const ACTIVE_STATUSES = ['pending', 'approved', 'awaitingpayment', 'upcoming', 'confirmed', 'paid', 'completed'];
     const oldStatus = String(currentReq.status || '').toLowerCase();
-    const newStatus = status !== undefined ? String(status).toLowerCase() : oldStatus;
+    const newStatus = requestedStatus || oldStatus;
 
     const oldIsActive = ACTIVE_STATUSES.includes(oldStatus);
     const newIsActive = ACTIVE_STATUSES.includes(newStatus);
@@ -141,7 +183,7 @@ router.patch('/requests/:requestCode', async (req, res) => {
     if (status !== undefined)       { updates.push('status = ?');         params.push(status); }
     if (pkg !== undefined)          { updates.push('package_json = ?');   params.push(pkg ? safeJson(pkg) : null); }
     if (equipment !== undefined)    { updates.push('equipment_json = ?'); params.push(safeJson(equipment)); }
-    if (billing !== undefined)      { updates.push('billing_json = ?');   params.push(billing ? safeJson(billing) : null); }
+    if (billing !== undefined)      { updates.push('billing_json = ?');   params.push(nextBilling ? safeJson(nextBilling) : null); }
     if (denialReason !== undefined) { updates.push('denial_reason = ?'); params.push(denialReason || null); }
     if (additional !== undefined)   { updates.push('additional_notes = ?'); params.push(additional); }
     if (event !== undefined)        { updates.push('event_json = ?');     params.push(safeJson(event)); }

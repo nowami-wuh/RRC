@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchAdminRequests, updateAdminRequestStatus } from '../../api/api';
+import { fetchAdminRequests, updateAdminRequest } from '../../api/api';
 
 const initialBookings = {
   pending: [
@@ -519,7 +519,9 @@ export default function AdminRequests() {
     });
 
     // Update backend database via API
-    updateAdminRequestStatus(id, newStatus).catch(() => {});
+    const apiPayload = { status: newStatus };
+    if (extra.billing !== undefined) apiPayload.billing = extra.billing;
+    updateAdminRequest(id, apiPayload).catch(() => {});
 
     setDetailState(null);
     setCurrentEquipment({});
@@ -666,7 +668,16 @@ export default function AdminRequests() {
       `Confirm that the downpayment for booking ${selectedBooking.booking.id} has been received via chat? This will move the booking to Upcoming.`,
       () => {
         const paidOn = new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
-        moveBooking(selectedBooking.booking.id, 'upcoming', { paidOn, equipment: cloneData(currentEquipment) });
+        moveBooking(selectedBooking.booking.id, 'upcoming', {
+          paidOn,
+          equipment: cloneData(currentEquipment),
+          billing: {
+            downpaymentStatus: 'paid',
+            downpaymentPaid: true,
+            downpaymentRecordedAt: new Date().toISOString(),
+            paymentMethod: 'chat_receipt',
+          },
+        });
       }
     );
   };
