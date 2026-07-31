@@ -125,7 +125,20 @@
   text-align: center;
   font-size: 16px;
 }
-.mr-empty-icon { font-size: 44px; }
+.mr-empty-icon {
+  font-size: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto;
+}
+.mr-empty-icon svg {
+  width: 52px;
+  height: 52px;
+  fill: #8FABD4;
+}
 
 /* ── Request Card ─────────────────────────────────────────── */
 .request-card {
@@ -407,7 +420,19 @@
   gap: 10px;
   align-items: flex-start;
 }
-.upcoming-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.upcoming-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.upcoming-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: #1b5e20;
+}
 .upcoming-text .upcoming-label {
   font-family: 'Garet Heavy', sans-serif;
   font-size: 13px;
@@ -432,7 +457,19 @@
   gap: 10px;
   align-items: flex-start;
 }
-.denial-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.denial-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.denial-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: #c0392b;
+}
 .denial-text { flex: 1; }
 .denial-label {
   font-family: 'Garet Heavy', sans-serif;
@@ -749,7 +786,18 @@
   from { opacity: 0; transform: scale(0.94) translateY(10px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
-.mr-modal-icon  { font-size: 36px; margin-bottom: 12px; }
+.mr-modal-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mr-modal-icon svg {
+  width: 44px;
+  height: 44px;
+  fill: #e74c3c;
+}
 .mr-modal-title {
   font-family: 'Garet Heavy', sans-serif;
   font-size: 20px;

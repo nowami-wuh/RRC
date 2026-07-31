@@ -807,7 +807,7 @@ export default function AdminRequests() {
             {selectedBooking?.status === 'cancelled' && (
               <div className="status-banner cancelled-banner">
                 <div className="banner-text">
-                  <strong>This booking was cancelled by the client.</strong> No reason was given in-app — chat with the client to find out why.
+                  This booking was cancelled by the client. Chat with the client to find out why
                 </div>
                 <button
                   className="btn-chat-small"

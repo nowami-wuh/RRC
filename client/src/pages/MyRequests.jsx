@@ -28,6 +28,44 @@ function getTabKey(status) {
   return 'pending';
 }
 
+const EMPTY_TAB_ICONS = {
+  pending: (
+    <svg className="nav-icon" viewBox="0 0 24 24">
+      <path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6zm10 14.5V20H8v-3.5l4-4 4 4zm-4-5l-4-4V4h8v3.5l-4 4z" fill="currentColor" />
+    </svg>
+  ),
+  approved: (
+    <svg className="nav-icon" viewBox="0 0 24 24">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor" />
+    </svg>
+  ),
+  upcoming: (
+    <svg className="nav-icon" viewBox="0 0 24 24">
+      <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z" fill="currentColor" />
+    </svg>
+  ),
+  completed: (
+    <svg className="nav-icon" viewBox="0 0 24 24">
+      <path d="M2 22l14-5-9-9L2 22zm4.24-4.24l2.12-5.66 3.54 3.54-5.66 2.12zM14.5 9.5l.88-1.88L17.26 6.74l1.88-.88-1.88-.88-1.88-1.88-.88 1.88-1.88.88 1.88.88zM20 12l-.94 2.06L17 15l2.06.94L20 18l.94-2.06L23 15l-2.06-.94z" fill="currentColor" />
+    </svg>
+  ),
+  denied: (
+    <svg className="nav-icon" viewBox="0 0 24 24">
+      <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z" fill="currentColor" />
+    </svg>
+  ),
+  cancelled: (
+    <svg className="nav-icon" viewBox="0 0 24 24">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z" fill="currentColor" />
+    </svg>
+  ),
+  all: (
+    <svg className="nav-icon" viewBox="0 0 24 24">
+      <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 16H5V5h2v3h10V5h2v14z" fill="currentColor" />
+    </svg>
+  ),
+};
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function formatCurrency(val) {
@@ -432,7 +470,11 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
 
           {isUpcoming && (
             <div className="upcoming-banner">
-              <span className="upcoming-icon">🎉</span>
+              <span className="upcoming-icon">
+                <svg className="nav-icon" viewBox="0 0 24 24">
+                  <path d="M2 22l14-5-9-9L2 22zm4.24-4.24l2.12-5.66 3.54 3.54-5.66 2.12zM14.5 9.5l.88-1.88L17.26 6.74l1.88-.88-1.88-.88-1.88-1.88-.88 1.88-1.88.88 1.88.88zM20 12l-.94 2.06L17 15l2.06.94L20 18l.94-2.06L23 15l-2.06-.94z" fill="currentColor" />
+                </svg>
+              </span>
               <div className="upcoming-text">
                 <div className="upcoming-label">Booking Confirmed!</div>
                 <div className="upcoming-msg">
@@ -444,7 +486,11 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
 
           {isDenied && req.denialReason && (
             <div className="denial-banner">
-              <span className="denial-icon">❌</span>
+              <span className="denial-icon">
+                <svg className="nav-icon" viewBox="0 0 24 24">
+                  <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z" fill="currentColor" />
+                </svg>
+              </span>
               <div className="denial-text">
                 <div className="denial-label">Reason for Denial</div>
                 <div className="denial-reason">{req.denialReason}</div>
@@ -681,13 +727,21 @@ export default function MyRequests() {
       <div className="requests-wrapper" id="requestsWrapper">
         {loading && (
           <div className="empty-state">
-            <div className="mr-empty-icon">⏳</div>
+            <div className="mr-empty-icon">
+              <svg className="nav-icon" viewBox="0 0 24 24">
+                <path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6zm10 14.5V20H8v-3.5l4-4 4 4zm-4-5l-4-4V4h8v3.5l-4 4z" fill="currentColor" />
+              </svg>
+            </div>
             <div>Loading your requests…</div>
           </div>
         )}
         {error && (
           <div className="empty-state">
-            <div className="mr-empty-icon">⚠️</div>
+            <div className="mr-empty-icon">
+              <svg className="nav-icon" viewBox="0 0 24 24">
+                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" fill="currentColor" />
+              </svg>
+            </div>
             <div>{error}</div>
           </div>
         )}
@@ -695,12 +749,7 @@ export default function MyRequests() {
         {!loading && !error && filteredRequests.length === 0 && (
           <div className="empty-state" id="emptyState">
             <div className="mr-empty-icon">
-              {activeTab === 'pending'   ? '⏳' :
-               activeTab === 'approved'  ? '✅' :
-               activeTab === 'upcoming'  ? '📅' :
-               activeTab === 'completed' ? '🎉' :
-               activeTab === 'denied'    ? '❌' :
-               activeTab === 'cancelled' ? '🚫' : '📋'}
+              {EMPTY_TAB_ICONS[activeTab] || EMPTY_TAB_ICONS.all}
             </div>
             <div>
               {activeTab === 'all' ? 'No requests yet.' : `No ${activeTab} requests.`}
@@ -733,7 +782,11 @@ export default function MyRequests() {
       {cancelModal && (
         <div className="mr-modal-overlay" id="cancelModal">
           <div className="mr-modal">
-            <div className="mr-modal-icon">⚠️</div>
+            <div className="mr-modal-icon">
+              <svg className="nav-icon" viewBox="0 0 24 24">
+                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" fill="currentColor" />
+              </svg>
+            </div>
             <h2 className="mr-modal-title">Cancel this booking?</h2>
             <p className="mr-modal-desc">
               Are you sure you want to cancel your request for{' '}
