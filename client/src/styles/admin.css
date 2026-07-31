@@ -5975,8 +5975,8 @@ body {
         min-width: 0;
         overflow-x: auto !important;
         overflow-y: hidden !important;
-        gap: 6px !important;
-        padding: 4px 2px 8px !important;
+        gap: 6px;
+        padding: 4px 2px 8px;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
     }
@@ -5986,11 +5986,12 @@ body {
     }
 
     .requests-admin-page .status-tab {
-        flex: 0 0 auto !important;
+        flex: 0 0 auto;
         width: max-content;
         min-width: max-content;
-        padding: 8px 14px !important;
-        white-space: nowrap !important;
+        padding: 6px 14px 14px;
+        text-align: center;
+        white-space: nowrap;
     }
 }
 
