@@ -5061,65 +5061,6 @@ body {
     }
 }
 
-/* Keep admin status filters usable on narrow screens. */
-.requests-admin-page .status-tabs {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 4px;
-    background: #f0f0f0;
-    border-radius: 8px;
-    padding: 4px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    white-space: nowrap;
-}
-.requests-admin-page .status-tabs::-webkit-scrollbar { display: none; }
-.requests-admin-page .status-tab {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    gap: 6px;
-    min-height: 30px;
-    padding: 6px 14px;
-    border: none;
-    border-radius: 6px;
-    background: none;
-    color: var(--text-gray);
-    font-family: 'Garet', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: visible;
-    text-overflow: clip;
-}
-.requests-admin-page .status-tab:hover:not(.active) { color: var(--dark-blue); }
-.requests-admin-page .status-tab.active {
-    background: #ffffff;
-    color: var(--dark-blue);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-}
-.requests-admin-page .status-tab-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    padding: 1px 6px;
-    border-radius: 999px;
-    background: #ddd;
-    color: #666;
-    font-size: 11px;
-    font-weight: 700;
-}
-.requests-admin-page .status-tab.active .status-tab-count {
-    background: var(--dark-blue);
-    color: #ffffff;
-}
-
 /* ══════════════════════════════════════════════════════════════
    360px / ULTRA-NARROW DEVICE OVERRIDES (MAX-WIDTH 400px)
 ══════════════════════════════════════════════════════════════ */
