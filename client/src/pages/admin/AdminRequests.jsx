@@ -289,6 +289,7 @@ export default function AdminRequests() {
   const location = useLocation();
   const [bookings, setBookings] = useState(initialBookings);
   const [currentStatus, setCurrentStatus] = useState('pending');
+  const statusTabsRef = useRef(null);
   const statusTabRefs = useRef({});
   const [sortAsc, setSortAsc] = useState(false);
   const [detailState, setDetailState] = useState(null);
@@ -397,11 +398,19 @@ export default function AdminRequests() {
   }, [bookings, currentStatus, sortAsc]);
 
   useEffect(() => {
-    statusTabRefs.current[currentStatus]?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-      inline: 'center',
-    });
+    const tabs = statusTabsRef.current;
+    const tab = statusTabRefs.current[currentStatus];
+    if (!tabs || !tab) return;
+
+    const maxScrollLeft = tabs.scrollWidth - tabs.clientWidth;
+    const centeredScrollLeft = tab.offsetLeft - (tabs.clientWidth - tab.offsetWidth) / 2;
+    const targetScrollLeft = currentStatus === 'pending'
+      ? 0
+      : currentStatus === 'cancelled'
+        ? maxScrollLeft
+        : Math.max(0, Math.min(centeredScrollLeft, maxScrollLeft));
+
+    tabs.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
   }, [currentStatus]);
 
   const setStatus = (status) => {
@@ -651,7 +660,7 @@ export default function AdminRequests() {
       <div className="main-content">
         <div id="listView" style={{ display: selectedBooking ? 'none' : 'block' }}>
           <div className="status-bar">
-            <div className="status-tabs">
+            <div className="status-tabs" ref={statusTabsRef}>
               {statusTabs.map((tab) => (
                 <button
                   key={tab.key}
