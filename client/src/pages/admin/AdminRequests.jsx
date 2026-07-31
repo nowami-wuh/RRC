@@ -275,6 +275,7 @@ const statusLabels = {
 };
 
 const statusPositions = { pending: '0%', approved: '16.666%', upcoming: '33.333%', completed: '50%', denied: '66.666%', cancelled: '83.333%' };
+const statusIndexes = { pending: 0, approved: 1, upcoming: 2, completed: 3, denied: 4, cancelled: 5 };
 
 function cloneData(value) {
   return JSON.parse(JSON.stringify(value));
@@ -408,11 +409,12 @@ export default function AdminRequests() {
     const maxScrollLeft = Math.max(0, tabs.scrollWidth - tabs.clientWidth);
     const progressRect = progressTrack.getBoundingClientRect();
     const tabRect = tab.getBoundingClientRect();
-    const visibleCenter = progressRect.left + progressRect.width / 2;
+    const segmentWidth = progressRect.width / statusTabs.length;
+    const visibleCenter = progressRect.left + segmentWidth * (statusIndexes[currentStatus] + 0.5);
     const tabCenter = tabRect.left + tabRect.width / 2;
     const centeredScrollLeft = tabs.scrollLeft + tabCenter - visibleCenter;
     const targetScrollLeft = currentStatus === 'pending'
-      ? tabs.clientWidth / 2
+      ? 0
       : currentStatus === 'cancelled'
         ? maxScrollLeft
         : Math.max(0, Math.min(centeredScrollLeft, maxScrollLeft));
@@ -697,7 +699,7 @@ export default function AdminRequests() {
       <div className="main-content">
         <div id="listView" style={{ display: selectedBooking ? 'none' : 'block' }}>
           <div className="status-bar">
-            <div className="status-tabs" ref={statusTabsRef}>
+            <div className={`status-tabs status-${currentStatus}`} ref={statusTabsRef}>
               {statusTabs.map((tab) => (
                 <button
                   key={tab.key}

@@ -5996,6 +5996,11 @@ body {
         pointer-events: none;
     }
 
+    .requests-admin-page .status-tabs.status-pending::before,
+    .requests-admin-page .status-tabs.status-cancelled::after {
+        flex-basis: 0;
+    }
+
     .requests-admin-page .status-tab {
         flex: 0 0 auto;
         width: max-content;
