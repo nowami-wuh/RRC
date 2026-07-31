@@ -5158,6 +5158,12 @@ body {
 
     .admin-inquiries-shell.mobile .msg-row .bubble {
         max-width: 88%;
+        padding: 8px 11px;
+    }
+
+    .admin-inquiries-shell.mobile .msg-row .reply-trigger-btn,
+    .admin-inquiries-shell.mobile .msg-row .edit-message-btn {
+        display: none !important;
     }
 
     .admin-inquiries-shell.mobile .chat-header {
