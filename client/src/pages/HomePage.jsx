@@ -43,7 +43,7 @@ function normalizeDate(dateStr) {
 
 function isVisibleCalendarRequest(status) {
   const s = String(status || '').toLowerCase();
-  return ['approved', 'awaitingpayment', 'upcoming', 'completed', 'paid', 'confirmed'].includes(s);
+  return ['upcoming', 'completed', 'paid', 'confirmed'].includes(s);
 }
 
 export default function HomePage() {
@@ -66,7 +66,7 @@ export default function HomePage() {
         const requests = allRequestsData.requests || [];
         requests.forEach((req) => {
           if (req.event && req.event.date) {
-            // Only show requests that are confirmed, upcoming, completed, or approved
+            // Only show requests that are confirmed, upcoming, completed, or paid
             if (!isVisibleCalendarRequest(req.status)) return;
 
             const dateKey = normalizeDate(req.event.date);

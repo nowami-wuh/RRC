@@ -1,6 +1,7 @@
 import express from 'express';
 import { execute, parseJson, query, safeJson } from '../db.js';
 import { sendRequestStatusEmail, sendChatReplyEmail } from '../mailer.js';
+import { parseEquipmentList, validateEquipmentStock, reserveEquipmentStock, releaseEquipmentStock } from '../inventoryHelpers.js';
 
 const router = express.Router();
 
@@ -94,6 +95,46 @@ router.patch('/requests/:requestCode', async (req, res) => {
   try {
     const { requestCode } = req.params;
     const { status, package: pkg, equipment, additional, event, billing, denialReason } = req.body;
+
+    const currentRows = await query('SELECT * FROM requests WHERE request_code = ? LIMIT 1', [requestCode]);
+    if (currentRows.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    const currentReq = currentRows[0];
+
+    const ACTIVE_STATUSES = ['pending', 'approved', 'awaitingpayment', 'upcoming', 'confirmed', 'paid', 'completed'];
+    const oldStatus = String(currentReq.status || '').toLowerCase();
+    const newStatus = status !== undefined ? String(status).toLowerCase() : oldStatus;
+
+    const oldIsActive = ACTIVE_STATUSES.includes(oldStatus);
+    const newIsActive = ACTIVE_STATUSES.includes(newStatus);
+
+    const oldEquipment = parseEquipmentList(currentReq.equipment_json);
+    const newEquipment = equipment !== undefined ? parseEquipmentList(equipment) : oldEquipment;
+
+    if (oldIsActive && !newIsActive) {
+      // Transitioning from active to cancelled/denied -> Release stock
+      await releaseEquipmentStock(oldEquipment);
+    } else if (!oldIsActive && newIsActive) {
+      // Transitioning from cancelled/denied to active -> Validate & reserve stock
+      try {
+        await validateEquipmentStock(newEquipment);
+      } catch (valErr) {
+        return res.status(400).json({ error: valErr.message });
+      }
+      await reserveEquipmentStock(newEquipment);
+    } else if (oldIsActive && newIsActive && equipment !== undefined) {
+      // Active request with modified equipment -> Re-calculate reservation
+      await releaseEquipmentStock(oldEquipment);
+      try {
+        await validateEquipmentStock(newEquipment);
+      } catch (valErr) {
+        // Rollback old equipment reservation if validation fails
+        await reserveEquipmentStock(oldEquipment).catch(() => {});
+        return res.status(400).json({ error: valErr.message });
+      }
+      await reserveEquipmentStock(newEquipment);
+    }
 
     const updates = [];
     const params = [];

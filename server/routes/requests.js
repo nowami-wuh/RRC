@@ -1,6 +1,7 @@
 import express from 'express';
 import { execute, parseJson, query, safeJson } from '../db.js';
 import { sendRequestConfirmationEmail } from '../mailer.js';
+import { parseEquipmentList, validateEquipmentStock, reserveEquipmentStock, releaseEquipmentStock } from '../inventoryHelpers.js';
 
 const router = express.Router();
 
@@ -114,6 +115,13 @@ router.patch('/:requestCode/cancel', async (req, res) => {
 
     await execute('UPDATE requests SET status = ? WHERE request_code = ?', ['cancelled', requestCode]);
 
+    // Release reserved equipment stock if request was active
+    const ACTIVE_STATUSES = ['pending', 'approved', 'awaitingpayment', 'upcoming', 'confirmed', 'paid', 'completed'];
+    if (ACTIVE_STATUSES.includes(String(current.status).toLowerCase())) {
+      const equipmentItems = parseEquipmentList(current.equipment_json);
+      await releaseEquipmentStock(equipmentItems);
+    }
+
     // Insert notification for the customer
     const notifMsg = `Your request ${requestCode} has been cancelled.`;
     await execute(
@@ -128,65 +136,83 @@ router.patch('/:requestCode/cancel', async (req, res) => {
   }
 });
 
-router.post('/', (req, res) => {
-  const payload = req.body || {};
-  const customerId = payload.customerId;
-  if (!customerId) {
-    return res.status(400).json({ error: 'customerId is required' });
-  }
+router.post('/', async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const customerId = payload.customerId;
+    if (!customerId) {
+      return res.status(400).json({ error: 'customerId is required' });
+    }
 
-  const requestCode = payload.id || `REQ-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 10)}`;
-  const event = {
-    title: payload.title,
-    venue: payload.venue,
-    pax: payload.pax,
-    date: payload.date,
-    timeStart: payload.timeStart,
-    timeEnd: payload.timeEnd,
-  };
+    const requestCode = payload.id || `REQ-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 10)}`;
+    const event = {
+      title: payload.title,
+      venue: payload.venue,
+      pax: payload.pax,
+      date: payload.date,
+      timeStart: payload.timeStart,
+      timeEnd: payload.timeEnd,
+    };
 
-  execute(
-    'INSERT INTO requests (request_code, customer_public_id, type, status, event_json, package_json, equipment_json, additional_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [requestCode, customerId, payload.type || 'book', 'pending', safeJson(event), payload.package ? safeJson(payload.package) : null, safeJson(payload.equipment || []), payload.additional || null],
-  )
-    .then(async () => {
-      const newRequest = {
-        id: requestCode,
-        type: payload.type || 'book',
-        status: 'pending',
-        dateRequested: new Date().toLocaleDateString(),
-        customerId,
-        event,
-        package: payload.package || null,
-        equipment: payload.equipment || [],
-        billing: null,
-        denialReason: null,
-        additional: payload.additional || null,
-      };
+    const equipmentItems = parseEquipmentList(payload.equipment);
 
-      // Insert submitted notification
-      try {
-        await execute(
-          'INSERT INTO notifications (customer_public_id, request_code, type, message) VALUES (?, ?, ?, ?)',
-          [customerId, requestCode, 'submitted', `Your request ${requestCode} has been submitted and is now pending review.`],
-        );
-      } catch (_) {}
+    // 1. Validate requested equipment quantities against current inventory
+    try {
+      await validateEquipmentStock(equipmentItems);
+    } catch (valErr) {
+      return res.status(400).json({ error: valErr.message });
+    }
 
-      // Send confirmation email to the customer (best-effort)
-      try {
-        const customerRows = await query('SELECT email FROM customers WHERE public_id = ? LIMIT 1', [customerId]);
-        if (customerRows[0]?.email) {
-          await sendRequestConfirmationEmail(customerRows[0].email, newRequest);
-        }
-      } catch (emailErr) {
-        console.error('Failed to send confirmation email:', emailErr.message);
+    // 2. Reserve inventory when request is submitted
+    await reserveEquipmentStock(equipmentItems);
+
+    try {
+      await execute(
+        'INSERT INTO requests (request_code, customer_public_id, type, status, event_json, package_json, equipment_json, additional_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [requestCode, customerId, payload.type || 'book', 'pending', safeJson(event), payload.package ? safeJson(payload.package) : null, safeJson(payload.equipment || []), payload.additional || null],
+      );
+    } catch (dbErr) {
+      // Rollback stock reservation if DB insert fails
+      await releaseEquipmentStock(equipmentItems).catch(() => {});
+      throw dbErr;
+    }
+
+    const newRequest = {
+      id: requestCode,
+      type: payload.type || 'book',
+      status: 'pending',
+      dateRequested: new Date().toLocaleDateString(),
+      customerId,
+      event,
+      package: payload.package || null,
+      equipment: payload.equipment || [],
+      billing: null,
+      denialReason: null,
+      additional: payload.additional || null,
+    };
+
+    // Insert submitted notification
+    try {
+      await execute(
+        'INSERT INTO notifications (customer_public_id, request_code, type, message) VALUES (?, ?, ?, ?)',
+        [customerId, requestCode, 'submitted', `Your request ${requestCode} has been submitted and is now pending review.`],
+      );
+    } catch (_) {}
+
+    // Send confirmation email to the customer (best-effort)
+    try {
+      const customerRows = await query('SELECT email FROM customers WHERE public_id = ? LIMIT 1', [customerId]);
+      if (customerRows[0]?.email) {
+        await sendRequestConfirmationEmail(customerRows[0].email, newRequest);
       }
+    } catch (emailErr) {
+      console.error('Failed to send confirmation email:', emailErr.message);
+    }
 
-      res.status(201).json({ request: newRequest });
-    })
-    .catch((error) => {
-      res.status(500).json({ error: error.message || 'Unable to create request' });
-    });
+    res.status(201).json({ request: newRequest });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Unable to create request' });
+  }
 });
 
 export default router;
