@@ -5153,6 +5153,21 @@ body {
         flex: 1 1 auto !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
+        padding: 10px 8px !important;
+    }
+
+    .admin-inquiries-shell.mobile .msg-row .bubble {
+        max-width: 88%;
+    }
+
+    .admin-inquiries-shell.mobile .chat-header {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .admin-inquiries-shell.mobile .chat-input-bar {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
     }
 
     /* --- Inventory adjustments --- */
