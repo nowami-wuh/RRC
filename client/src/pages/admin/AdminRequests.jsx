@@ -402,8 +402,12 @@ export default function AdminRequests() {
     const tab = statusTabRefs.current[currentStatus];
     if (!tabs || !tab) return;
 
-    const maxScrollLeft = tabs.scrollWidth - tabs.clientWidth;
-    const centeredScrollLeft = tab.offsetLeft - (tabs.clientWidth - tab.offsetWidth) / 2;
+    const maxScrollLeft = Math.max(0, tabs.scrollWidth - tabs.clientWidth);
+    const tabsRect = tabs.getBoundingClientRect();
+    const tabRect = tab.getBoundingClientRect();
+    const visibleCenter = tabsRect.left + tabs.clientWidth / 2;
+    const tabCenter = tabRect.left + tabRect.width / 2;
+    const centeredScrollLeft = tabs.scrollLeft + tabCenter - visibleCenter;
     const targetScrollLeft = currentStatus === 'pending'
       ? 0
       : currentStatus === 'cancelled'
