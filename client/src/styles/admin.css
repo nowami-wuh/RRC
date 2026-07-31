@@ -5925,6 +5925,47 @@ body {
   .inv-flip-hint        { font-size: 11px; padding: 5px 10px; }
 }
 
+.apm-top-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.apm-top-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: center;
+}
+
+.apm-tab-0,
+.apm-tab-1,
+.apm-tab-2 {
+    text-align: center;
+}
+
+@media (max-width: 400px) {
+    .apm-top-tabs {
+        justify-content: flex-start;
+        gap: 6px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .apm-top-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .apm-top-tab {
+        flex: 0 0 auto;
+        min-width: max-content;
+        padding: 6px 14px 14px;
+        white-space: nowrap;
+    }
+}
+
 /* Keep request filters in one touch-scrollable row on narrow phones. */
 @media (max-width: 400px) {
     .requests-admin-page .status-tabs {
