@@ -5999,6 +5999,17 @@ body {
         overflow: visible;
         text-overflow: clip;
     }
+
+    .requests-admin-page .status-tab.active {
+        background: none;
+        color: var(--text-dark);
+        border-color: transparent;
+        box-shadow: none;
+    }
+
+    .requests-admin-page .progress-track {
+        display: block !important;
+    }
 }
 
 
