@@ -76,6 +76,12 @@ img {
   overflow-y: auto;
 }
 
+.sidebar.notifications-open {
+  overflow: visible;
+  position: relative;
+  z-index: 1000;
+}
+
 .sidebar-header {
   display: flex;
   align-items: center;

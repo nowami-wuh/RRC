@@ -136,7 +136,7 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar${notifOpen ? ' notifications-open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="sidebar-brand-icons">
