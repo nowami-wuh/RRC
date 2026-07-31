@@ -290,6 +290,7 @@ export default function AdminRequests() {
   const [bookings, setBookings] = useState(initialBookings);
   const [currentStatus, setCurrentStatus] = useState('pending');
   const statusTabsRef = useRef(null);
+  const statusProgressRef = useRef(null);
   const statusTabRefs = useRef({});
   const statusScrollAnimationRef = useRef(null);
   const [sortAsc, setSortAsc] = useState(false);
@@ -401,12 +402,13 @@ export default function AdminRequests() {
   useEffect(() => {
     const tabs = statusTabsRef.current;
     const tab = statusTabRefs.current[currentStatus];
-    if (!tabs || !tab) return;
+    const progressTrack = statusProgressRef.current;
+    if (!tabs || !tab || !progressTrack) return;
 
     const maxScrollLeft = Math.max(0, tabs.scrollWidth - tabs.clientWidth);
-    const tabsRect = tabs.getBoundingClientRect();
+    const progressRect = progressTrack.getBoundingClientRect();
     const tabRect = tab.getBoundingClientRect();
-    const visibleCenter = tabsRect.left + tabs.clientWidth / 2;
+    const visibleCenter = progressRect.left + progressRect.width / 2;
     const tabCenter = tabRect.left + tabRect.width / 2;
     const centeredScrollLeft = tabs.scrollLeft + tabCenter - visibleCenter;
     const targetScrollLeft = currentStatus === 'pending'
@@ -707,7 +709,7 @@ export default function AdminRequests() {
                 </button>
               ))}
             </div>
-            <div className="progress-track">
+            <div className="progress-track" ref={statusProgressRef}>
               <div className="progress-fill" id="progressFill" style={{ left: statusPositions[currentStatus] }} />
             </div>
           </div>
