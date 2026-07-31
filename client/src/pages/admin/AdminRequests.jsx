@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchAdminRequests, updateAdminRequestStatus } from '../../api/api';
 
@@ -289,6 +289,7 @@ export default function AdminRequests() {
   const location = useLocation();
   const [bookings, setBookings] = useState(initialBookings);
   const [currentStatus, setCurrentStatus] = useState('pending');
+  const statusTabRefs = useRef({});
   const [sortAsc, setSortAsc] = useState(false);
   const [detailState, setDetailState] = useState(null);
   const [activeSection, setActiveSection] = useState('approval');
@@ -394,6 +395,14 @@ export default function AdminRequests() {
     const list = bookings[currentStatus] || [];
     return sortAsc ? [...list].reverse() : list;
   }, [bookings, currentStatus, sortAsc]);
+
+  useEffect(() => {
+    statusTabRefs.current[currentStatus]?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, [currentStatus]);
 
   const setStatus = (status) => {
     setCurrentStatus(status);
@@ -646,6 +655,7 @@ export default function AdminRequests() {
               {statusTabs.map((tab) => (
                 <button
                   key={tab.key}
+                  ref={(element) => { statusTabRefs.current[tab.key] = element; }}
                   className={`status-tab ${currentStatus === tab.key ? 'active' : ''}`}
                   onClick={() => setStatus(tab.key)}
                 >

@@ -4055,7 +4055,7 @@ body {
     width: 16.666%;
     background: var(--dark-blue);
     border-radius: 20px;
-    transition: left 0.3s ease, width 0.3s ease;
+    transition: left 0.45s cubic-bezier(0.22, 1, 0.36, 1), width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .requests-admin-page .list-area { display: flex; flex-direction: column; gap: 14px; }
 .requests-admin-page .sort-row { display: flex; justify-content: flex-end; }
@@ -4707,6 +4707,7 @@ body {
         padding: 4px 2px 8px;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
+        scroll-behavior: smooth;
     }
     .requests-admin-page .status-tabs::-webkit-scrollbar { display: none; }
     .requests-admin-page .status-tab {
