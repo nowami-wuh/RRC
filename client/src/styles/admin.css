@@ -5970,9 +5970,11 @@ body {
 @media (max-width: 400px) {
     .requests-admin-page .status-tabs {
         display: flex !important;
+        justify-content: flex-start;
         flex-wrap: nowrap !important;
         width: 100%;
         min-width: 0;
+        box-sizing: border-box;
         overflow-x: auto !important;
         overflow-y: hidden !important;
         gap: 6px;
@@ -5990,8 +5992,12 @@ body {
         width: max-content;
         min-width: max-content;
         padding: 6px 14px 14px;
+        border: none;
+        background: none;
         text-align: center;
         white-space: nowrap;
+        overflow: visible;
+        text-overflow: clip;
     }
 }
 
