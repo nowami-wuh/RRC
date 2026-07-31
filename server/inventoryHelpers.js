@@ -31,15 +31,23 @@ export function parseEquipmentList(equipmentJsonOrArray) {
     .filter((item) => item !== null && item.itemCode !== null);
 }
 
+function inventoryLookup(itemCode) {
+  const value = String(itemCode);
+  return /^\d+$/.test(value)
+    ? { condition: 'id = ?', value }
+    : { condition: 'item_code = ?', value };
+}
+
 /**
  * Validates that each item in requested equipment exists and has sufficient stock.
  * Throws an Error if any item has insufficient stock or is not found.
  */
 export async function validateEquipmentStock(equipmentItems) {
   for (const item of equipmentItems) {
+    const lookup = inventoryLookup(item.itemCode);
     const rows = await query(
-      'SELECT * FROM inventory_items WHERE item_code = ? OR id = ? LIMIT 1',
-      [item.itemCode, item.itemCode],
+      `SELECT * FROM inventory_items WHERE ${lookup.condition} LIMIT 1`,
+      [lookup.value],
     );
     if (rows.length === 0) {
       throw new Error(`Equipment item "${item.name}" (${item.itemCode}) was not found in inventory.`);
@@ -56,9 +64,10 @@ export async function validateEquipmentStock(equipmentItems) {
  */
 export async function reserveEquipmentStock(equipmentItems) {
   for (const item of equipmentItems) {
+    const lookup = inventoryLookup(item.itemCode);
     await execute(
-      'UPDATE inventory_items SET stock = GREATEST(0, stock - ?) WHERE item_code = ? OR id = ?',
-      [item.qty, item.itemCode, item.itemCode],
+      `UPDATE inventory_items SET stock = GREATEST(0, stock - ?) WHERE ${lookup.condition}`,
+      [item.qty, lookup.value],
     );
   }
 }
@@ -68,9 +77,10 @@ export async function reserveEquipmentStock(equipmentItems) {
  */
 export async function releaseEquipmentStock(equipmentItems) {
   for (const item of equipmentItems) {
+    const lookup = inventoryLookup(item.itemCode);
     await execute(
-      'UPDATE inventory_items SET stock = stock + ? WHERE item_code = ? OR id = ?',
-      [item.qty, item.itemCode, item.itemCode],
+      `UPDATE inventory_items SET stock = stock + ? WHERE ${lookup.condition}`,
+      [item.qty, lookup.value],
     );
   }
 }
