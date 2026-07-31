@@ -5925,4 +5925,32 @@ body {
   .inv-flip-hint        { font-size: 11px; padding: 5px 10px; }
 }
 
+/* Keep request filters in one touch-scrollable row on narrow phones. */
+@media (max-width: 400px) {
+    .requests-admin-page .status-tabs {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        width: 100%;
+        min-width: 0;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        gap: 6px !important;
+        padding: 4px 2px 8px !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .requests-admin-page .status-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .requests-admin-page .status-tab {
+        flex: 0 0 auto !important;
+        width: max-content;
+        min-width: max-content;
+        padding: 8px 14px !important;
+        white-space: nowrap !important;
+    }
+}
+
 
