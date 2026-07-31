@@ -5988,6 +5988,14 @@ body {
         display: none;
     }
 
+    .requests-admin-page .status-tabs::before,
+    .requests-admin-page .status-tabs::after {
+        content: '';
+        flex: 0 0 50%;
+        height: 1px;
+        pointer-events: none;
+    }
+
     .requests-admin-page .status-tab {
         flex: 0 0 auto;
         width: max-content;

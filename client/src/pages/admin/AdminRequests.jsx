@@ -412,7 +412,7 @@ export default function AdminRequests() {
     const tabCenter = tabRect.left + tabRect.width / 2;
     const centeredScrollLeft = tabs.scrollLeft + tabCenter - visibleCenter;
     const targetScrollLeft = currentStatus === 'pending'
-      ? 0
+      ? tabs.clientWidth / 2
       : currentStatus === 'cancelled'
         ? maxScrollLeft
         : Math.max(0, Math.min(centeredScrollLeft, maxScrollLeft));
