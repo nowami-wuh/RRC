@@ -1,8 +1,5 @@
 import mysql from 'mysql2/promise';
 
-console.log('db.js env password:', process.env.MYSQL_PASSWORD);
-console.log('db.js env host:', process.env.MYSQL_HOST);
-
 const ssl = process.env.MYSQL_SSL === 'true' || process.env.MYSQL_SSL === '1'
   ? { rejectUnauthorized: false }
   : undefined;

@@ -13,6 +13,13 @@ function generateId(prefix = 'BK') {
 
 const EMPTY_FORM = { title: '', venue: '', pax: '', date: '', timeStart: '', timeEnd: '' };
 
+function getLocalDateString() {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${today.getFullYear()}-${month}-${day}`;
+}
+
 export default function MakeRequest() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -141,6 +148,10 @@ export default function MakeRequest() {
       setError('Please fill out all required event details.');
       return;
     }
+    if (form.date <= getLocalDateString()) {
+      setError('Please choose a future event date.');
+      return;
+    }
     if (type === 'rent' && selectedItems.length === 0) {
       setError('Please select at least one equipment item.');
       return;
@@ -237,6 +248,7 @@ export default function MakeRequest() {
             className="field-input"
             type={type}
             value={formValues[key]}
+            min={key === 'date' ? getLocalDateString() : undefined}
             onChange={(e) => setForm(prev => ({ ...prev, [key]: e.target.value }))}
             required
           />

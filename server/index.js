@@ -165,12 +165,19 @@ console.log('EMAIL_USER=', process.env.EMAIL_USER || '(not set)');
 console.log('NODE_ENV=', process.env.NODE_ENV);
 console.log('CORS_ORIGINS=', process.env.CORS_ORIGINS || process.env.CLIENT_ORIGIN);
 
-bootstrapDatabase().catch((error) => {
-  console.warn('MySQL bootstrap skipped:', error.message);
-}).finally(() => {
+const startServer = () => {
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
     // Verify SMTP connectivity at startup — check Render logs for ✅ or ❌
     verifyMailer().catch(() => {}); // errors already logged inside verifyMailer
   });
-});
+};
+
+if (String(process.env.SKIP_DATABASE_BOOTSTRAP).toLowerCase() === 'true') {
+  console.log('Database bootstrap skipped by configuration.');
+  startServer();
+} else {
+  bootstrapDatabase().catch((error) => {
+    console.warn('MySQL bootstrap skipped:', error.message);
+  }).finally(startServer);
+}

@@ -296,6 +296,7 @@ export default function AdminRequests() {
   const statusScrollAnimationRef = useRef(null);
   const [sortAsc, setSortAsc] = useState(false);
   const [detailState, setDetailState] = useState(null);
+  const [cancelingRequestId, setCancelingRequestId] = useState(null);
   const [activeSection, setActiveSection] = useState('approval');
   const [pkgDropdownOpen, setPkgDropdownOpen] = useState(false);
   const [currentEquipment, setCurrentEquipment] = useState({});
@@ -530,6 +531,41 @@ export default function AdminRequests() {
     showToastMessage(`Booking ${id} moved to ${newStatus}.`);
   };
 
+  const cancelPendingRequest = async (id) => {
+    const result = findBooking(id);
+    if (!result || result.status !== 'pending') return;
+
+    setCancelingRequestId(id);
+    try {
+      await updateAdminRequest(id, { status: 'cancelled' });
+      setBookings((prev) => {
+        const next = cloneData(prev);
+        for (const statusKey of Object.keys(next)) {
+          const index = next[statusKey].findIndex((booking) => booking.id === id);
+          if (index >= 0) {
+            const [booking] = next[statusKey].splice(index, 1);
+            next.cancelled.unshift(booking);
+            break;
+          }
+        }
+        return next;
+      });
+      showToastMessage(`Request ${id} cancelled.`);
+    } catch (error) {
+      showToastMessage(error.message || `Unable to cancel request ${id}.`, true);
+    } finally {
+      setCancelingRequestId(null);
+    }
+  };
+
+  const confirmCancelRequest = (booking) => {
+    openConfirm(
+      'Cancel Request',
+      `Cancel request ${booking.id}? The client will be notified and this request will move to Cancelled.`,
+      () => cancelPendingRequest(booking.id),
+    );
+  };
+
   const selectPackage = (pkg) => {
     if (!selectedBooking || selectedBooking.status !== 'pending') return;
     updateBooking(selectedBooking.booking.id, (booking) => ({ ...booking, package: pkg }));
@@ -750,9 +786,20 @@ export default function AdminRequests() {
                           {booking.requestType === 'rent' ? 'RENT' : 'BOOKING'}
                         </span>
                       </div>
-                      <button className="bc-view-link" onClick={() => openDetail(booking.id)}>
-                        View Details
-                      </button>
+                      <div className="bc-actions">
+                        {currentStatus === 'pending' && (
+                          <button
+                            className="bc-cancel-btn"
+                            onClick={() => confirmCancelRequest(booking)}
+                            disabled={cancelingRequestId === booking.id}
+                          >
+                            {cancelingRequestId === booking.id ? 'Cancelling…' : 'Cancel'}
+                          </button>
+                        )}
+                        <button className="bc-view-link" onClick={() => openDetail(booking.id)}>
+                          View Details
+                        </button>
+                      </div>
                     </div>
                     <div className="bc-cols">
                       <span>EVENT</span>
@@ -876,7 +923,7 @@ export default function AdminRequests() {
             {selectedBooking?.status === 'cancelled' && (
               <div className="status-banner cancelled-banner">
                 <div className="banner-text">
-                  This booking was cancelled by the client. Chat with the client to find out why
+                  This booking was cancelled. Chat with the client for more information.
                 </div>
                 <button
                   className="btn-chat-small"

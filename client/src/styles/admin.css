@@ -4192,6 +4192,34 @@ body {
     transition: color 0.2s;
 }
 .requests-admin-page .bc-view-link:hover { color: #2d4a73; }
+.requests-admin-page .bc-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+    flex-shrink: 0;
+}
+.requests-admin-page .bc-cancel-btn {
+    min-height: 36px;
+    padding: 7px 14px;
+    border: 1px solid #bd4545;
+    border-radius: 7px;
+    background: #fff;
+    color: #a52f2f;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.requests-admin-page .bc-cancel-btn:hover:not(:disabled) {
+    background: #a52f2f;
+    border-color: #a52f2f;
+    color: #fff;
+}
+.requests-admin-page .bc-cancel-btn:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
 .requests-admin-page .bc-cols {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -4754,6 +4782,21 @@ body {
 
 @media (max-width: 640px) {
     .requests-admin-page .main-content { padding: 12px; }
+    .requests-admin-page .bc-top {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .requests-admin-page .bc-actions {
+        width: 100%;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .requests-admin-page .bc-cancel-btn,
+    .requests-admin-page .bc-view-link {
+        min-height: 40px;
+        padding: 8px 12px;
+    }
     .requests-admin-page .status-bar {
         margin-bottom: 10px;
         padding: 0;
@@ -6105,5 +6148,4 @@ body {
         display: block !important;
     }
 }
-
 

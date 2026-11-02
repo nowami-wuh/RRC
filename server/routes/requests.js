@@ -5,6 +5,23 @@ import { parseEquipmentList, validateEquipmentStock, reserveEquipmentStock, rele
 
 const router = express.Router();
 
+function isFutureDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const parsedDate = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== value) {
+    return false;
+  }
+
+  const today = new Date();
+  const localToday = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, '0'),
+    String(today.getDate()).padStart(2, '0'),
+  ].join('-');
+  return value > localToday;
+}
+
 function formatRequest(row) {
   return {
     id: row.request_code,
@@ -142,6 +159,9 @@ router.post('/', async (req, res) => {
     const customerId = payload.customerId;
     if (!customerId) {
       return res.status(400).json({ error: 'customerId is required' });
+    }
+    if (!isFutureDate(payload.date)) {
+      return res.status(400).json({ error: 'Please choose a future event date.' });
     }
 
     const requestCode = payload.id || `REQ-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 10)}`;
