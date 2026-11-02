@@ -265,6 +265,10 @@ const statusTabs = [
   { key: 'cancelled', label: 'CANCELLED' },
 ];
 
+const createEmptyBookings = () => Object.fromEntries(
+  statusTabs.map(({ key }) => [key, []]),
+);
+
 const statusLabels = {
   pending: 'PENDING',
   approved: 'AWAITING PAYMENT',
@@ -288,7 +292,9 @@ function peso(value) {
 export default function AdminRequests() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [bookings, setBookings] = useState(initialBookings);
+  const [bookings, setBookings] = useState(createEmptyBookings);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [requestsLoadError, setRequestsLoadError] = useState('');
   const [currentStatus, setCurrentStatus] = useState('pending');
   const statusTabsRef = useRef(null);
   const statusProgressRef = useRef(null);
@@ -310,56 +316,51 @@ export default function AdminRequests() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectReasonError, setRejectReasonError] = useState('');
 
-  // Fetch real API requests and merge into bookings
+  // Populate the page from persisted requests; never expose sample bookings as actionable data.
   useEffect(() => {
     fetchAdminRequests()
       .then((data) => {
         const apiRequests = data.requests || [];
-        if (apiRequests.length === 0) return;
+        const next = createEmptyBookings();
+        apiRequests.forEach((req) => {
+          let category = req.status ? req.status.toLowerCase() : 'pending';
+          if (category === 'awaitingpayment') category = 'approved';
+          if (!next[category]) next[category] = [];
 
-        setBookings((prev) => {
-          const next = cloneData(prev);
-          apiRequests.forEach((req) => {
-            let category = req.status ? req.status.toLowerCase() : 'pending';
-            if (category === 'awaitingpayment') category = 'approved';
-            if (!next[category]) next[category] = [];
+          const formattedReq = {
+            id: req.id,
+            event: req.event?.title || 'Event',
+            requestDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '',
+            customerId: req.customerId || null,  // real public_id — used for chat navigation
+            client: {
+              username: req.customerName || req.customerId || 'Customer',
+              phone: req.customerPhone || '',
+              email: req.customerEmail || '',
+            },
+            eventDetails: {
+              name: req.event?.title || 'Event',
+              date: req.event?.date || '',
+              time: req.event?.timeStart && req.event?.timeEnd ? `${req.event.timeStart} - ${req.event.timeEnd}` : req.event?.timeStart || 'All Day',
+              venue: req.event?.venue || '',
+              pax: req.event?.pax || 0,
+            },
+            package: req.package?.name?.replace('PACKAGE ', '') || null,
+            equipment: req.equipment || {},
+            addonFee: req.billing?.addonFee || 0,
+            mobilizationFee: req.billing?.mobilizationFee || 0,
+            promoApplied: false,
+            requestType: req.type === 'book' ? 'booking' : 'rent',
+            additionalRequirements: req.additional || null,
+          };
 
-            const formattedReq = {
-              id: req.id,
-              event: req.event?.title || 'Event',
-              requestDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '',
-              customerId: req.customerId || null,  // real public_id — used for chat navigation
-              client: {
-                username: req.customerName || req.customerId || 'Customer',
-                phone: req.customerPhone || '',
-                email: req.customerEmail || '',
-              },
-              eventDetails: {
-                name: req.event?.title || 'Event',
-                date: req.event?.date || '',
-                time: req.event?.timeStart && req.event?.timeEnd ? `${req.event.timeStart} - ${req.event.timeEnd}` : req.event?.timeStart || 'All Day',
-                venue: req.event?.venue || '',
-                pax: req.event?.pax || 0,
-              },
-              package: req.package?.name?.replace('PACKAGE ', '') || null,
-              equipment: req.equipment || {},
-              addonFee: req.billing?.addonFee || 0,
-              mobilizationFee: req.billing?.mobilizationFee || 0,
-              promoApplied: false,
-              requestType: req.type === 'book' ? 'booking' : 'rent',
-              additionalRequirements: req.additional || null,
-            };
-
-            // Remove duplicate if exists in any list
-            for (const key of Object.keys(next)) {
-              next[key] = next[key].filter((b) => b.id !== req.id);
-            }
-            next[category].unshift(formattedReq);
-          });
-          return next;
+          next[category].unshift(formattedReq);
         });
+        setBookings(next);
       })
-      .catch(() => {});
+      .catch((error) => {
+        setRequestsLoadError(error.message || 'Unable to load requests.');
+      })
+      .finally(() => setRequestsLoading(false));
   }, []);
 
   // Listen for searchId from location state (navigated from calendar or inquiry)
@@ -531,9 +532,9 @@ export default function AdminRequests() {
     showToastMessage(`Booking ${id} moved to ${newStatus}.`);
   };
 
-  const cancelPendingRequest = async (id) => {
+  const cancelRequest = async (id) => {
     const result = findBooking(id);
-    if (!result || result.status !== 'pending') return;
+    if (!result || !['pending', 'approved', 'upcoming'].includes(result.status)) return;
 
     setCancelingRequestId(id);
     try {
@@ -550,6 +551,8 @@ export default function AdminRequests() {
         }
         return next;
       });
+      setCurrentStatus('cancelled');
+      setCurrentEquipment({});
       showToastMessage(`Request ${id} cancelled.`);
     } catch (error) {
       showToastMessage(error.message || `Unable to cancel request ${id}.`, true);
@@ -562,7 +565,7 @@ export default function AdminRequests() {
     openConfirm(
       'Cancel Request',
       `Cancel request ${booking.id}? The client will be notified and this request will move to Cancelled.`,
-      () => cancelPendingRequest(booking.id),
+      () => cancelRequest(booking.id),
     );
   };
 
@@ -773,7 +776,11 @@ export default function AdminRequests() {
               </button>
             </div>
             <div className="booking-list">
-              {visibleList.length === 0 ? (
+              {requestsLoading ? (
+                <p className="empty-msg">Loading requests…</p>
+              ) : requestsLoadError ? (
+                <p className="empty-msg">{requestsLoadError}</p>
+              ) : visibleList.length === 0 ? (
                 <p className="empty-msg">No bookings in this category.</p>
               ) : (
                 visibleList.map((booking) => (
@@ -786,20 +793,9 @@ export default function AdminRequests() {
                           {booking.requestType === 'rent' ? 'RENT' : 'BOOKING'}
                         </span>
                       </div>
-                      <div className="bc-actions">
-                        {currentStatus === 'pending' && (
-                          <button
-                            className="bc-cancel-btn"
-                            onClick={() => confirmCancelRequest(booking)}
-                            disabled={cancelingRequestId === booking.id}
-                          >
-                            {cancelingRequestId === booking.id ? 'Cancelling…' : 'Cancel'}
-                          </button>
-                        )}
-                        <button className="bc-view-link" onClick={() => openDetail(booking.id)}>
-                          View Details
-                        </button>
-                      </div>
+                      <button className="bc-view-link" onClick={() => openDetail(booking.id)}>
+                        View Details
+                      </button>
                     </div>
                     <div className="bc-cols">
                       <span>EVENT</span>
@@ -1072,10 +1068,21 @@ export default function AdminRequests() {
             )}
           </div>
 
-          <button className="back-btn" onClick={() => { setDetailState(null); setCurrentEquipment({}); }}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
-            Back to Requests
-          </button>
+          <div className="detail-navigation">
+            <button className="back-btn" onClick={() => { setDetailState(null); setCurrentEquipment({}); }}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
+              Back to Requests
+            </button>
+            {selectedBooking && ['pending', 'approved', 'upcoming'].includes(selectedBooking.status) && (
+              <button
+                className="btn-cancel-request"
+                onClick={() => confirmCancelRequest(selectedBooking.booking)}
+                disabled={cancelingRequestId === selectedBooking.booking.id}
+              >
+                {cancelingRequestId === selectedBooking.booking.id ? 'Cancelling…' : 'Cancel Request'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

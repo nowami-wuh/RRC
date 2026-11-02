@@ -86,6 +86,7 @@ async function ensureTables() {
       billing_json LONGTEXT NULL,
       denial_reason TEXT NULL,
       additional_notes TEXT NULL,
+      service_agreement_accepted TINYINT(1) NOT NULL DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_requests_customer (customer_public_id),
       INDEX idx_requests_status (status)
@@ -108,6 +109,11 @@ async function ensureTables() {
   // Safe migrations for existing tables
   try { await execute(`ALTER TABLE requests ADD COLUMN billing_json LONGTEXT NULL AFTER equipment_json`); } catch (_) {}
   try { await execute(`ALTER TABLE requests ADD COLUMN denial_reason TEXT NULL AFTER billing_json`); } catch (_) {}
+  try {
+    await execute('ALTER TABLE requests ADD COLUMN service_agreement_accepted TINYINT(1) NOT NULL DEFAULT 0 AFTER additional_notes');
+  } catch (error) {
+    if (error.code !== 'ER_DUP_FIELDNAME') throw error;
+  }
 
   await execute(`
     CREATE TABLE IF NOT EXISTS notifications (
@@ -186,9 +192,28 @@ async function ensureTables() {
       email VARCHAR(255) NOT NULL,
       phone VARCHAR(255) NOT NULL,
       location VARCHAR(255) NOT NULL,
+      service_agreement LONGTEXT NULL,
+      gcash_qr LONGTEXT NULL,
+      bank_name VARCHAR(255) NULL,
+      bank_account_number VARCHAR(100) NULL,
+      bank_account_name VARCHAR(255) NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
+
+  for (const [column, definition] of [
+    ['service_agreement', 'LONGTEXT NULL'],
+    ['gcash_qr', 'LONGTEXT NULL'],
+    ['bank_name', 'VARCHAR(255) NULL'],
+    ['bank_account_number', 'VARCHAR(100) NULL'],
+    ['bank_account_name', 'VARCHAR(255) NULL'],
+  ]) {
+    try {
+      await execute(`ALTER TABLE about_info ADD COLUMN ${column} ${definition}`);
+    } catch (error) {
+      if (error.code !== 'ER_DUP_FIELDNAME') throw error;
+    }
+  }
 }
 
 async function seedAuthData() {
@@ -439,13 +464,14 @@ async function seedReferenceData() {
   const aboutRows = await query('SELECT COUNT(*) AS count FROM about_info');
   if (aboutRows[0].count === 0) {
     await execute(
-      'INSERT INTO about_info (id, description, facebook, email, phone, location) VALUES (1, ?, ?, ?, ?, ?)',
+      'INSERT INTO about_info (id, description, facebook, email, phone, location, service_agreement) VALUES (1, ?, ?, ?, ?, ?, ?)',
       [
         'RRC Professional Lights and Sounds is a service provider that caters to events such as weddings, concerts, corporate occasions, and private gatherings, providing services such as lights and sounds equipment rentals, as well as stage and truss setup, among others.',
         'RRC Professional Lights & Sounds',
         'ricson_duenas@yahoo.com',
         '0955-075-4117 / (042)332-1417',
         'Laylay, Boac, Marinduque',
+        'By submitting a booking request, I confirm that the event details I provided are accurate. I understand that this request is subject to RRC availability and admin approval; submitting it does not confirm the booking. RRC will confirm the package, price, payment schedule, and event arrangements with me. I agree to coordinate with RRC and follow the final agreed terms.',
       ],
     );
   }

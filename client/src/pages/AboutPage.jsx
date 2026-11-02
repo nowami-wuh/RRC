@@ -13,6 +13,11 @@ export default function AboutPage() {
     email: 'ricson_duenas@yahoo.com',
     phone: '0955-075-4117 / (042)332-1417',
     location: 'Laylay, Boac, Marinduque',
+    service_agreement: 'By submitting a booking request, I confirm that the event details I provided are accurate. I understand that this request is subject to RRC availability and admin approval; submitting it does not confirm the booking. RRC will confirm the package, price, payment schedule, and event arrangements with me. I agree to coordinate with RRC and follow the final agreed terms.',
+    gcash_qr: '',
+    bank_name: '',
+    bank_account_number: '',
+    bank_account_name: '',
   });
 
   const [loading, setLoading] = useState(true);
@@ -25,11 +30,11 @@ export default function AboutPage() {
     fetchAboutInfo()
       .then((res) => {
         if (res?.about) {
-          setAboutData(res.about);
-          setFormData(res.about);
+          setAboutData((current) => ({ ...current, ...res.about }));
+          setFormData((current) => ({ ...current, ...res.about }));
         }
       })
-      .catch(() => {})
+      .catch((err) => setMsg({ text: err.message || 'Failed to load About Us information.', type: 'error' }))
       .finally(() => setLoading(false));
   }, []);
 
@@ -57,6 +62,31 @@ export default function AboutPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleQrUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setMsg({ text: 'Upload a PNG, JPEG, or WEBP image for the GCash QR.', type: 'error' });
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMsg({ text: 'The GCash QR image must be 2 MB or smaller.', type: 'error' });
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setFormData((previous) => ({ ...previous, gcash_qr: reader.result }));
+        setMsg({ text: '', type: '' });
+      }
+    };
+    reader.onerror = () => setMsg({ text: 'Unable to read the selected QR image.', type: 'error' });
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -159,6 +189,75 @@ export default function AboutPage() {
               </div>
             </div>
 
+            <h3 className="about-edit-title">Booking Service Agreement</h3>
+            <div className="edit-field-group">
+              <label className="edit-label" htmlFor="service-agreement">Agreement shown before customers submit a booking</label>
+              <textarea
+                id="service-agreement"
+                className="edit-textarea"
+                rows={7}
+                value={formData.service_agreement}
+                onChange={(e) => setFormData({ ...formData, service_agreement: e.target.value })}
+                required
+              />
+            </div>
+
+            <h3 className="about-edit-title">Payment Information</h3>
+            <div className="edit-grid">
+              <div className="edit-field-group">
+                <label className="edit-label">Bank Name</label>
+                <input
+                  type="text"
+                  className="edit-input"
+                  placeholder="e.g. BDO, BPI, or GCash"
+                  value={formData.bank_name}
+                  onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                />
+              </div>
+              <div className="edit-field-group">
+                <label className="edit-label">Bank Account Number</label>
+                <input
+                  type="text"
+                  className="edit-input"
+                  placeholder="Enter account number"
+                  value={formData.bank_account_number}
+                  onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
+                />
+              </div>
+              <div className="edit-field-group">
+                <label className="edit-label">Account Name</label>
+                <input
+                  type="text"
+                  className="edit-input"
+                  placeholder="Enter account holder name"
+                  value={formData.bank_account_name}
+                  onChange={(e) => setFormData({ ...formData, bank_account_name: e.target.value })}
+                />
+              </div>
+              <div className="edit-field-group">
+                <label className="edit-label" htmlFor="gcash-qr-upload">GCash QR Image (PNG, JPEG, or WEBP; max 2 MB)</label>
+                <input
+                  id="gcash-qr-upload"
+                  type="file"
+                  className="edit-input"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleQrUpload}
+                />
+                {formData.gcash_qr && (
+                  <div className="qr-upload-preview">
+                    <img src={formData.gcash_qr} alt="GCash QR preview" />
+                    <button
+                      type="button"
+                      className="edit-btn-cancel"
+                      onClick={() => setFormData({ ...formData, gcash_qr: '' })}
+                    >
+                      Remove QR
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="edit-form-actions">
               <button type="button" className="edit-btn-cancel" onClick={() => setIsEditing(false)}>
                 Cancel
@@ -213,6 +312,23 @@ export default function AboutPage() {
                 <span className="contact-text">{aboutData.location}</span>
               </div>
             </div>
+            {(aboutData.gcash_qr || aboutData.bank_name || aboutData.bank_account_number || aboutData.bank_account_name) && (
+              <>
+                <div className="contact-divider" />
+                <h3 className="contact-title">Payment Information</h3>
+                {aboutData.gcash_qr && (
+                  <div className="payment-qr-wrap">
+                    <img className="payment-qr" src={aboutData.gcash_qr} alt="GCash payment QR code" />
+                    <span className="contact-text">Scan to pay with GCash</span>
+                  </div>
+                )}
+                <div className="payment-details">
+                  {aboutData.bank_name && <p><strong>Bank / Wallet:</strong> {aboutData.bank_name}</p>}
+                  {aboutData.bank_account_number && <p><strong>Account Number:</strong> {aboutData.bank_account_number}</p>}
+                  {aboutData.bank_account_name && <p><strong>Account Name:</strong> {aboutData.bank_account_name}</p>}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

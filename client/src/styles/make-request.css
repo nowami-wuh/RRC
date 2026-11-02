@@ -735,6 +735,120 @@
   transform: translateY(-1px);
 }
 
+/* ── Service Agreement ──────────────────────────────────────────────────── */
+.agreement-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(10, 18, 45, 0.62);
+}
+
+.agreement-modal {
+  position: relative;
+  width: min(620px, 100%);
+  max-height: min(85vh, 760px);
+  overflow-y: auto;
+  padding: 32px;
+  border: 2px solid var(--dark-blue);
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+.agreement-modal h2 {
+  margin: 0 36px 18px 0;
+  color: var(--dark-blue);
+  font-family: 'Garet Heavy', sans-serif;
+  font-size: 22px;
+}
+
+.agreement-modal-copy {
+  max-height: 42vh;
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid #d5dced;
+  border-radius: 8px;
+  background: #f8faff;
+  color: var(--text-dark);
+  font-family: 'Garet', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.agreement-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: #eef2fb;
+  color: var(--dark-blue);
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.agreement-accept-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 18px 0;
+  color: var(--text-dark);
+  font-family: 'Garet', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.agreement-accept-row input {
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  accent-color: var(--dark-blue);
+}
+
+.agreement-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.agreement-cancel-btn,
+.agreement-accept-btn {
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: 'Garet Heavy', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.agreement-cancel-btn {
+  border: 1px solid #c8cbd3;
+  background: white;
+  color: var(--text-dark);
+}
+
+.agreement-accept-btn {
+  border: 1px solid var(--dark-blue);
+  background: var(--dark-blue);
+  color: white;
+}
+
+.agreement-accept-btn:disabled,
+.agreement-cancel-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .request-wrapper {
@@ -775,6 +889,10 @@
   .success-id-value {
     font-size: 20px;
   }
+
+  .agreement-modal {
+    padding: 24px 18px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -809,6 +927,15 @@
   }
 
   .success-btn {
+    width: 100%;
+  }
+
+  .agreement-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .agreement-cancel-btn,
+  .agreement-accept-btn {
     width: 100%;
   }
 }

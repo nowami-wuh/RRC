@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS requests (
   package_json LONGTEXT NULL,
   equipment_json LONGTEXT NULL,
   additional_notes TEXT NULL,
+  service_agreement_accepted TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_requests_customer (customer_public_id),
   INDEX idx_requests_status (status)
@@ -88,6 +89,21 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   requires_auth TINYINT(1) NOT NULL DEFAULT 0,
   notes TEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS about_info (
+  id INT PRIMARY KEY DEFAULT 1,
+  description TEXT NOT NULL,
+  facebook VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  phone VARCHAR(255) NOT NULL,
+  location VARCHAR(255) NOT NULL,
+  service_agreement LONGTEXT NULL,
+  gcash_qr LONGTEXT NULL,
+  bank_name VARCHAR(255) NULL,
+  bank_account_number VARCHAR(100) NULL,
+  bank_account_name VARCHAR(255) NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 INSERT IGNORE INTO events (event_date, events_json) VALUES

@@ -157,8 +157,15 @@ router.post('/', async (req, res) => {
   try {
     const payload = req.body || {};
     const customerId = payload.customerId;
+    const requestType = payload.type || 'book';
     if (!customerId) {
       return res.status(400).json({ error: 'customerId is required' });
+    }
+    if (!['book', 'rent'].includes(requestType)) {
+      return res.status(400).json({ error: 'Request type must be book or rent.' });
+    }
+    if (requestType === 'book' && payload.serviceAgreementAccepted !== true) {
+      return res.status(400).json({ error: 'Please accept the service agreement before submitting a booking.' });
     }
     if (!isFutureDate(payload.date)) {
       return res.status(400).json({ error: 'Please choose a future event date.' });
@@ -188,8 +195,18 @@ router.post('/', async (req, res) => {
 
     try {
       await execute(
-        'INSERT INTO requests (request_code, customer_public_id, type, status, event_json, package_json, equipment_json, additional_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [requestCode, customerId, payload.type || 'book', 'pending', safeJson(event), payload.package ? safeJson(payload.package) : null, safeJson(payload.equipment || []), payload.additional || null],
+        'INSERT INTO requests (request_code, customer_public_id, type, status, event_json, package_json, equipment_json, additional_notes, service_agreement_accepted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          requestCode,
+          customerId,
+          requestType,
+          'pending',
+          safeJson(event),
+          payload.package ? safeJson(payload.package) : null,
+          safeJson(payload.equipment || []),
+          payload.additional || null,
+          requestType === 'book' ? 1 : 0,
+        ],
       );
     } catch (dbErr) {
       // Rollback stock reservation if DB insert fails
@@ -199,7 +216,7 @@ router.post('/', async (req, res) => {
 
     const newRequest = {
       id: requestCode,
-      type: payload.type || 'book',
+      type: requestType,
       status: 'pending',
       dateRequested: new Date().toLocaleDateString(),
       customerId,

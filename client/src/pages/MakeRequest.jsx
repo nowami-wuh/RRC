@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { createRequest, fetchInventory } from '../api/api';
+import { createRequest, fetchAboutInfo, fetchInventory } from '../api/api';
 import '../styles/make-request.css';
 
 function generateId(prefix = 'BK') {
@@ -12,6 +12,7 @@ function generateId(prefix = 'BK') {
 }
 
 const EMPTY_FORM = { title: '', venue: '', pax: '', date: '', timeStart: '', timeEnd: '' };
+const DEFAULT_SERVICE_AGREEMENT = 'By submitting a booking request, I confirm that the event details I provided are accurate. I understand that this request is subject to RRC availability and admin approval; submitting it does not confirm the booking. RRC will confirm the package, price, payment schedule, and event arrangements with me. I agree to coordinate with RRC and follow the final agreed terms.';
 
 function getLocalDateString() {
   const today = new Date();
@@ -49,6 +50,11 @@ export default function MakeRequest() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(null); // { type, id }
   const [error, setError] = useState('');
+  const [serviceAgreement, setServiceAgreement] = useState(DEFAULT_SERVICE_AGREEMENT);
+  const [agreementLoading, setAgreementLoading] = useState(true);
+  const [agreementLoadError, setAgreementLoadError] = useState('');
+  const [agreementOpen, setAgreementOpen] = useState(false);
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
 
   // Load inventory from DB
   useEffect(() => {
@@ -71,6 +77,18 @@ export default function MakeRequest() {
         setInventoryGroups([]);
       })
       .finally(() => setInventoryLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetchAboutInfo()
+      .then((data) => {
+        const agreement = data?.about?.service_agreement;
+        if (typeof agreement === 'string' && agreement.trim()) {
+          setServiceAgreement(agreement);
+        }
+      })
+      .catch((err) => setAgreementLoadError(err.message || 'Unable to load the service agreement.'))
+      .finally(() => setAgreementLoading(false));
   }, []);
 
   // All flat inventory items (for lookup)
@@ -136,7 +154,7 @@ export default function MakeRequest() {
     setRequestId(generateId('RQ'));
   };
 
-  const handleSubmit = async (type) => {
+  const handleSubmit = async (type, hasAcceptedAgreement = false) => {
     const form = type === 'book' ? bookForm : rentForm;
     const additional = type === 'book' ? bookAdditional : rentAdditional;
 
@@ -156,6 +174,22 @@ export default function MakeRequest() {
       setError('Please select at least one equipment item.');
       return;
     }
+    if (type === 'book' && agreementLoadError) {
+      setError('The service agreement could not be loaded. Please refresh the page before booking.');
+      return;
+    }
+    if (type === 'book' && agreementLoading) {
+      setError('Please wait while the service agreement loads.');
+      return;
+    }
+    if (type === 'book' && !hasAcceptedAgreement) {
+      setAgreementAccepted(false);
+      setAgreementOpen(true);
+      return;
+    }
+    if (type === 'book' && !agreementAccepted) {
+      return;
+    }
 
     const id = type === 'book' ? bookingId : requestId;
     const payload = {
@@ -170,10 +204,12 @@ export default function MakeRequest() {
       timeEnd: form.timeEnd,
       additional,
       equipment: type === 'rent' ? selectedItems : [],
+      serviceAgreementAccepted: type === 'book' && agreementAccepted,
     };
 
     setSubmitting(true);
     setError('');
+    setAgreementOpen(false);
     try {
       await createRequest(payload);
       setSubmitted({ type, id });
@@ -305,15 +341,18 @@ export default function MakeRequest() {
             />
 
             {error && <div className="form-error">{error}</div>}
+            {agreementLoadError && (
+              <div className="form-error">{agreementLoadError} Refresh the page to try again.</div>
+            )}
 
             <div className="form-footer">
               <button
                 type="button"
                 className="confirm-btn"
                 onClick={() => handleSubmit('book')}
-                disabled={submitting}
+                disabled={submitting || agreementLoading || Boolean(agreementLoadError)}
               >
-                {submitting ? 'SUBMITTING...' : 'CONFIRM BOOKING REQUEST'}
+                {agreementLoading ? 'LOADING AGREEMENT...' : submitting ? 'SUBMITTING...' : 'CONFIRM BOOKING REQUEST'}
               </button>
             </div>
           </div>
@@ -477,6 +516,53 @@ export default function MakeRequest() {
           </div>
         )}
 
+        {agreementOpen && (
+          <div className="agreement-modal-backdrop" role="presentation">
+            <section
+              className="agreement-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="agreement-modal-title"
+            >
+              <button
+                type="button"
+                className="agreement-modal-close"
+                aria-label="Close service agreement"
+                onClick={() => setAgreementOpen(false)}
+              >
+                ×
+              </button>
+              <h2 id="agreement-modal-title">Service Agreement</h2>
+              <div className="agreement-modal-copy">{serviceAgreement}</div>
+              <label className="agreement-accept-row">
+                <input
+                  type="checkbox"
+                  checked={agreementAccepted}
+                  onChange={(event) => setAgreementAccepted(event.target.checked)}
+                />
+                <span>I have read and agree to the service agreement.</span>
+              </label>
+              <div className="agreement-modal-actions">
+                <button
+                  type="button"
+                  className="agreement-cancel-btn"
+                  onClick={() => setAgreementOpen(false)}
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="agreement-accept-btn"
+                  onClick={() => handleSubmit('book', true)}
+                  disabled={!agreementAccepted || submitting}
+                >
+                  {submitting ? 'SUBMITTING...' : 'AGREE & SUBMIT BOOKING'}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
       </div>
     </div>
   );
