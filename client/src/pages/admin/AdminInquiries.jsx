@@ -120,6 +120,7 @@ export default function AdminInquiries() {
   const selectCustomerId = location.state?.selectCustomerId || null;
   const selectCustomerName = location.state?.selectCustomerName || null;
   const selectMessageId = location.state?.selectMessageId || null;
+  const selectRequestCode = location.state?.selectRequestCode || null;
 
   useEffect(() => {
     Promise.all([fetchAdminInquiries(), fetchAdminRequests()])
@@ -131,13 +132,13 @@ export default function AdminInquiries() {
         if (selectCustomerId) {
           setActiveConv(selectCustomerId);
           // Keep the receipt target until the conversation messages are loaded.
-          if (!selectMessageId) navigate('/admin/inquiries', { replace: true, state: {} });
+          if (!selectMessageId && !selectRequestCode) navigate('/admin/inquiries', { replace: true, state: {} });
         }
       })
       .catch(() => {});
   // Re-run whenever a new selectCustomerId is injected via navigation state
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectCustomerId]);
+  }, [selectCustomerId, selectMessageId, selectRequestCode]);
 
   // Filter out seed/dummy data
   const filteredMessages = messages.filter(
@@ -271,6 +272,13 @@ export default function AdminInquiries() {
           if (!active) return;
           const avatar = res?.user?.avatar || null;
           setCustomerAvatars((prev) => ({ ...prev, [activeConv]: avatar }));
+          if (res?.user?.username) {
+            setMessages((prev) => prev.map((message) => (
+              message.customerPublicId === activeConv && message.senderRole === 'customer'
+                ? { ...message, senderName: res.user.username }
+                : message
+            )));
+          }
         })
         .catch(() => {});
     };
@@ -288,19 +296,35 @@ export default function AdminInquiries() {
 
   const activeConversation = conversationMap[activeConv];
   const activeMessages = activeConversation?.messages || [];
-  const activeBookingRequest = adminRequests.find((req) => {
+  const requestCodeFromMessage = (message) => {
+    const match = String(message?.text || '').match(/Downpayment receipt submitted for ([^.\s]+)\./i);
+    return match?.[1] || null;
+  };
+  const activeReceiptRequest = selectRequestCode
+    ? adminRequests.find((req) => String(req.id) === String(selectRequestCode))
+    : null;
+  const activeBookingRequest = activeReceiptRequest || adminRequests.find((req) => {
     const requestCustomerId = req.customerId || req.customer_public_id || req.customerId?.toString?.();
     return requestCustomerId && String(requestCustomerId) === String(activeConv);
   });
 
   useEffect(() => {
-    if (!selectMessageId || !activeMessages.length) return;
-    const message = activeMessages.find((item) => String(item.id) === String(selectMessageId));
+    if ((!selectMessageId && !selectRequestCode) || !activeMessages.length) return;
+    const requestCode = String(selectRequestCode || '');
+    const message = activeMessages.find((item) => (
+      (selectMessageId && String(item.id) === String(selectMessageId))
+      || (
+        requestCode
+        && item.senderRole === 'customer'
+        && item.image
+        && String(item.text || '').includes(`Downpayment receipt submitted for ${requestCode}`)
+      )
+    ));
     if (!message) return;
     const timer = window.setTimeout(() => scrollToMessage(message.id), 0);
     navigate('/admin/inquiries', { replace: true, state: {} });
     return () => window.clearTimeout(timer);
-  }, [selectMessageId, activeMessages, navigate]);
+  }, [selectMessageId, selectRequestCode, activeMessages, navigate]);
 
   const handleSelectConversation = (conversationId) => {
     setActiveConv(conversationId);
@@ -749,8 +773,10 @@ export default function AdminInquiries() {
                         <button
                           className="receipt-prompt-btn"
                           onClick={() => {
+                            const receiptRequestCode = requestCodeFromMessage(msg);
+                            const receiptRequest = adminRequests.find((req) => String(req.id) === String(receiptRequestCode));
                             setReceiptPromptMsgIndex(index);
-                            navigate('/admin/requests', { state: { searchId: activeBookingRequest.id } });
+                            navigate('/admin/requests', { state: { searchId: receiptRequest?.id || activeBookingRequest.id } });
                           }}
                         >
                           Mark as Paid

@@ -854,19 +854,22 @@ export default function AdminRequests() {
 
   const markAsPaid = () => {
     if (!selectedBooking) return;
+    const bookingId = selectedBooking.booking.id;
+    const total = Number(selectedBooking.booking.billing?.total || billingBreakdown.total || 0);
+    const equipment = cloneData(selectedBooking.booking.equipment || currentEquipment);
     openConfirm(
       'Mark as Paid',
-      `Confirm that the downpayment for booking ${selectedBooking.booking.id} has been received via chat? This will move the booking to Upcoming.`,
+      `Confirm that the downpayment for booking ${bookingId} has been received via chat? This will move the booking to Upcoming.`,
       () => {
         const paidOn = new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
-        moveBooking(selectedBooking.booking.id, 'upcoming', {
+        moveBooking(bookingId, 'upcoming', {
           paidOn,
-          equipment: cloneData(currentEquipment),
+          equipment,
           billing: {
             downpaymentStatus: 'paid',
             downpaymentPaid: true,
-            downpayment: billingBreakdown.total * 0.2,
-            downpaymentAmount: billingBreakdown.total * 0.2,
+            downpayment: total * 0.2,
+            downpaymentAmount: total * 0.2,
             downpaymentRecordedAt: new Date().toISOString(),
             paymentMethod: 'chat_receipt',
           },
@@ -1185,19 +1188,18 @@ export default function AdminRequests() {
                   )}
                 </div>
                 <div className="payment-review-actions">
-                  {selectedBooking.booking.payment?.status === 'submitted' && selectedBooking.booking.payment?.receiptMessageId && (
-                    <button
-                      className="btn-view-receipt"
-                      onClick={() => navigate('/admin/inquiries', {
-                        state: {
-                          selectCustomerId: String(selectedBooking.booking.customerId || ''),
-                          selectMessageId: selectedBooking.booking.payment.receiptMessageId,
-                        },
-                      })}
-                    >
-                      View Receipt
-                    </button>
-                  )}
+                  <button
+                    className="btn-view-receipt"
+                    onClick={() => navigate('/admin/inquiries', {
+                      state: {
+                        selectCustomerId: String(selectedBooking.booking.customerId || ''),
+                        selectMessageId: selectedBooking.booking.payment?.receiptMessageId || null,
+                        selectRequestCode: selectedBooking.booking.id,
+                      },
+                    })}
+                  >
+                    View Receipt
+                  </button>
                   {selectedBooking.status === 'approved' && (
                     <button className="btn-mark-paid" onClick={markAsPaid}>Mark Downpayment Paid</button>
                   )}

@@ -142,7 +142,10 @@ router.post('/:requestCode/downpayment-receipt', async (req, res) => {
         }
 
         const rows = await query(
-          'SELECT * FROM requests WHERE request_code = ? AND customer_public_id = ? LIMIT 1',
+          `SELECT r.*, c.username AS customer_username
+           FROM requests r
+           LEFT JOIN customers c ON c.public_id = r.customer_public_id
+           WHERE r.request_code = ? AND r.customer_public_id = ? LIMIT 1`,
           [requestCode, customerId],
         );
         const requestRow = rows[0];
@@ -159,7 +162,7 @@ router.post('/:requestCode/downpayment-receipt', async (req, res) => {
           `INSERT INTO chat_messages
            (sender_role, sender_name, customer_public_id, text, image, time_label)
            VALUES ('customer', ?, ?, ?, ?, ?)`,
-          [customerId, customerId, messageText, image, timeLabel],
+          [requestRow.customer_username || customerId, customerId, messageText, image, timeLabel],
         );
 
         await execute(
