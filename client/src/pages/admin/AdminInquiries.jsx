@@ -139,15 +139,6 @@ export default function AdminInquiries() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectCustomerId]);
 
-  useEffect(() => {
-    if (!selectMessageId || !activeMessages.length) return;
-    const message = activeMessages.find((item) => String(item.id) === String(selectMessageId));
-    if (!message) return;
-    const timer = window.setTimeout(() => scrollToMessage(message.id), 0);
-    navigate('/admin/inquiries', { replace: true, state: {} });
-    return () => window.clearTimeout(timer);
-  }, [selectMessageId, activeMessages, navigate]);
-
   // Filter out seed/dummy data
   const filteredMessages = messages.filter(
     (m) => m.senderName !== 'Sample User' && m.text !== 'Sample Message'
@@ -301,6 +292,15 @@ export default function AdminInquiries() {
     const requestCustomerId = req.customerId || req.customer_public_id || req.customerId?.toString?.();
     return requestCustomerId && String(requestCustomerId) === String(activeConv);
   });
+
+  useEffect(() => {
+    if (!selectMessageId || !activeMessages.length) return;
+    const message = activeMessages.find((item) => String(item.id) === String(selectMessageId));
+    if (!message) return;
+    const timer = window.setTimeout(() => scrollToMessage(message.id), 0);
+    navigate('/admin/inquiries', { replace: true, state: {} });
+    return () => window.clearTimeout(timer);
+  }, [selectMessageId, activeMessages, navigate]);
 
   const handleSelectConversation = (conversationId) => {
     setActiveConv(conversationId);

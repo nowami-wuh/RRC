@@ -1167,7 +1167,8 @@ export default function AdminRequests() {
               </div>
             </div>
 
-            {selectedBooking?.status === 'approved' && (
+            {(selectedBooking?.status === 'approved'
+              || (selectedBooking?.booking.payment?.status === 'submitted' && selectedBooking?.status !== 'upcoming')) && (
               <div className="status-banner awaiting-payment">
                 <div className="banner-text">
                   {selectedBooking.booking.payment?.status === 'submitted' ? (
@@ -1197,7 +1198,9 @@ export default function AdminRequests() {
                       View Receipt
                     </button>
                   )}
-                  <button className="btn-mark-paid" onClick={markAsPaid}>Mark Downpayment Paid</button>
+                  {selectedBooking.status === 'approved' && (
+                    <button className="btn-mark-paid" onClick={markAsPaid}>Mark Downpayment Paid</button>
+                  )}
                 </div>
               </div>
             )}
