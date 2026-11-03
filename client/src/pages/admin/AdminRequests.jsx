@@ -377,8 +377,9 @@ export default function AdminRequests() {
           if (!next[category]) next[category] = [];
 
           const eventSchedule = formatEventSchedule(req.event);
+          const requestId = String(req.id || '').trim();
           const formattedReq = {
-            id: req.id,
+            id: requestId,
             event: req.event?.title || 'Event',
             requestDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '',
             customerId: req.customerId || null,  // real public_id — used for chat navigation
@@ -417,13 +418,13 @@ export default function AdminRequests() {
 
   // Listen for searchId from location state (navigated from calendar or inquiry)
   useEffect(() => {
-    const searchId = location.state?.searchId;
+    const searchId = String(location.state?.searchId || '').trim();
     if (searchId) {
       for (const statusKey of Object.keys(bookings)) {
-        const found = bookings[statusKey].find((b) => b.id === searchId);
+        const found = bookings[statusKey].find((b) => String(b.id).trim() === searchId);
         if (found) {
           setCurrentStatus(statusKey);
-          openDetail(searchId);
+          openDetail(found.id);
           break;
         }
       }
@@ -1112,14 +1113,7 @@ export default function AdminRequests() {
                     <>
                       <strong>Receipt Submitted.</strong> The customer sent a downpayment invoice. Review the image below before marking it as paid.
                       {selectedBooking.booking.payment.receiptImage && (
-                        <a
-                          className="payment-receipt-link"
-                          href={selectedBooking.booking.payment.receiptImage}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <img src={selectedBooking.booking.payment.receiptImage} alt="Customer downpayment invoice" />
-                        </a>
+                        <img className="payment-receipt-link" src={selectedBooking.booking.payment.receiptImage} alt="Customer downpayment invoice" />
                       )}
                     </>
                   ) : (
@@ -1128,7 +1122,22 @@ export default function AdminRequests() {
                     </>
                   )}
                 </div>
-                <button className="btn-mark-paid" onClick={markAsPaid}>Mark as Paid</button>
+                <div className="payment-review-actions">
+                  {selectedBooking.booking.payment?.receiptMessageId && (
+                    <button
+                      className="btn-view-receipt"
+                      onClick={() => navigate('/admin/inquiries', {
+                        state: {
+                          selectCustomerId: selectedBooking.booking.customerId,
+                          selectMessageId: selectedBooking.booking.payment.receiptMessageId,
+                        },
+                      })}
+                    >
+                      View Receipt
+                    </button>
+                  )}
+                  <button className="btn-mark-paid" onClick={markAsPaid}>Mark Downpayment Paid</button>
+                </div>
               </div>
             )}
 

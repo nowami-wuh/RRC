@@ -119,6 +119,7 @@ export default function AdminInquiries() {
   const navigate = useNavigate();
   const selectCustomerId = location.state?.selectCustomerId || null;
   const selectCustomerName = location.state?.selectCustomerName || null;
+  const selectMessageId = location.state?.selectMessageId || null;
 
   useEffect(() => {
     Promise.all([fetchAdminInquiries(), fetchAdminRequests()])
@@ -129,14 +130,23 @@ export default function AdminInquiries() {
         // Auto-select the conversation passed from AdminRequests
         if (selectCustomerId) {
           setActiveConv(selectCustomerId);
-          // Clear location state so a refresh or back-nav doesn't re-apply it
-          navigate('/admin/inquiries', { replace: true, state: {} });
+          // Keep the receipt target until the conversation messages are loaded.
+          if (!selectMessageId) navigate('/admin/inquiries', { replace: true, state: {} });
         }
       })
       .catch(() => {});
   // Re-run whenever a new selectCustomerId is injected via navigation state
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectCustomerId]);
+
+  useEffect(() => {
+    if (!selectMessageId || !activeMessages.length) return;
+    const message = activeMessages.find((item) => String(item.id) === String(selectMessageId));
+    if (!message) return;
+    const timer = window.setTimeout(() => scrollToMessage(message.id), 0);
+    navigate('/admin/inquiries', { replace: true, state: {} });
+    return () => window.clearTimeout(timer);
+  }, [selectMessageId, activeMessages, navigate]);
 
   // Filter out seed/dummy data
   const filteredMessages = messages.filter(

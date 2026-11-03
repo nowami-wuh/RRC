@@ -4365,9 +4365,6 @@ body {
   display: block;
   width: fit-content;
   margin-top: 10px;
-}
-.requests-admin-page .payment-receipt-link img {
-  display: block;
   width: min(280px, 100%);
   max-height: 220px;
   object-fit: contain;
@@ -4375,6 +4372,25 @@ body {
   border-radius: 6px;
   background: #fff;
 }
+.requests-admin-page .payment-review-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.requests-admin-page .btn-view-receipt {
+    background: #fff;
+    color: #80620a;
+    border: 1px solid #d5ad32;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-family: 'Garet Heavy', sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.requests-admin-page .btn-view-receipt:hover { background: #fff8df; }
 .requests-admin-page .status-banner.upcoming-banner { background: #eaf6ea; border: 1.5px solid #A8D4A8; }
 .requests-admin-page .status-banner.denied-banner { background: #fdebeb; border: 1.5px solid #E8A8A8; }
 .requests-admin-page .status-banner.cancelled-banner { background: #f0f0f0; border: 1.5px solid #d0d0d0; }
