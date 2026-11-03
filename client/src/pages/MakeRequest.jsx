@@ -346,15 +346,31 @@ export default function MakeRequest() {
             disabled={!venueLocation[formKey].city}
             onChange={(event) => {
               const barangayValue = event.target.value;
-              const selectedBarangay = findBarangay(venueLocation[formKey].city, barangayValue);
+              const city = venueLocation[formKey].city;
+              const cityBarangays = MARINDUQUE_LOCATIONS[city] || [];
+              const selectedBarangay = findBarangay(city, barangayValue);
+              const isValidPrefix = !barangayValue || cityBarangays.some((barangay) =>
+                normalizeLocation(barangay).startsWith(normalizeLocation(barangayValue)),
+              );
+              if (!isValidPrefix) return;
               setVenueLocation((previous) => ({
                 ...previous,
                 [formKey]: { ...previous[formKey], barangay: barangayValue },
               }));
               setForm((previous) => ({
                 ...previous,
-                venue: selectedBarangay ? `${selectedBarangay}, ${venueLocation[formKey].city}` : '',
+                venue: selectedBarangay ? `${selectedBarangay}, ${city}` : '',
               }));
+            }}
+            onBlur={() => {
+              const city = venueLocation[formKey].city;
+              const selectedBarangay = findBarangay(city, venueLocation[formKey].barangay);
+              if (selectedBarangay) return;
+              setVenueLocation((previous) => ({
+                ...previous,
+                [formKey]: { ...previous[formKey], barangay: '' },
+              }));
+              setForm((previous) => ({ ...previous, venue: '' }));
             }}
             required
           />

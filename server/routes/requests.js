@@ -35,6 +35,12 @@ function formatRequest(row) {
     billing: parseJson(row.billing_json, null),
     denialReason: row.denial_reason || null,
     additional: row.additional_notes,
+    payment: row.payment_status ? {
+      status: row.payment_status,
+      amount: Number(row.payment_amount) || 0,
+      receiptImage: row.receipt_image || null,
+      receiptMessageId: row.receipt_message_id || null,
+    } : null,
   };
 }
 
@@ -105,8 +111,14 @@ router.patch('/notifications/:id/read', async (req, res) => {
 router.get('/', (req, res) => {
   const { customerId } = req.query;
   const sql = customerId
-    ? 'SELECT * FROM requests WHERE customer_public_id = ? ORDER BY created_at DESC, id DESC'
-    : 'SELECT * FROM requests ORDER BY created_at DESC, id DESC';
+    ? `SELECT r.*, p.status AS payment_status, p.amount AS payment_amount,
+         p.receipt_image, p.receipt_message_id
+       FROM requests r LEFT JOIN request_payments p ON p.request_code = r.request_code
+       WHERE r.customer_public_id = ? ORDER BY r.created_at DESC, r.id DESC`
+    : `SELECT r.*, p.status AS payment_status, p.amount AS payment_amount,
+         p.receipt_image, p.receipt_message_id
+       FROM requests r LEFT JOIN request_payments p ON p.request_code = r.request_code
+       ORDER BY r.created_at DESC, r.id DESC`;
 
   query(sql, customerId ? [customerId] : [])
     .then((rows) => {
@@ -114,6 +126,62 @@ router.get('/', (req, res) => {
     })
     .catch((error) => {
       res.status(500).json({ error: error.message || 'Unable to load requests' });
+    });
+
+    router.post('/:requestCode/downpayment-receipt', async (req, res) => {
+      try {
+        const { requestCode } = req.params;
+        const { customerId, image } = req.body || {};
+        if (!customerId || typeof image !== 'string' || !image.startsWith('data:image/')) {
+          return res.status(400).json({ error: 'A valid receipt image and customer are required.' });
+        }
+        if (image.length > 7 * 1024 * 1024) {
+          return res.status(400).json({ error: 'Receipt image must be 5 MB or smaller.' });
+        }
+
+        const rows = await query(
+          'SELECT * FROM requests WHERE request_code = ? AND customer_public_id = ? LIMIT 1',
+          [requestCode, customerId],
+        );
+        const requestRow = rows[0];
+        if (!requestRow) return res.status(404).json({ error: 'Request not found.' });
+        if (!['approved', 'awaitingpayment'].includes(String(requestRow.status).toLowerCase())) {
+          return res.status(400).json({ error: 'A receipt can only be sent for an approved request.' });
+        }
+
+        const billing = parseJson(requestRow.billing_json, {}) || {};
+        const amount = Number(billing.downpaymentAmount) || Number(billing.total || 0) * 0.2;
+        const messageText = `Downpayment receipt submitted for ${requestCode}. Please review the attached invoice.`;
+        const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const result = await execute(
+          `INSERT INTO chat_messages
+           (sender_role, sender_name, customer_public_id, text, image, time_label)
+           VALUES ('customer', ?, ?, ?, ?, ?)`,
+          [customerId, customerId, messageText, image, timeLabel],
+        );
+
+        await execute(
+          `INSERT INTO request_payments
+           (request_code, status, amount, payment_method, receipt_message_id, receipt_image)
+           VALUES (?, 'submitted', ?, 'customer_receipt', ?, ?)
+           ON DUPLICATE KEY UPDATE
+             status = IF(status = 'paid', status, 'submitted'),
+             amount = VALUES(amount), payment_method = VALUES(payment_method),
+             receipt_message_id = VALUES(receipt_message_id), receipt_image = VALUES(receipt_image)`,
+          [requestCode, amount, result.insertId, image],
+        );
+
+        const updated = await query(
+          `SELECT r.*, p.status AS payment_status, p.amount AS payment_amount,
+             p.receipt_image, p.receipt_message_id
+           FROM requests r LEFT JOIN request_payments p ON p.request_code = r.request_code
+           WHERE r.request_code = ? LIMIT 1`,
+          [requestCode],
+        );
+        res.status(201).json({ request: formatRequest(updated[0]) });
+      } catch (error) {
+        res.status(500).json({ error: error.message || 'Unable to submit downpayment receipt.' });
+      }
     });
 });
 

@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS request_payments (
   amount DECIMAL(10, 2) NULL,
   payment_method VARCHAR(50) NULL,
   receipt_message_id INT NULL,
+  receipt_image LONGTEXT NULL,
   recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_request_payments_status (status)
 );

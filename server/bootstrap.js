@@ -166,6 +166,7 @@ async function ensureTables() {
 
   try { await execute(`ALTER TABLE chat_messages ADD COLUMN original_text LONGTEXT NULL AFTER time_label`); } catch (_) {}
   try { await execute(`ALTER TABLE chat_messages ADD COLUMN edited_at TIMESTAMP NULL AFTER original_text`); } catch (_) {}
+  try { await execute(`ALTER TABLE request_payments ADD COLUMN receipt_image LONGTEXT NULL AFTER receipt_message_id`); } catch (_) {}
 
   // Migrate existing tables: add avatar support for users and admins
   try { await execute(`ALTER TABLE customers ADD COLUMN avatar LONGTEXT NULL AFTER phone`); } catch (_) {}

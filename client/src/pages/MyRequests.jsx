@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchRequests, cancelRequest } from '../api/api';
+import { fetchRequests, cancelRequest, submitDownpaymentReceipt } from '../api/api';
 import '../styles/my-requests.css';
 
 // ── Status Tab Config ───────────────────────────────────────────────────────────
@@ -169,11 +169,13 @@ function Timeline({ status }) {
 
 // ── Equipment / Package Table ────────────────────────────────────────────────────
 
-function PackageSection({ pkg }) {
+function PackageSection({ pkg, equipment }) {
   if (!pkg) return null;
   // pkg can be { name, groups: [{category, items:[{name,qty,unit}]}], packageCost }
   // OR it might come from DB as a flat object
-  const groups = pkg.groups || [];
+  const groups = pkg.groups?.length
+    ? pkg.groups
+    : Object.entries(equipment || {}).map(([category, items]) => ({ category, items }));
   const packageName = pkg.name || 'PACKAGE';
   const packageCost = pkg.packageCost ?? pkg.basePrice ?? null;
 
@@ -257,7 +259,7 @@ function RentItemsSection({ equipment }) {
 
 // ── Billing Section ─────────────────────────────────────────────────────────────
 
-function BillingSection({ billing, pkg }) {
+function BillingSection({ billing, pkg, status }) {
   if (!billing && !pkg) return null;
 
   const b = billing || {};
@@ -269,6 +271,7 @@ function BillingSection({ billing, pkg }) {
   const extensionAmt = extensionHrs * 2500;
   const downpayment  = Number(b.downpayment)  || 0;
   const promoApplied = Boolean(b.promoApplied);
+  const isApproved = ['approved', 'awaitingpayment'].includes(status?.toLowerCase());
 
   const effectiveBase = promoApplied && promoPrice > 0 ? promoPrice : basePrice;
   const total = effectiveBase + addonsTotal + mobilization + extensionAmt;
@@ -333,6 +336,13 @@ function BillingSection({ billing, pkg }) {
           </div>
         )}
 
+        {isApproved && total > 0 && (
+          <div className="billing-row downpayment-required">
+            <span className="billing-label">Downpayment Required</span>
+            <span className="billing-value">{formatCurrency(total * 0.2)}</span>
+          </div>
+        )}
+
         {downpayment > 0 && (
           <>
             <div className="billing-row">
@@ -369,6 +379,7 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
   const isDenied   = req.status?.toLowerCase() === 'denied';
   const isPending  = req.status?.toLowerCase() === 'pending';
   const isUpcoming = req.status?.toLowerCase() === 'upcoming';
+  const receiptSubmitted = req.payment?.status === 'submitted';
 
   return (
     <div
@@ -446,25 +457,47 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
 
           {isAwaiting && (
             <div className="awaiting-banner">
-              <span className="awaiting-icon">💳</span>
+              <span className="awaiting-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 12H4v-6h16v6zm0-8H4V7h16v2z" fill="currentColor" />
+                </svg>
+              </span>
               <div className="awaiting-text">
                 <div className="awaiting-label">Awaiting Downpayment</div>
                 <div className="awaiting-msg">
-                  Please settle your downpayment via GCash or bank transfer and send your receipt through the chat to confirm your booking.
+                  {receiptSubmitted
+                    ? 'Your receipt has been sent to the admin for visual verification. You will be notified after it is marked as paid.'
+                    : 'Please settle your downpayment via GCash or bank transfer, then send the invoice picture below.'}
                 </div>
               </div>
+              {!receiptSubmitted && (
+                <button className="receipt-submit-btn" onClick={() => onNavigate('receipt', req)}>
+                  Send Downpayment Receipt
+                </button>
+              )}
             </div>
           )}
 
           {isApproved && !isAwaiting && (
             <div className="awaiting-banner">
-              <span className="awaiting-icon">💳</span>
+              <span className="awaiting-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 12H4v-6h16v6zm0-8H4V7h16v2z" fill="currentColor" />
+                </svg>
+              </span>
               <div className="awaiting-text">
                 <div className="awaiting-label">Awaiting Downpayment</div>
                 <div className="awaiting-msg">
-                  Please settle your downpayment via GCash or bank transfer and send your receipt through the chat to confirm your booking.
+                  {receiptSubmitted
+                    ? 'Your receipt has been sent to the admin for visual verification. You will be notified after it is marked as paid.'
+                    : 'Please settle your downpayment via GCash or bank transfer, then send the invoice picture below.'}
                 </div>
               </div>
+              {!receiptSubmitted && (
+                <button className="receipt-submit-btn" onClick={() => onNavigate('receipt', req)}>
+                  Send Downpayment Receipt
+                </button>
+              )}
             </div>
           )}
 
@@ -518,7 +551,7 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
           {showPackage && (
             <>
               <hr className="card-divider" style={{ marginTop: '16px' }} />
-              <PackageSection pkg={req.package} />
+              <PackageSection pkg={req.package} equipment={req.equipment} />
             </>
           )}
 
@@ -533,7 +566,7 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
           {(showBilling || showPackage) && (
             <>
               <hr className="card-divider" />
-              <BillingSection billing={req.billing} pkg={req.package} />
+              <BillingSection billing={req.billing} pkg={req.package} status={req.status} />
             </>
           )}
 
@@ -586,6 +619,10 @@ export default function MyRequests() {
   const [cancelModal, setCancelModal] = useState(null);
   const [cancelling,  setCancelling]  = useState(false);
   const [cancelError, setCancelError] = useState('');
+  const [receiptModal, setReceiptModal] = useState(null);
+  const [receiptPreview, setReceiptPreview] = useState('');
+  const [receiptError, setReceiptError] = useState('');
+  const [receiptSubmitting, setReceiptSubmitting] = useState(false);
   const [searchId,    setSearchId]    = useState(location.state?.searchId || '');
   const highlightRef = useRef(null);
   const tabsBarRef   = useRef(null);
@@ -691,6 +728,58 @@ export default function MyRequests() {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
+  const openReceiptModal = (req) => {
+    setReceiptModal(req);
+    setReceiptPreview('');
+    setReceiptError('');
+  };
+
+  const closeReceiptModal = () => {
+    if (receiptSubmitting) return;
+    setReceiptModal(null);
+    setReceiptPreview('');
+    setReceiptError('');
+  };
+
+  const handleReceiptChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setReceiptError('Please choose an invoice image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setReceiptError('Invoice image must be 5 MB or smaller.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReceiptPreview(String(reader.result));
+      setReceiptError('');
+    };
+    reader.onerror = () => setReceiptError('Unable to read the invoice image.');
+    reader.readAsDataURL(file);
+  };
+
+  const handleReceiptSubmit = async () => {
+    if (!receiptModal || !receiptPreview || !user?.id) {
+      setReceiptError('Please select an invoice image first.');
+      return;
+    }
+    setReceiptSubmitting(true);
+    setReceiptError('');
+    try {
+      await submitDownpaymentReceipt(receiptModal.id, user.id, receiptPreview);
+      setReceiptModal(null);
+      setReceiptPreview('');
+      loadData();
+    } catch (err) {
+      setReceiptError(err.message || 'Unable to send the invoice image.');
+    } finally {
+      setReceiptSubmitting(false);
+    }
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
@@ -771,7 +860,7 @@ export default function MyRequests() {
                 isHighlighted={isHighlighted}
                 onToggle={() => toggleExpand(req.id)}
                 onCancel={openCancelModal}
-                onNavigate={navigate}
+                onNavigate={(target, req) => target === 'receipt' ? openReceiptModal(req) : navigate(target)}
               />
             </div>
           );
@@ -811,6 +900,34 @@ export default function MyRequests() {
                 id="cancelModalConfirm"
               >
                 {cancelling ? 'Cancelling…' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {receiptModal && (
+        <div className="mr-modal-overlay" onClick={closeReceiptModal}>
+          <div className="mr-modal receipt-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="mr-modal-icon receipt-modal-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor" />
+              </svg>
+            </div>
+            <h2 className="mr-modal-title">Send Downpayment Receipt</h2>
+            <p className="mr-modal-desc">
+              Attach a clear invoice or payment receipt for <strong>{receiptModal.id}</strong>.
+              It will be sent to the admin chat for verification.
+            </p>
+            <label className="receipt-upload-label">
+              Choose Invoice Image
+              <input type="file" accept="image/*" onChange={handleReceiptChange} />
+            </label>
+            {receiptPreview && <img className="receipt-preview" src={receiptPreview} alt="Invoice preview" />}
+            {receiptError && <div className="mr-modal-error">{receiptError}</div>}
+            <div className="mr-modal-actions">
+              <button className="mr-modal-back" onClick={closeReceiptModal} disabled={receiptSubmitting}>Cancel</button>
+              <button className="mr-modal-confirm receipt-submit-confirm" onClick={handleReceiptSubmit} disabled={receiptSubmitting}>
+                {receiptSubmitting ? 'Sending…' : 'Send Receipt'}
               </button>
             </div>
           </div>

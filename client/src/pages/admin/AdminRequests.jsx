@@ -358,6 +358,7 @@ export default function AdminRequests() {
             package: req.package?.name?.replace('PACKAGE ', '') || null,
             equipment: req.equipment || {},
             billing: req.billing || {},
+            payment: req.payment || null,
             addonFee: req.billing?.addonFee || 0,
             mobilizationFee: req.billing?.mobilizationFee || 0,
             promoApplied: false,
@@ -709,12 +710,21 @@ export default function AdminRequests() {
       return;
     }
 
+    const packageGroups = Object.entries(currentEquipment).map(([category, items]) => ({
+      category,
+      items: cloneData(items),
+    }));
+
     openConfirm(
       'Approve Booking',
       `Approve booking ${selectedBooking.booking.id}? The client will be notified to settle the downpayment, and this will move to Approved (awaiting payment).`,
       () => {
         moveBooking(selectedBooking.booking.id, 'approved', {
-          package: { name: `PACKAGE ${selectedBooking.booking.package}` },
+          package: {
+            name: `PACKAGE ${selectedBooking.booking.package}`,
+            groups: packageGroups,
+            packageCost: billingBreakdown.equipAmt,
+          },
           equipment: cloneData(currentEquipment),
           billing: {
             basePrice: billingBreakdown.equipAmt,
@@ -724,6 +734,7 @@ export default function AdminRequests() {
             mobilization: billingBreakdown.mobFee,
             mobilizationFee: billingBreakdown.mobFee,
             total: billingBreakdown.total,
+            downpaymentAmount: billingBreakdown.total * 0.2,
             promoApplied: Boolean(selectedBooking.booking.promoApplied),
           },
         });
@@ -760,6 +771,8 @@ export default function AdminRequests() {
           billing: {
             downpaymentStatus: 'paid',
             downpaymentPaid: true,
+            downpayment: billingBreakdown.total * 0.2,
+            downpaymentAmount: billingBreakdown.total * 0.2,
             downpaymentRecordedAt: new Date().toISOString(),
             paymentMethod: 'chat_receipt',
           },
@@ -1011,7 +1024,25 @@ export default function AdminRequests() {
             {selectedBooking?.status === 'approved' && (
               <div className="status-banner awaiting-payment">
                 <div className="banner-text">
-                  <strong>Awaiting Downpayment.</strong> Package and billing have been set. Confirm with the client via chat once payment is received.
+                  {selectedBooking.booking.payment?.status === 'submitted' ? (
+                    <>
+                      <strong>Receipt Submitted.</strong> The customer sent a downpayment invoice. Review the image below before marking it as paid.
+                      {selectedBooking.booking.payment.receiptImage && (
+                        <a
+                          className="payment-receipt-link"
+                          href={selectedBooking.booking.payment.receiptImage}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <img src={selectedBooking.booking.payment.receiptImage} alt="Customer downpayment invoice" />
+                        </a>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <strong>Awaiting Downpayment.</strong> Package and billing have been set. The customer can send an invoice image for review.
+                    </>
+                  )}
                 </div>
                 <button className="btn-mark-paid" onClick={markAsPaid}>Mark as Paid</button>
               </div>

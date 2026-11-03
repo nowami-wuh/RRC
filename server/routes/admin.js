@@ -35,6 +35,12 @@ function formatRequest(row) {
     billing: parseJson(row.billing_json, null),
     denialReason: row.denial_reason || null,
     additional: row.additional_notes,
+    payment: row.payment_status ? {
+      status: row.payment_status,
+      amount: Number(row.payment_amount) || 0,
+      receiptImage: row.receipt_image || null,
+      receiptMessageId: row.receipt_message_id || null,
+    } : null,
   };
 }
 
@@ -82,6 +88,7 @@ router.get('/requests', async (req, res) => {
       SELECT r.*, c.username AS customer_name, c.email AS customer_email, c.phone AS customer_phone
       FROM requests r
       LEFT JOIN customers c ON c.public_id = r.customer_public_id
+      LEFT JOIN request_payments p ON p.request_code = r.request_code
       ORDER BY r.created_at DESC, r.id DESC
     `);
 

@@ -84,6 +84,13 @@ export function cancelRequest(requestCode) {
   });
 }
 
+export function submitDownpaymentReceipt(requestCode, customerId, image) {
+  return request(`/requests/${encodeURIComponent(requestCode)}/downpayment-receipt`, {
+    method: 'POST',
+    body: JSON.stringify({ customerId, image }),
+  });
+}
+
 export function fetchNotifications(customerId) {
   return request(`/requests/notifications?customerId=${encodeURIComponent(customerId)}`);
 }
@@ -279,4 +286,3 @@ export function updateAboutInfo(payload) {
     body: JSON.stringify(payload),
   });
 }
-
