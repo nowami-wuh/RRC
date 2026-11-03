@@ -198,6 +198,7 @@ async function ensureTables() {
       bank_name VARCHAR(255) NULL,
       bank_account_number VARCHAR(100) NULL,
       bank_account_name VARCHAR(255) NULL,
+      payment_methods LONGTEXT NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
@@ -208,6 +209,7 @@ async function ensureTables() {
     ['bank_name', 'VARCHAR(255) NULL'],
     ['bank_account_number', 'VARCHAR(100) NULL'],
     ['bank_account_name', 'VARCHAR(255) NULL'],
+    ['payment_methods', 'LONGTEXT NULL'],
   ]) {
     try {
       await execute(`ALTER TABLE about_info ADD COLUMN ${column} ${definition}`);

@@ -3,6 +3,28 @@ import { useAuth } from '../context/AuthContext';
 import { fetchAboutInfo, updateAboutInfo } from '../api/api';
 import '../styles/about.css';
 
+const emptyPaymentMethod = () => ({
+  label: '',
+  qr: '',
+  bank_name: '',
+  bank_account_number: '',
+  bank_account_name: '',
+});
+
+function getPaymentMethods(data) {
+  if (Array.isArray(data?.payment_methods) && data.payment_methods.length > 0) return data.payment_methods;
+  if (data?.gcash_qr || data?.bank_name || data?.bank_account_number || data?.bank_account_name) {
+    return [{
+      label: '',
+      qr: data.gcash_qr || '',
+      bank_name: data.bank_name || '',
+      bank_account_number: data.bank_account_number || '',
+      bank_account_name: data.bank_account_name || '',
+    }];
+  }
+  return [];
+}
+
 export default function AboutPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || (typeof user?.id === 'string' && user.id.startsWith('ADMIN-'));
@@ -18,6 +40,7 @@ export default function AboutPage() {
     bank_name: '',
     bank_account_number: '',
     bank_account_name: '',
+    payment_methods: [],
   });
 
   const [loading, setLoading] = useState(true);
@@ -30,8 +53,9 @@ export default function AboutPage() {
     fetchAboutInfo()
       .then((res) => {
         if (res?.about) {
-          setAboutData((current) => ({ ...current, ...res.about }));
-          setFormData((current) => ({ ...current, ...res.about }));
+          const about = { ...res.about, payment_methods: getPaymentMethods(res.about) };
+          setAboutData((current) => ({ ...current, ...about }));
+          setFormData((current) => ({ ...current, ...about }));
         }
       })
       .catch((err) => setMsg({ text: err.message || 'Failed to load About Us information.', type: 'error' }))
@@ -64,7 +88,7 @@ export default function AboutPage() {
     }
   };
 
-  const handleQrUpload = (event) => {
+  const handleQrUpload = (event, methodIndex) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
@@ -81,9 +105,35 @@ export default function AboutPage() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        setFormData((previous) => ({ ...previous, gcash_qr: reader.result }));
+        setFormData((previous) => ({
+          ...previous,
+          payment_methods: previous.payment_methods.map((method, index) =>
+            index === methodIndex ? { ...method, qr: reader.result } : method),
+        }));
         setMsg({ text: '', type: '' });
       }
+    };
+
+    const updatePaymentMethod = (index, field, value) => {
+      setFormData((previous) => ({
+        ...previous,
+        payment_methods: previous.payment_methods.map((method, methodIndex) =>
+          methodIndex === index ? { ...method, [field]: value } : method),
+      }));
+    };
+
+    const addPaymentMethod = () => {
+      setFormData((previous) => ({
+        ...previous,
+        payment_methods: [...previous.payment_methods, emptyPaymentMethod()],
+      }));
+    };
+
+    const removePaymentMethod = (index) => {
+      setFormData((previous) => ({
+        ...previous,
+        payment_methods: previous.payment_methods.filter((_, methodIndex) => methodIndex !== index),
+      }));
     };
     reader.onerror = () => setMsg({ text: 'Unable to read the selected QR image.', type: 'error' });
     reader.readAsDataURL(file);
@@ -203,60 +253,46 @@ export default function AboutPage() {
             </div>
 
             <h3 className="about-edit-title">Payment Information</h3>
-            <div className="edit-grid">
-              <div className="edit-field-group">
-                <label className="edit-label">Bank Name</label>
-                <input
-                  type="text"
-                  className="edit-input"
-                  placeholder="e.g. BDO, BPI, or GCash"
-                  value={formData.bank_name}
-                  onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                />
-              </div>
-              <div className="edit-field-group">
-                <label className="edit-label">Bank Account Number</label>
-                <input
-                  type="text"
-                  className="edit-input"
-                  placeholder="Enter account number"
-                  value={formData.bank_account_number}
-                  onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
-                />
-              </div>
-              <div className="edit-field-group">
-                <label className="edit-label">Account Name</label>
-                <input
-                  type="text"
-                  className="edit-input"
-                  placeholder="Enter account holder name"
-                  value={formData.bank_account_name}
-                  onChange={(e) => setFormData({ ...formData, bank_account_name: e.target.value })}
-                />
-              </div>
-              <div className="edit-field-group">
-                <label className="edit-label" htmlFor="gcash-qr-upload">GCash QR Image (PNG, JPEG, or WEBP; max 2 MB)</label>
-                <input
-                  id="gcash-qr-upload"
-                  type="file"
-                  className="edit-input"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={handleQrUpload}
-                />
-                {formData.gcash_qr && (
-                  <div className="qr-upload-preview">
-                    <img src={formData.gcash_qr} alt="GCash QR preview" />
-                    <button
-                      type="button"
-                      className="edit-btn-cancel"
-                      onClick={() => setFormData({ ...formData, gcash_qr: '' })}
-                    >
-                      Remove QR
-                    </button>
+            <p className="payment-edit-help">Add every QR code or bank account customers can use.</p>
+            <div className="payment-method-editor-list">
+              {formData.payment_methods.map((method, index) => (
+                <div className="payment-method-editor" key={`payment-method-${index}`}>
+                  <div className="payment-method-editor-header">
+                    <strong>Payment Method {index + 1}</strong>
+                    <button type="button" className="edit-btn-cancel" onClick={() => removePaymentMethod(index)}>Remove</button>
                   </div>
-                )}
-              </div>
+                  <div className="edit-grid">
+                    <div className="edit-field-group">
+                      <label className="edit-label">Label</label>
+                      <input type="text" className="edit-input" placeholder="e.g. GCash, BDO" value={method.label} onChange={(e) => updatePaymentMethod(index, 'label', e.target.value)} />
+                    </div>
+                    <div className="edit-field-group">
+                      <label className="edit-label">Bank / Wallet</label>
+                      <input type="text" className="edit-input" placeholder="e.g. BDO, BPI, or GCash" value={method.bank_name} onChange={(e) => updatePaymentMethod(index, 'bank_name', e.target.value)} />
+                    </div>
+                    <div className="edit-field-group">
+                      <label className="edit-label">Account Number</label>
+                      <input type="text" className="edit-input" placeholder="Enter account number" value={method.bank_account_number} onChange={(e) => updatePaymentMethod(index, 'bank_account_number', e.target.value)} />
+                    </div>
+                    <div className="edit-field-group">
+                      <label className="edit-label">Account Name</label>
+                      <input type="text" className="edit-input" placeholder="Enter account holder name" value={method.bank_account_name} onChange={(e) => updatePaymentMethod(index, 'bank_account_name', e.target.value)} />
+                    </div>
+                    <div className="edit-field-group">
+                      <label className="edit-label" htmlFor={`payment-qr-upload-${index}`}>QR Image (PNG, JPEG, or WEBP; max 2 MB)</label>
+                      <input id={`payment-qr-upload-${index}`} type="file" className="edit-input" accept="image/png,image/jpeg,image/webp" onChange={(e) => handleQrUpload(e, index)} />
+                      {method.qr && (
+                        <div className="qr-upload-preview">
+                          <img src={method.qr} alt={`${method.label || 'Payment'} QR preview`} />
+                          <button type="button" className="edit-btn-cancel" onClick={() => updatePaymentMethod(index, 'qr', '')}>Remove QR</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
+            <button type="button" className="edit-btn-cancel add-payment-method-btn" onClick={addPaymentMethod}>+ Add Payment Method</button>
 
             <div className="edit-form-actions">
               <button type="button" className="edit-btn-cancel" onClick={() => setIsEditing(false)}>
@@ -312,20 +348,24 @@ export default function AboutPage() {
                 <span className="contact-text">{aboutData.location}</span>
               </div>
             </div>
-            {(aboutData.gcash_qr || aboutData.bank_name || aboutData.bank_account_number || aboutData.bank_account_name) && (
+            {getPaymentMethods(aboutData).length > 0 && (
               <>
                 <div className="contact-divider" />
                 <h3 className="contact-title">Payment Information</h3>
-                {aboutData.gcash_qr && (
-                  <div className="payment-qr-wrap">
-                    <img className="payment-qr" src={aboutData.gcash_qr} alt="GCash payment QR code" />
-                    <span className="contact-text">Scan to pay with GCash</span>
-                  </div>
-                )}
-                <div className="payment-details">
-                  {aboutData.bank_name && <p><strong>Bank / Wallet:</strong> {aboutData.bank_name}</p>}
-                  {aboutData.bank_account_number && <p><strong>Account Number:</strong> {aboutData.bank_account_number}</p>}
-                  {aboutData.bank_account_name && <p><strong>Account Name:</strong> {aboutData.bank_account_name}</p>}
+                <div className="payment-method-display-list">
+                  {getPaymentMethods(aboutData).map((method, index) => (
+                    <div className="payment-method-display" key={`about-payment-${index}`}>
+                      {method.label && <h4>{method.label}</h4>}
+                      {method.qr && <div className="payment-qr-wrap"><img className="payment-qr" src={method.qr} alt={`${method.label || 'Payment'} QR code`} /><span className="contact-text">Scan to pay</span></div>}
+                      {(method.bank_name || method.bank_account_number || method.bank_account_name) && (
+                        <div className="payment-details">
+                          {method.bank_name && <p><strong>Bank / Wallet:</strong> {method.bank_name}</p>}
+                          {method.bank_account_number && <p><strong>Account Number:</strong> {method.bank_account_number}</p>}
+                          {method.bank_account_name && <p><strong>Account Name:</strong> {method.bank_account_name}</p>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </>
             )}

@@ -14,25 +14,45 @@ const defaultAbout = {
   bank_name: '',
   bank_account_number: '',
   bank_account_name: '',
+  payment_methods: [],
 };
+
+function parsePaymentMethods(value, legacy = defaultAbout) {
+  let methods = value;
+  if (typeof methods === 'string') {
+    try { methods = JSON.parse(methods); } catch (_) { methods = []; }
+  }
+  if (Array.isArray(methods) && methods.length > 0) return methods;
+  if (legacy.gcash_qr || legacy.bank_name || legacy.bank_account_number || legacy.bank_account_name) {
+    return [{
+      label: '',
+      qr: legacy.gcash_qr || '',
+      bank_name: legacy.bank_name || '',
+      bank_account_number: legacy.bank_account_number || '',
+      bank_account_name: legacy.bank_account_name || '',
+    }];
+  }
+  return [];
+}
 
 // GET /api/about
 router.get('/', async (req, res) => {
   try {
     const rows = await query(
-      'SELECT description, facebook, email, phone, location, service_agreement, gcash_qr, bank_name, bank_account_number, bank_account_name FROM about_info WHERE id = 1 LIMIT 1',
+      'SELECT description, facebook, email, phone, location, service_agreement, gcash_qr, bank_name, bank_account_number, bank_account_name, payment_methods FROM about_info WHERE id = 1 LIMIT 1',
     );
     if (rows.length > 0) {
+      const about = {
+        ...defaultAbout,
+        ...rows[0],
+        service_agreement: rows[0].service_agreement || defaultAbout.service_agreement,
+        gcash_qr: rows[0].gcash_qr || '',
+        bank_name: rows[0].bank_name || '',
+        bank_account_number: rows[0].bank_account_number || '',
+        bank_account_name: rows[0].bank_account_name || '',
+      };
       return res.json({
-        about: {
-          ...defaultAbout,
-          ...rows[0],
-          service_agreement: rows[0].service_agreement || defaultAbout.service_agreement,
-          gcash_qr: rows[0].gcash_qr || '',
-          bank_name: rows[0].bank_name || '',
-          bank_account_number: rows[0].bank_account_number || '',
-          bank_account_name: rows[0].bank_account_name || '',
-        },
+        about: { ...about, payment_methods: parsePaymentMethods(rows[0].payment_methods, about) },
       });
     }
     return res.json({ about: defaultAbout });
@@ -52,6 +72,15 @@ router.put('/', async (req, res) => {
   const bankName = typeof body.bank_name === 'string' ? body.bank_name.trim() : '';
   const bankAccountNumber = typeof body.bank_account_number === 'string' ? body.bank_account_number.trim() : '';
   const bankAccountName = typeof body.bank_account_name === 'string' ? body.bank_account_name.trim() : '';
+  const paymentMethods = Array.isArray(body.payment_methods)
+    ? body.payment_methods.map((method) => ({
+      label: typeof method.label === 'string' ? method.label.trim() : '',
+      qr: typeof method.qr === 'string' ? method.qr.trim() : '',
+      bank_name: typeof method.bank_name === 'string' ? method.bank_name.trim() : '',
+      bank_account_number: typeof method.bank_account_number === 'string' ? method.bank_account_number.trim() : '',
+      bank_account_name: typeof method.bank_account_name === 'string' ? method.bank_account_name.trim() : '',
+    })).filter((method) => method.label || method.qr || method.bank_name || method.bank_account_number || method.bank_account_name)
+    : [];
 
   if (!description || !facebook || !email || !phone || !location || !serviceAgreement) {
     return res.status(400).json({ error: 'About Us details and a service agreement are required.' });
@@ -59,8 +88,8 @@ router.put('/', async (req, res) => {
 
   try {
     await execute(
-      `INSERT INTO about_info (id, description, facebook, email, phone, location, service_agreement, gcash_qr, bank_name, bank_account_number, bank_account_name)
-       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO about_info (id, description, facebook, email, phone, location, service_agreement, gcash_qr, bank_name, bank_account_number, bank_account_name, payment_methods)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
        description = VALUES(description),
        facebook = VALUES(facebook),
@@ -71,7 +100,8 @@ router.put('/', async (req, res) => {
        gcash_qr = VALUES(gcash_qr),
        bank_name = VALUES(bank_name),
        bank_account_number = VALUES(bank_account_number),
-       bank_account_name = VALUES(bank_account_name)`,
+       bank_account_name = VALUES(bank_account_name),
+       payment_methods = VALUES(payment_methods)`,
       [
         description.trim(),
         facebook.trim(),
@@ -83,6 +113,7 @@ router.put('/', async (req, res) => {
         bankName,
         bankAccountNumber,
         bankAccountName,
+        JSON.stringify(paymentMethods),
       ],
     );
 
@@ -99,6 +130,7 @@ router.put('/', async (req, res) => {
         bank_name: bankName,
         bank_account_number: bankAccountNumber,
         bank_account_name: bankAccountName,
+        payment_methods: paymentMethods,
       },
     });
   } catch (error) {

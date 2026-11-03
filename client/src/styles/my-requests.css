@@ -841,6 +841,7 @@
   animation: modal-in 0.25s ease;
 }
 .receipt-modal {
+  width: min(100%, 520px);
   max-height: calc(100vh - 40px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -884,6 +885,10 @@
   margin: 0 auto 14px;
 }
 .payment-method-window {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   border: 1px solid #dde4f0;
   border-radius: 8px;
   background: #f8fafc;
@@ -909,6 +914,21 @@
   font-size: 12px;
   line-height: 1.6;
   text-align: left;
+}
+.payment-method-option {
+  min-width: 0;
+  border-top: 1px solid #e1e6ef;
+  padding: 12px 0;
+}
+.payment-method-option:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.payment-method-label {
+  display: block;
+  color: var(--dark-blue);
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
 }
 .mr-modal-title {
   font-family: 'Garet Heavy', sans-serif;

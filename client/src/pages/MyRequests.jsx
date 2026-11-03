@@ -28,6 +28,20 @@ function getTabKey(status) {
   return 'pending';
 }
 
+function getPaymentMethods(data) {
+  if (Array.isArray(data?.payment_methods) && data.payment_methods.length > 0) return data.payment_methods;
+  if (data?.gcash_qr || data?.bank_name || data?.bank_account_number || data?.bank_account_name) {
+    return [{
+      label: '',
+      qr: data.gcash_qr || '',
+      bank_name: data.bank_name || '',
+      bank_account_number: data.bank_account_number || '',
+      bank_account_name: data.bank_account_name || '',
+    }];
+  }
+  return [];
+}
+
 const EMPTY_TAB_ICONS = {
   pending: (
     <svg className="nav-icon" viewBox="0 0 24 24">
@@ -645,6 +659,7 @@ export default function MyRequests() {
     bank_name: '',
     bank_account_number: '',
     bank_account_name: '',
+    payment_methods: [],
   });
   const [searchId,    setSearchId]    = useState(location.state?.searchId || '');
   const highlightRef = useRef(null);
@@ -667,7 +682,7 @@ export default function MyRequests() {
   useEffect(() => {
     fetchAboutInfo()
       .then((data) => {
-        if (data?.about) setPaymentInfo((current) => ({ ...current, ...data.about }));
+        if (data?.about) setPaymentInfo((current) => ({ ...current, ...data.about, payment_methods: getPaymentMethods(data.about) }));
       })
       .catch(() => {});
   }, []);
@@ -952,17 +967,20 @@ export default function MyRequests() {
             {!receiptPreview && (
               <div className="payment-method-window">
                 <div className="payment-method-title">Admin Payment Details</div>
-                {paymentInfo.gcash_qr && (
-                  <img className="payment-method-qr" src={paymentInfo.gcash_qr} alt="Admin GCash or bank payment QR code" />
-                )}
-                {(paymentInfo.bank_name || paymentInfo.bank_account_number || paymentInfo.bank_account_name) && (
-                  <div className="payment-method-details">
-                    {paymentInfo.bank_name && <div><strong>Bank / Wallet:</strong> {paymentInfo.bank_name}</div>}
-                    {paymentInfo.bank_account_name && <div><strong>Account Name:</strong> {paymentInfo.bank_account_name}</div>}
-                    {paymentInfo.bank_account_number && <div><strong>Account Number:</strong> {paymentInfo.bank_account_number}</div>}
+                {getPaymentMethods(paymentInfo).map((method, index) => (
+                  <div className="payment-method-option" key={`receipt-payment-${index}`}>
+                    {method.label && <strong className="payment-method-label">{method.label}</strong>}
+                    {method.qr && <img className="payment-method-qr" src={method.qr} alt={`${method.label || 'Payment'} QR code`} />}
+                    {(method.bank_name || method.bank_account_number || method.bank_account_name) && (
+                      <div className="payment-method-details">
+                        {method.bank_name && <div><strong>Bank / Wallet:</strong> {method.bank_name}</div>}
+                        {method.bank_account_name && <div><strong>Account Name:</strong> {method.bank_account_name}</div>}
+                        {method.bank_account_number && <div><strong>Account Number:</strong> {method.bank_account_number}</div>}
+                      </div>
+                    )}
                   </div>
-                )}
-                {!paymentInfo.gcash_qr && !paymentInfo.bank_name && (
+                ))}
+                {getPaymentMethods(paymentInfo).length === 0 && (
                   <div className="billing-note">Payment details are available through the admin chat.</div>
                 )}
               </div>
