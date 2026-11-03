@@ -276,7 +276,7 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   const effectiveBase = promoApplied && promoPrice > 0 ? promoPrice : basePrice;
   const total = effectiveBase + addonsTotal + mobilization + extensionAmt;
   const requiredDownpayment = Number(b.downpaymentAmount) || total * 0.2;
-  const balance = total - downpayment;
+  const balance = Boolean(b.fullyPaid) ? 0 : total - downpayment;
 
   if (total === 0 && downpayment === 0) {
     return (

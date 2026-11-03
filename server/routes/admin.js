@@ -85,7 +85,9 @@ router.get('/summary', async (req, res) => {
 router.get('/requests', async (req, res) => {
   try {
     const rows = await query(`
-      SELECT r.*, c.username AS customer_name, c.email AS customer_email, c.phone AS customer_phone
+      SELECT r.*, c.username AS customer_name, c.email AS customer_email, c.phone AS customer_phone,
+        p.status AS payment_status, p.amount AS payment_amount,
+        p.receipt_image, p.receipt_message_id
       FROM requests r
       LEFT JOIN customers c ON c.public_id = r.customer_public_id
       LEFT JOIN request_payments p ON p.request_code = r.request_code

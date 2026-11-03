@@ -554,9 +554,20 @@ export default function AdminRequests() {
     });
   };
 
-  const moveBooking = (id, newStatus, extra = {}) => {
+  const moveBooking = async (id, newStatus, extra = {}) => {
     const result = findBooking(id);
     if (!result) return;
+
+    const apiPayload = { status: newStatus };
+    if (extra.package !== undefined) apiPayload.package = extra.package;
+    if (extra.equipment !== undefined) apiPayload.equipment = extra.equipment;
+    if (extra.billing !== undefined) apiPayload.billing = extra.billing;
+    try {
+      await updateAdminRequest(id, apiPayload);
+    } catch (error) {
+      showToastMessage(error.message || `Unable to update booking ${id}.`, true);
+      return;
+    }
 
     setBookings((prev) => {
       const next = cloneData(prev);
@@ -564,20 +575,13 @@ export default function AdminRequests() {
         const idx = next[statusKey].findIndex((booking) => booking.id === id);
         if (idx >= 0) {
           const booking = next[statusKey].splice(idx, 1)[0];
-          const updated = { ...booking, ...extra };
-          next[newStatus].unshift(updated);
+          const updated = { ...booking, status: newStatus, ...extra };
+          if (next[newStatus]) next[newStatus].unshift(updated);
           break;
         }
       }
       return next;
     });
-
-    // Update backend database via API
-    const apiPayload = { status: newStatus };
-    if (extra.package !== undefined) apiPayload.package = extra.package;
-    if (extra.equipment !== undefined) apiPayload.equipment = extra.equipment;
-    if (extra.billing !== undefined) apiPayload.billing = extra.billing;
-    updateAdminRequest(id, apiPayload).catch(() => {});
 
     setDetailState(null);
     setCurrentEquipment({});
@@ -817,6 +821,47 @@ export default function AdminRequests() {
           },
         });
       }
+    );
+  };
+
+  const markEventAsPaid = () => {
+    if (!selectedBooking || selectedBooking.status !== 'upcoming') return;
+    openConfirm(
+      'Mark Event Fully Paid',
+      `Confirm that the full event amount for booking ${selectedBooking.booking.id} has been paid? This records the remaining balance as paid.`,
+      async () => {
+        const total = billingBreakdown.total;
+        const currentBilling = selectedBooking.booking.billing || {};
+        await updateAdminRequest(selectedBooking.booking.id, {
+          billing: {
+            ...currentBilling,
+            total,
+            totalPaid: total,
+            remainingBalance: 0,
+            paymentStatus: 'paid',
+            fullyPaid: true,
+            fullyPaidAt: new Date().toISOString(),
+            finalPaymentMethod: 'cash',
+          },
+        }).then(() => {
+          updateBooking(selectedBooking.booking.id, (booking) => ({
+            ...booking,
+            billing: {
+              ...(booking.billing || {}),
+              total,
+              totalPaid: total,
+              remainingBalance: 0,
+              paymentStatus: 'paid',
+              fullyPaid: true,
+              fullyPaidAt: new Date().toISOString(),
+              finalPaymentMethod: 'cash',
+            },
+          }));
+          showToastMessage(`Booking ${selectedBooking.booking.id} is fully paid.`);
+        }).catch((error) => {
+          showToastMessage(error.message || 'Unable to record full payment.', true);
+        });
+      },
     );
   };
 
@@ -1090,7 +1135,10 @@ export default function AdminRequests() {
             {selectedBooking?.status === 'upcoming' && (
               <div className="status-banner upcoming-banner">
                 <div className="banner-text">
-                  <strong>Paid &amp; Confirmed.</strong> This event is scheduled and awaiting its date.
+                  <strong>{selectedBooking.booking.billing?.fullyPaid ? 'Fully Paid &amp; Confirmed.' : 'Downpayment Paid &amp; Confirmed.'}</strong>{' '}
+                  {selectedBooking.booking.billing?.fullyPaid
+                    ? 'The full event amount has been recorded as paid.'
+                    : 'This event is scheduled and awaiting its date.'}
                 </div>
               </div>
             )}
@@ -1248,6 +1296,9 @@ export default function AdminRequests() {
                     )}
                     {selectedBooking.status === 'approved' && (
                       <button className="btn-mark-paid" onClick={markAsPaid}>Mark as Paid</button>
+                    )}
+                    {selectedBooking.status === 'upcoming' && !selectedBooking.booking.billing?.fullyPaid && (
+                      <button className="btn-mark-paid" onClick={markEventAsPaid}>Mark Event Fully Paid</button>
                     )}
                   </div>
                 </div>
