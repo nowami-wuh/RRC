@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchAdminRequests, updateAdminRequest } from '../../api/api';
+import { fetchAdminPackages, fetchAdminRequests, updateAdminRequest } from '../../api/api';
 
 const initialBookings = {
   pending: [
@@ -237,6 +237,15 @@ const packageEquipment = {
 
 const packageBaseCost = { A: 4000, B: 8000, C: 15000, D: 28000 };
 
+const defaultMobilizationFees = {
+  boac: 1500,
+  gasan: 2000,
+  mogpog: 2000,
+  'sta cruz': 3500,
+  buenavista: 3000,
+  torrijos: 5000,
+};
+
 const inventoryStock = {
   'Main Powered Speaker Single 15 inch': { unit: 'pcs', available: 5 },
   'Sub Powered Speaker': { unit: 'pc', available: 2 },
@@ -295,6 +304,7 @@ export default function AdminRequests() {
   const [bookings, setBookings] = useState(createEmptyBookings);
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [requestsLoadError, setRequestsLoadError] = useState('');
+  const [pricingPackages, setPricingPackages] = useState([]);
   const [currentStatus, setCurrentStatus] = useState('pending');
   const statusTabsRef = useRef(null);
   const statusProgressRef = useRef(null);
@@ -318,8 +328,9 @@ export default function AdminRequests() {
 
   // Populate the page from persisted requests; never expose sample bookings as actionable data.
   useEffect(() => {
-    fetchAdminRequests()
-      .then((data) => {
+    Promise.all([fetchAdminRequests(), fetchAdminPackages()])
+      .then(([data, packageData]) => {
+        setPricingPackages(packageData.packages || []);
         const apiRequests = data.requests || [];
         const next = createEmptyBookings();
         apiRequests.forEach((req) => {
@@ -346,6 +357,7 @@ export default function AdminRequests() {
             },
             package: req.package?.name?.replace('PACKAGE ', '') || null,
             equipment: req.equipment || {},
+            billing: req.billing || {},
             addonFee: req.billing?.addonFee || 0,
             mobilizationFee: req.billing?.mobilizationFee || 0,
             promoApplied: false,
@@ -522,6 +534,8 @@ export default function AdminRequests() {
 
     // Update backend database via API
     const apiPayload = { status: newStatus };
+    if (extra.package !== undefined) apiPayload.package = extra.package;
+    if (extra.equipment !== undefined) apiPayload.equipment = extra.equipment;
     if (extra.billing !== undefined) apiPayload.billing = extra.billing;
     updateAdminRequest(id, apiPayload).catch(() => {});
 
@@ -571,8 +585,19 @@ export default function AdminRequests() {
 
   const selectPackage = (pkg) => {
     if (!selectedBooking || selectedBooking.status !== 'pending') return;
-    updateBooking(selectedBooking.booking.id, (booking) => ({ ...booking, package: pkg }));
-    setCurrentEquipment(cloneData(packageEquipment[pkg] || {}));
+    const packageItems = getPackageEquipment(pkg);
+    const existingExtras = Object.fromEntries(
+      Object.entries(currentEquipment)
+        .filter(([category]) => !['SOUNDS', 'LIGHTS'].includes(category))
+        .map(([category, items]) => [category, cloneData(items)]),
+    );
+    const nextEquipment = { ...packageItems, ...existingExtras };
+    updateBooking(selectedBooking.booking.id, (booking) => ({
+      ...booking,
+      package: pkg,
+      equipment: cloneData(nextEquipment),
+    }));
+    setCurrentEquipment(nextEquipment);
     setPkgDropdownOpen(false);
   };
 
@@ -678,7 +703,18 @@ export default function AdminRequests() {
       `Approve booking ${selectedBooking.booking.id}? The client will be notified to settle the downpayment, and this will move to Approved (awaiting payment).`,
       () => {
         moveBooking(selectedBooking.booking.id, 'approved', {
+          package: { name: `PACKAGE ${selectedBooking.booking.package}` },
           equipment: cloneData(currentEquipment),
+          billing: {
+            basePrice: billingBreakdown.equipAmt,
+            promoPrice: billingBreakdown.promoPrice,
+            addonsTotal: billingBreakdown.addonFee,
+            addonFee: billingBreakdown.addonFee,
+            mobilization: billingBreakdown.mobFee,
+            mobilizationFee: billingBreakdown.mobFee,
+            total: billingBreakdown.total,
+            promoApplied: Boolean(selectedBooking.booking.promoApplied),
+          },
         });
       }
     );
@@ -722,21 +758,54 @@ export default function AdminRequests() {
   };
 
   const calcEquipmentAmount = () => {
-    if (selectedBooking?.booking.package && packageBaseCost[selectedBooking.booking.package]) {
-      return packageBaseCost[selectedBooking.booking.package];
-    }
-    return 0;
+    const packageCode = selectedBooking?.booking.package;
+    const configuredPackage = pricingPackages.find((pkg) =>
+      String(pkg.name || '').trim().toUpperCase() === `PACKAGE ${packageCode}`,
+    );
+    return Number(configuredPackage?.price) || packageBaseCost[packageCode] || 0;
+  };
+
+  const getPackageEquipment = (pkg) => {
+    const configuredPackage = pricingPackages.find((item) =>
+      String(item.name || '').trim().toUpperCase() === `PACKAGE ${pkg}`,
+    );
+    if (!configuredPackage?.groups) return cloneData(packageEquipment[pkg] || {});
+
+    return Object.fromEntries(configuredPackage.groups.map((group) => [
+      group.category,
+      (group.items || []).map((item) => {
+        const parts = String(item.qty || '1 pc').split(' ');
+        return { name: item.name, qty: Number(parts[0]) || 1, unit: parts.slice(1).join(' ') || 'pc' };
+      }),
+    ]));
+  };
+
+  const getMobilizationFee = (booking) => {
+    const venue = String(booking.eventDetails?.venue || '').toLowerCase();
+    const city = Object.keys(defaultMobilizationFees).find((name) =>
+      venue.replace(/[.,]/g, ' ').replace(/\s+/g, ' ').includes(name),
+    );
+    const configuredMisc = pricingPackages.find((item) => {
+      const name = String(item.name || '').toLowerCase().replace(/[.,]/g, ' ').replace(/\s+/g, ' ');
+      return name.startsWith('mobilization fee') && city && name.includes(city);
+    });
+    if (configuredMisc) return Number(String(configuredMisc.subtitle).replace(/[^0-9.]/g, '')) || 0;
+    return city ? defaultMobilizationFees[city] : Number(booking.mobilizationFee) || 0;
   };
 
   const billingBreakdown = (() => {
     if (!selectedBooking) return { equipAmt: 0, mobFee: 0, addonFee: 0, total: 0 };
     const booking = selectedBooking.booking;
     let equipAmt = calcEquipmentAmount();
-    if (booking.promoApplied) equipAmt = Math.round(equipAmt * 0.9);
-    const mobFee = booking.mobilizationFee || 0;
-    const addonFee = booking.addonFee || 0;
+    const configuredPackage = pricingPackages.find((pkg) =>
+      String(pkg.name || '').trim().toUpperCase() === `PACKAGE ${booking.package}`,
+    );
+    const promoPrice = Number(configuredPackage?.promo) || 0;
+    if (booking.promoApplied && promoPrice > 0) equipAmt = promoPrice;
+    const mobFee = booking.requestType === 'booking' ? getMobilizationFee(booking) : Number(booking.mobilizationFee) || 0;
+    const addonFee = Number(booking.billing?.addonsTotal ?? booking.billing?.addonFee ?? booking.addonFee) || 0;
     const total = equipAmt + mobFee + addonFee;
-    return { equipAmt, mobFee, addonFee, total };
+    return { equipAmt, promoPrice, mobFee, addonFee, total };
   })();
 
   const isEditable = selectedBooking?.status === 'pending';

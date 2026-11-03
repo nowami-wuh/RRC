@@ -1,0 +1,11 @@
+ client/src/pages/AboutPage.jsx           | 122 [32m+++++++++++++++++++++++++[m[31m-[m
+ client/src/pages/MakeRequest.jsx         |  94 [32m++++++++++++++++++++[m[31m-[m
+ client/src/pages/admin/AdminRequests.jsx | 141 [32m++++++++++++++++[m[31m---------------[m
+ client/src/styles/about.css              |  55 [32m++++++++++++[m
+ client/src/styles/admin.css              |  74 [32m+++++++[m[31m---------[m
+ client/src/styles/make-request.css       | 127 [32m++++++++++++++++++++++++++++[m
+ server/bootstrap.js                      |  28 [32m+++++[m[31m-[m
+ server/routes/about.js                   |  65 [32m++++++++++++[m[31m--[m
+ server/routes/requests.js                |  23 [32m++++[m[31m-[m
+ server/schema.sql                        |  16 [32m++++[m
+ 10 files changed, 614 insertions(+), 131 deletions(-)
