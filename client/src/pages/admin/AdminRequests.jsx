@@ -655,7 +655,12 @@ export default function AdminRequests() {
     }
 
     const stockItem = inventoryStock[name];
-    if (!stockItem || qty > stockItem.available) {
+    const configuredAddon = getAddOnCatalog().find((item) => item.name === name);
+    if (!stockItem && !configuredAddon) {
+      setAddEquipError('Please select a valid inventory item or configured add-on.');
+      return;
+    }
+    if (stockItem && qty > stockItem.available) {
       setAddEquipError(`Only ${stockItem?.available ?? 0} ${stockItem?.unit ?? 'unit'} of "${name}" available in inventory.`);
       return;
     }
@@ -667,7 +672,13 @@ export default function AdminRequests() {
     if (existing) {
       existing.qty += qty;
     } else {
-      nextEquipment[cat].push({ name, qty, unit: stockItem.unit });
+      nextEquipment[cat].push({
+        name,
+        qty,
+        unit: stockItem?.unit || 'item',
+        price: configuredAddon?.price || 0,
+        promoPrice: configuredAddon?.promo || 0,
+      });
     }
 
     setCurrentEquipment(nextEquipment);
@@ -780,6 +791,28 @@ export default function AdminRequests() {
     ]));
   };
 
+  const getAddOnCatalog = () => pricingPackages
+    .filter((item) => ['equipment', 'effects'].includes(item.section))
+    .map((item) => ({
+      name: item.name,
+      price: Number(item.price) || 0,
+      promo: Number(item.promo) || 0,
+    }));
+
+  const getAddOnFee = (booking) => {
+    const selectedAddOns = currentEquipment['ADD-ONS'] || [];
+    if (selectedAddOns.length === 0) return null;
+
+    const catalog = getAddOnCatalog();
+    return selectedAddOns.reduce((total, item) => {
+      const configuredAddon = catalog.find((addon) => addon.name === item.name);
+      const regularPrice = Number(item.price ?? configuredAddon?.price) || 0;
+      const promoPrice = Number(item.promoPrice ?? configuredAddon?.promo) || 0;
+      const unitPrice = booking.promoApplied && promoPrice > 0 ? promoPrice : regularPrice;
+      return total + unitPrice * (Number(item.qty) || 1);
+    }, 0);
+  };
+
   const getMobilizationFee = (booking) => {
     const venue = String(booking.eventDetails?.venue || '').toLowerCase();
     const city = Object.keys(defaultMobilizationFees).find((name) =>
@@ -803,7 +836,10 @@ export default function AdminRequests() {
     const promoPrice = Number(configuredPackage?.promo) || 0;
     if (booking.promoApplied && promoPrice > 0) equipAmt = promoPrice;
     const mobFee = booking.requestType === 'booking' ? getMobilizationFee(booking) : Number(booking.mobilizationFee) || 0;
-    const addonFee = Number(booking.billing?.addonsTotal ?? booking.billing?.addonFee ?? booking.addonFee) || 0;
+    const selectedAddonFee = getAddOnFee(booking);
+    const addonFee = selectedAddonFee === null
+      ? Number(booking.billing?.addonsTotal ?? booking.billing?.addonFee ?? booking.addonFee) || 0
+      : selectedAddonFee;
     const total = equipAmt + mobFee + addonFee;
     return { equipAmt, promoPrice, mobFee, addonFee, total };
   })();
@@ -1170,8 +1206,23 @@ export default function AdminRequests() {
                 {Object.keys(inventoryStock).sort().map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
+                {getAddOnCatalog().length > 0 && (
+                  <optgroup label="Configured Add-ons">
+                    {getAddOnCatalog().map((addon) => (
+                      <option key={`addon-${addon.name}`} value={addon.name}>
+                        {addon.name} - Php {addon.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
-              <p className="m-hint">{newEquipSelection ? `${inventoryStock[newEquipSelection].available} ${inventoryStock[newEquipSelection].unit} available in inventory` : ''}</p>
+              <p className="m-hint">
+                {newEquipSelection && inventoryStock[newEquipSelection]
+                  ? `${inventoryStock[newEquipSelection].available} ${inventoryStock[newEquipSelection].unit} available in inventory`
+                  : newEquipSelection && getAddOnCatalog().some((addon) => addon.name === newEquipSelection)
+                    ? 'Configured add-on price will be included in the estimated bill.'
+                    : ''}
+              </p>
 
               <label className="m-label" style={{ marginTop: '14px' }}>Quantity</label>
               <input type="number" className="m-input" min="1" value={newEquipQty} onChange={(event) => setNewEquipQty(Number(event.target.value))} />
