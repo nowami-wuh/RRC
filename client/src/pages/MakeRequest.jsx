@@ -14,6 +14,23 @@ function generateId(prefix = 'BK') {
 const EMPTY_FORM = { title: '', venue: '', pax: '', date: '', timeStart: '', timeEnd: '' };
 const DEFAULT_SERVICE_AGREEMENT = 'By submitting a booking request, I confirm that the event details I provided are accurate. I understand that this request is subject to RRC availability and admin approval; submitting it does not confirm the booking. RRC will confirm the package, price, payment schedule, and event arrangements with me. I agree to coordinate with RRC and follow the final agreed terms.';
 
+const MARINDUQUE_LOCATIONS = {
+  Boac: ['Agot', 'Agumaymayan', 'Amoingon', 'Apitong', 'Balagasan', 'Balaring', 'Balimbing', 'Balogo', 'Bamban', 'Bangbangalon', 'Bantad', 'Bantay', 'Bayuti', 'Binunga', 'Boi', 'Boton', 'Buliasnin', 'Bunganay', 'Caganhao', 'Canat', 'Catubugan', 'Cawit', 'Daig', 'Daypay', 'Duyay', 'Hinapulan', 'Ihatub', 'Isok I', 'Isok II Poblacion', 'Laylay', 'Lupac', 'Mahinhin', 'Mainit', 'Malbog', 'Maligaya', 'Malusak', 'Mansiwat', 'Mataas na Bayan', 'Maybo', 'Mercado', 'Murallon', 'Ogbac', 'Pawa', 'Pili', 'Poctoy', 'Poras', 'Puting Buhangin', 'Puyog', 'Sabong', 'San Miguel', 'Santol', 'Sawi', 'Tabi', 'Tabigue', 'Tagwak', 'Tambunan', 'Tampus', 'Tanza', 'Tugos', 'Tumagabok', 'Tumapon'],
+  Gasan: ['Antipolo', 'Bachao Ibaba', 'Bachao Ilaya', 'Bacongbacong', 'Bahi', 'Bangbang', 'Banot', 'Banuyo', 'Barangay I', 'Barangay II', 'Barangay III', 'Bognuyan', 'Cabugao', 'Dawis', 'Dili', 'Libtangin', 'Mahunig', 'Mangiliol', 'Masiga', 'Matandang Gasan', 'Pangi', 'Pingan', 'Tabionan', 'Tapuyan', 'Tiguion'],
+  Mogpog: ['Anapog-Sibucao', 'Argao', 'Balanacan', 'Banto', 'Bintakay', 'Bocboc', 'Butansapa', 'Candahon', 'Capayang', 'Danao', 'Dulong Bayan', 'Gitnang Bayan', 'Guisian', 'Hinadharan', 'Hinanggayon', 'Ino', 'Janagdong', 'Lamesa', 'Laon', 'Magapua', 'Malayak', 'Malusak', 'Mampaitan', 'Mangyan-Mababad', 'Market Site', 'Mataas na Bayan', 'Mendez', 'Nangka I', 'Nangka II', 'Paye', 'Pili', 'Puting Buhangin', 'Sayao', 'Silangan', 'Sumangga', 'Tarug', 'Villa Mendez'],
+  'Sta. Cruz': ['Alobo', 'Angas', 'Aturan', 'Bagong Silang Poblacion', 'Baguidbirin', 'Baliis', 'Balogo', 'Banahaw Poblacion', 'Bangcuangan', 'Banogbog', 'Biga', 'Botilao', 'Buyabod', 'Dating Bayan', 'Devilla', 'Dolores', 'Haguimit', 'Hupi', 'Ipil', 'Jolo', 'Kaganhao', 'Kalangkang', 'Kamandugan', 'Kasily', 'Kilo-kilo', 'Kinyaman', 'Labo', 'Lamesa', 'Landy', 'Lapu-lapu Poblacion', 'Libjo', 'Lipa', 'Lusok', 'Maharlika Poblacion', 'Makulapnit', 'Maniwaya', 'Manlibunan', 'Masaguisi', 'Masalukot', 'Matalaba', 'Mongpong', 'Morales', 'Napo', 'Pag-asa Poblacion', 'Pantayin', 'Polo', 'Pulong-Parang', 'Punong', 'San Antonio', 'San Isidro', 'Tagum', 'Tamayo', 'Tambangan', 'Tawiran', 'Taytay'],
+  Buenavista: ['Bagacay', 'Bagtingon', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV', 'Bicas-bicas', 'Caigangan', 'Daykitin', 'Libas', 'Malbog', 'Sihi', 'Timbo', 'Tungib-Lipata', 'Yook'],
+  Torrijos: ['Bangwayin', 'Bayakbakin', 'Bolo', 'Bonliw', 'Buangan', 'Cabuyo', 'Cagpo', 'Dampulan', 'Kay Duke', 'Mabuhay', 'Makawayan', 'Malibago', 'Malinao', 'Maranlig', 'Marlangga', 'Matuyatuya', 'Nangka', 'Pakaskasan', 'Payanas', 'Poblacion', 'Poctoy', 'Sibuyao', 'Suha', 'Talawan', 'Tigwi'],
+};
+
+function normalizeLocation(value) {
+  return String(value || '').trim().toLowerCase().replace(/[.,-]/g, ' ').replace(/\s+/g, ' ');
+}
+
+function findBarangay(city, value) {
+  return (MARINDUQUE_LOCATIONS[city] || []).find((barangay) => normalizeLocation(barangay) === normalizeLocation(value));
+}
+
 function getLocalDateString() {
   const today = new Date();
   const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -31,6 +48,10 @@ export default function MakeRequest() {
   // Form state (shared event fields)
   const [bookForm, setBookForm] = useState(EMPTY_FORM);
   const [rentForm, setRentForm] = useState(EMPTY_FORM);
+  const [venueLocation, setVenueLocation] = useState({
+    book: { city: '', barangay: '' },
+    rent: { city: '', barangay: '' },
+  });
   const [bookAdditional, setBookAdditional] = useState('');
   const [rentAdditional, setRentAdditional] = useState('');
 
@@ -144,6 +165,7 @@ export default function MakeRequest() {
   const resetFormState = () => {
     setBookForm(EMPTY_FORM);
     setRentForm(EMPTY_FORM);
+    setVenueLocation({ book: { city: '', barangay: '' }, rent: { city: '', barangay: '' } });
     setBookAdditional('');
     setRentAdditional('');
     setSelectedEquipment({});
@@ -164,6 +186,12 @@ export default function MakeRequest() {
     }
     if (!form.title || !form.venue || !form.date || !form.timeStart || !form.timeEnd) {
       setError('Please fill out all required event details.');
+      return;
+    }
+    const location = venueLocation[type];
+    const barangay = findBarangay(location.city, location.barangay);
+    if (!location.city || !barangay) {
+      setError('Please choose a city and select a valid barangay from the suggestions.');
       return;
     }
     if (form.date <= getLocalDateString()) {
@@ -197,7 +225,7 @@ export default function MakeRequest() {
       id,
       customerId: user.id,
       title: form.title,
-      venue: form.venue,
+      venue: `${barangay}, ${location.city}`,
       pax: form.pax,
       date: form.date,
       timeStart: form.timeStart,
@@ -268,11 +296,10 @@ export default function MakeRequest() {
   }
 
   // ── Form Fields renderer ────────────────────────────────────────────────────
-  const renderFields = (formValues, setForm) => (
+  const renderFields = (formValues, setForm, formKey) => (
     <div className="form-fields">
       {[
         { label: 'Title of Event', key: 'title', type: 'text' },
-        { label: 'Venue', key: 'venue', type: 'text' },
         { label: 'No. of Guests', key: 'pax', type: 'number' },
         { label: 'Date', key: 'date', type: 'date' },
         { label: 'Time Start', key: 'timeStart', type: 'time' },
@@ -290,6 +317,54 @@ export default function MakeRequest() {
           />
         </div>
       ))}
+      <div className="field-row venue-field-row">
+        <label className="field-label" htmlFor={`${formKey}-venue-barangay`}>Venue</label>
+        <div className="venue-fields">
+          <select
+            className="field-input venue-city-input"
+            value={venueLocation[formKey].city}
+            onChange={(event) => {
+              const city = event.target.value;
+              setVenueLocation((previous) => ({
+                ...previous,
+                [formKey]: { city, barangay: '' },
+              }));
+              setForm((previous) => ({ ...previous, venue: '' }));
+            }}
+            required
+          >
+            <option value="">Select city</option>
+            {Object.keys(MARINDUQUE_LOCATIONS).map((city) => <option key={city} value={city}>{city}</option>)}
+          </select>
+          <input
+            id={`${formKey}-venue-barangay`}
+            className="field-input venue-barangay-input"
+            type="text"
+            list={`${formKey}-barangay-options`}
+            placeholder={venueLocation[formKey].city ? 'Start typing barangay...' : 'Select a city first'}
+            value={venueLocation[formKey].barangay}
+            disabled={!venueLocation[formKey].city}
+            onChange={(event) => {
+              const barangayValue = event.target.value;
+              const selectedBarangay = findBarangay(venueLocation[formKey].city, barangayValue);
+              setVenueLocation((previous) => ({
+                ...previous,
+                [formKey]: { ...previous[formKey], barangay: barangayValue },
+              }));
+              setForm((previous) => ({
+                ...previous,
+                venue: selectedBarangay ? `${selectedBarangay}, ${venueLocation[formKey].city}` : '',
+              }));
+            }}
+            required
+          />
+          <datalist id={`${formKey}-barangay-options`}>
+            {(MARINDUQUE_LOCATIONS[venueLocation[formKey].city] || []).map((barangay) => (
+              <option key={barangay} value={barangay} />
+            ))}
+          </datalist>
+        </div>
+      </div>
     </div>
   );
 
@@ -329,7 +404,7 @@ export default function MakeRequest() {
             </div>
 
             <p className="form-instruction"><em>Kindly fill out the following event details.</em></p>
-            {renderFields(bookForm, setBookForm)}
+            {renderFields(bookForm, setBookForm, 'book')}
 
             <p className="form-instruction additional-label"><em>If you have any additional requirements, please specify.</em></p>
             <textarea
@@ -368,7 +443,7 @@ export default function MakeRequest() {
             <hr className="form-divider" />
 
             <p className="form-instruction"><em>Kindly fill out the following event details.</em></p>
-            {renderFields(rentForm, setRentForm)}
+            {renderFields(rentForm, setRentForm, 'rent')}
 
             {/* Equipment Dropdown */}
             <div className="equipment-dropdown-wrapper">

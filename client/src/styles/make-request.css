@@ -174,6 +174,47 @@
   background-color: #f0f5ff;
 }
 
+.venue-field-row {
+  align-items: stretch;
+}
+
+.venue-fields {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(220px, 1.2fr);
+}
+
+.venue-fields .field-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-left: 1px solid #d5dced;
+}
+
+.venue-city-input {
+  cursor: pointer;
+}
+
+.venue-barangay-input:disabled {
+  color: #8a8f9c;
+  background: #f4f5f8;
+  cursor: not-allowed;
+}
+
+@media (max-width: 620px) {
+  .venue-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .venue-fields .field-input {
+    border-left: none;
+    border-bottom: 1px solid #d5dced;
+  }
+
+  .venue-fields .field-input:last-of-type {
+    border-bottom: none;
+  }
+}
+
 /* ── Additional Notes ───────────────────────────────────────────────────── */
 .additional-label {
   margin-top: 4px;
