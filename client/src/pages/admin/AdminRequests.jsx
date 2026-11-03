@@ -287,6 +287,11 @@ const statusLabels = {
   cancelled: 'CANCELLED',
 };
 
+function getStatusCategory(status) {
+  const normalizedStatus = String(status || 'pending').toLowerCase();
+  return normalizedStatus === 'awaitingpayment' ? 'approved' : normalizedStatus;
+}
+
 const statusPositions = { pending: '0%', approved: '16.666%', upcoming: '33.333%', completed: '50%', denied: '66.666%', cancelled: '83.333%' };
 const statusIndexes = { pending: 0, approved: 1, upcoming: 2, completed: 3, denied: 4, cancelled: 5 };
 
@@ -373,8 +378,7 @@ export default function AdminRequests() {
         const apiRequests = data.requests || [];
         const next = createEmptyBookings();
         apiRequests.forEach((req) => {
-          let category = req.status ? req.status.toLowerCase() : 'pending';
-          if (category === 'awaitingpayment') category = 'approved';
+          const category = getStatusCategory(req.status);
           if (!next[category]) next[category] = [];
 
           const eventSchedule = formatEventSchedule(req.event);
@@ -400,6 +404,7 @@ export default function AdminRequests() {
             equipment: req.equipment || {},
             billing: req.billing || {},
             payment: req.payment || null,
+            reason: req.denialReason || '',
             addonFee: req.billing?.addonFee || 0,
             mobilizationFee: req.billing?.mobilizationFee || 0,
             promoApplied: false,
@@ -564,8 +569,19 @@ export default function AdminRequests() {
     if (extra.package !== undefined) apiPayload.package = extra.package;
     if (extra.equipment !== undefined) apiPayload.equipment = extra.equipment;
     if (extra.billing !== undefined) apiPayload.billing = extra.billing;
+    if (extra.reason !== undefined) apiPayload.denialReason = extra.reason;
+    let persistedStatus = getStatusCategory(newStatus);
+    let persistedExtra = extra;
     try {
-      await updateAdminRequest(id, apiPayload);
+      const response = await updateAdminRequest(id, apiPayload);
+      const persistedRequest = response.request || {};
+      persistedStatus = getStatusCategory(persistedRequest.status || newStatus);
+      persistedExtra = {
+        ...extra,
+        ...(persistedRequest.denialReason !== undefined
+          ? { reason: persistedRequest.denialReason || '' }
+          : {}),
+      };
     } catch (error) {
       showToastMessage(error.message || `Unable to update booking ${id}.`, true);
       return;
@@ -577,8 +593,8 @@ export default function AdminRequests() {
         const idx = next[statusKey].findIndex((booking) => booking.id === id);
         if (idx >= 0) {
           const booking = next[statusKey].splice(idx, 1)[0];
-          const updated = { ...booking, status: newStatus, ...extra };
-          if (next[newStatus]) next[newStatus].unshift(updated);
+          const updated = { ...booking, status: persistedStatus, ...persistedExtra };
+          if (next[persistedStatus]) next[persistedStatus].unshift(updated);
           break;
         }
       }
@@ -587,9 +603,9 @@ export default function AdminRequests() {
 
     setDetailState(null);
     setCurrentEquipment({});
-    setCurrentStatus(newStatus);
-    setActiveSection(newStatus === 'pending' ? 'approval' : 'billing');
-    showToastMessage(`Booking ${id} moved to ${newStatus}.`);
+    setCurrentStatus(persistedStatus);
+    setActiveSection(persistedStatus === 'pending' ? 'approval' : 'billing');
+    showToastMessage(`Booking ${id} moved to ${persistedStatus}.`);
   };
 
   const cancelRequest = async (id) => {
@@ -1210,7 +1226,7 @@ export default function AdminRequests() {
             {selectedBooking?.status === 'upcoming' && (
               <div className="status-banner upcoming-banner">
                 <div className="banner-text">
-                  <strong>{selectedBooking.booking.billing?.fullyPaid ? 'Fully Paid &amp; Confirmed.' : 'Downpayment Paid &amp; Confirmed.'}</strong>{' '}
+                  <strong>{selectedBooking.booking.billing?.fullyPaid ? 'Fully Paid & Confirmed.' : 'Downpayment Paid & Confirmed.'}</strong>{' '}
                   {selectedBooking.booking.billing?.fullyPaid
                     ? 'The full event amount has been recorded as paid.'
                     : 'This event is scheduled and awaiting its date.'}
