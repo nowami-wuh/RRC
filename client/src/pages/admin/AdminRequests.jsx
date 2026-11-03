@@ -792,7 +792,7 @@ export default function AdminRequests() {
   };
 
   const getAddOnCatalog = () => pricingPackages
-    .filter((item) => ['equipment', 'effects'].includes(item.section))
+    .filter((item) => ['equipment', 'effects'].includes(String(item.section || '').toLowerCase()))
     .map((item) => ({
       name: item.name,
       price: Number(item.price) || 0,
@@ -800,12 +800,24 @@ export default function AdminRequests() {
     }));
 
   const getAddOnFee = (booking) => {
-    const selectedAddOns = currentEquipment['ADD-ONS'] || [];
-    if (selectedAddOns.length === 0) return null;
-
     const catalog = getAddOnCatalog();
-    return selectedAddOns.reduce((total, item) => {
-      const configuredAddon = catalog.find((addon) => addon.name === item.name);
+    const selectedAddOns = Object.entries(currentEquipment).flatMap(([category, items]) => items
+      .filter((item) => category === 'ADD-ONS' || catalog.some((addon) =>
+        String(addon.name).trim().toLowerCase() === String(item.name).trim().toLowerCase(),
+      )));
+
+    const pricedAddOns = selectedAddOns.filter((item) => {
+      const configuredAddon = catalog.find((addon) =>
+        String(addon.name).trim().toLowerCase() === String(item.name).trim().toLowerCase(),
+      );
+      return configuredAddon || Number(item.price) > 0 || Number(item.promoPrice) > 0;
+    });
+    if (pricedAddOns.length === 0) return null;
+
+    return pricedAddOns.reduce((total, item) => {
+      const configuredAddon = catalog.find((addon) =>
+        String(addon.name).trim().toLowerCase() === String(item.name).trim().toLowerCase(),
+      );
       const regularPrice = Number(item.price ?? configuredAddon?.price) || 0;
       const promoPrice = Number(item.promoPrice ?? configuredAddon?.promo) || 0;
       const unitPrice = booking.promoApplied && promoPrice > 0 ? promoPrice : regularPrice;
