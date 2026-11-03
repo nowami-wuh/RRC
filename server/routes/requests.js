@@ -128,7 +128,9 @@ router.get('/', (req, res) => {
       res.status(500).json({ error: error.message || 'Unable to load requests' });
     });
 
-    router.post('/:requestCode/downpayment-receipt', async (req, res) => {
+  });
+
+router.post('/:requestCode/downpayment-receipt', async (req, res) => {
       try {
         const { requestCode } = req.params;
         const { customerId, image } = req.body || {};
@@ -182,7 +184,6 @@ router.get('/', (req, res) => {
       } catch (error) {
         res.status(500).json({ error: error.message || 'Unable to submit downpayment receipt.' });
       }
-    });
 });
 
 // Client-side cancel (only allowed from pending / approved / awaitingpayment)

@@ -1123,12 +1123,12 @@ export default function AdminRequests() {
                   )}
                 </div>
                 <div className="payment-review-actions">
-                  {selectedBooking.booking.payment?.receiptMessageId && (
+                  {(selectedBooking.booking.payment?.status === 'submitted' || selectedBooking.booking.payment?.receiptMessageId) && (
                     <button
                       className="btn-view-receipt"
                       onClick={() => navigate('/admin/inquiries', {
                         state: {
-                          selectCustomerId: selectedBooking.booking.customerId,
+                          selectCustomerId: String(selectedBooking.booking.customerId || ''),
                           selectMessageId: selectedBooking.booking.payment.receiptMessageId,
                         },
                       })}
