@@ -830,6 +830,7 @@
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 .mr-modal {
+  box-sizing: border-box;
   background: white;
   border-radius: 12px;
   padding: 36px 32px 28px;
@@ -838,6 +839,11 @@
   text-align: center;
   box-shadow: 0 12px 48px rgba(0,0,0,0.2);
   animation: modal-in 0.25s ease;
+}
+.receipt-modal {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 @keyframes modal-in {
   from { opacity: 0; transform: scale(0.94) translateY(10px); }
@@ -926,7 +932,15 @@
   border-radius: 8px;
   margin-bottom: 16px;
 }
-.mr-modal-actions { display: flex; gap: 12px; justify-content: center; }
+.mr-modal-actions {
+  position: sticky;
+  bottom: -1px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding-top: 8px;
+  background: #fff;
+}
 .mr-modal-back {
   padding: 11px 28px;
   border-radius: 6px;
