@@ -100,6 +100,41 @@ router.get('/requests', async (req, res) => {
   }
 });
 
+router.delete('/requests/:requestCode', async (req, res) => {
+  try {
+    const { requestCode } = req.params;
+    const rows = await query('SELECT * FROM requests WHERE request_code = ? LIMIT 1', [requestCode]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    const request = rows[0];
+    await releaseEquipmentStock(parseEquipmentList(request.equipment_json));
+
+    const event = parseJson(request.event_json, {});
+    const eventDate = event.date ? formatYMD(event.date) : null;
+    if (eventDate) {
+      const eventRows = await query('SELECT events_json FROM events WHERE event_date = ? LIMIT 1', [eventDate]);
+      if (eventRows.length > 0) {
+        const remainingEvents = parseJson(eventRows[0].events_json, [])
+          .filter((entry) => entry.bookingId !== requestCode);
+        if (remainingEvents.length > 0) {
+          await execute('UPDATE events SET events_json = ? WHERE event_date = ?', [safeJson(remainingEvents), eventDate]);
+        } else {
+          await execute('DELETE FROM events WHERE event_date = ?', [eventDate]);
+        }
+      }
+    }
+
+    await execute('DELETE FROM notifications WHERE request_code = ?', [requestCode]);
+    await execute('DELETE FROM request_payments WHERE request_code = ?', [requestCode]);
+    await execute('DELETE FROM requests WHERE request_code = ?', [requestCode]);
+    res.json({ deleted: requestCode });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Unable to delete request' });
+  }
+});
+
 router.patch('/requests/:requestCode', async (req, res) => {
   try {
     const { requestCode } = req.params;

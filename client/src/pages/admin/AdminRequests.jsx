@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchAdminPackages, fetchAdminRequests, updateAdminRequest } from '../../api/api';
+import { deleteAdminRequest, fetchAdminPackages, fetchAdminRequests, updateAdminRequest } from '../../api/api';
 
 const initialBookings = {
   pending: [
@@ -363,6 +363,7 @@ export default function AdminRequests() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectReasonError, setRejectReasonError] = useState('');
+  const longPressTimersRef = useRef(new Map());
 
   // Populate the page from persisted requests; never expose sample bookings as actionable data.
   useEffect(() => {
@@ -626,6 +627,55 @@ export default function AdminRequests() {
       `Cancel request ${booking.id}? The client will be notified and this request will move to Cancelled.`,
       () => cancelRequest(booking.id),
     );
+  };
+
+  const deleteRequest = async (id) => {
+    const result = findBooking(id);
+    if (!result) return;
+
+    setCancelingRequestId(id);
+    try {
+      await deleteAdminRequest(id);
+      setBookings((prev) => {
+        const next = cloneData(prev);
+        for (const statusKey of Object.keys(next)) {
+          next[statusKey] = next[statusKey].filter((booking) => booking.id !== id);
+        }
+        return next;
+      });
+      if (detailState?.bookingId === id) {
+        setDetailState(null);
+        setCurrentEquipment({});
+      }
+      showToastMessage(`Request ${id} deleted.`);
+    } catch (error) {
+      showToastMessage(error.message || `Unable to delete request ${id}.`, true);
+    } finally {
+      setCancelingRequestId(null);
+    }
+  };
+
+  const confirmDeleteRequest = (booking) => {
+    openConfirm(
+      'Delete Request',
+      `Delete request ${booking.id}? This permanently removes the request and cannot be undone.`,
+      () => deleteRequest(booking.id),
+    );
+  };
+
+  const startRequestLongPress = (event, booking) => {
+    if (event.pointerType === 'mouse' || event.target.closest('button')) return;
+    const timer = window.setTimeout(() => {
+      longPressTimersRef.current.delete(booking.id);
+      confirmDeleteRequest(booking);
+    }, 700);
+    longPressTimersRef.current.set(booking.id, timer);
+  };
+
+  const clearRequestLongPress = (booking) => {
+    const timer = longPressTimersRef.current.get(booking.id);
+    if (timer) window.clearTimeout(timer);
+    longPressTimersRef.current.delete(booking.id);
   };
 
   const selectPackage = (pkg) => {
@@ -999,7 +1049,18 @@ export default function AdminRequests() {
                 <p className="empty-msg">No bookings in this category.</p>
               ) : (
                 visibleList.map((booking) => (
-                  <div key={booking.id} className="booking-card">
+                  <div
+                    key={booking.id}
+                    className="booking-card"
+                    onDoubleClick={(event) => {
+                      if (!event.target.closest('button')) confirmDeleteRequest(booking);
+                    }}
+                    onPointerDown={(event) => startRequestLongPress(event, booking)}
+                    onPointerUp={() => clearRequestLongPress(booking)}
+                    onPointerCancel={() => clearRequestLongPress(booking)}
+                    onPointerLeave={() => clearRequestLongPress(booking)}
+                    onContextMenu={(event) => event.preventDefault()}
+                  >
                     <div className="bc-top">
                       <div>
                         <span className="bc-id-label">{booking.requestType === 'rent' ? 'REQUEST ID' : 'BOOKING ID'}</span>

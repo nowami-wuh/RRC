@@ -4148,6 +4148,10 @@ body {
     padding: 18px 22px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.07);
 }
+.requests-admin-page .booking-card {
+    touch-action: manipulation;
+    user-select: none;
+}
 .requests-admin-page .bc-top {
     display: flex;
     align-items: center;

@@ -179,6 +179,12 @@ export function updateAdminRequest(requestCode, payload) {
   });
 }
 
+export function deleteAdminRequest(requestCode) {
+  return request(`/admin/requests/${encodeURIComponent(requestCode)}`, {
+    method: 'DELETE',
+  });
+}
+
 export function updateAdminRequestStatus(requestCode, status) {
   return updateAdminRequest(requestCode, { status });
 }
