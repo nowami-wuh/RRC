@@ -298,6 +298,44 @@ function peso(value) {
   return `Php ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function timeToMinutes(value) {
+  const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return null;
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const period = match[3]?.toUpperCase();
+  if (minutes > 59 || hours > 23 || (period && hours > 12)) return null;
+  if (period) {
+    if (hours === 12) hours = 0;
+    if (period === 'PM') hours += 12;
+  }
+  return hours * 60 + minutes;
+}
+
+function getNextEventDate(date) {
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return null;
+  parsedDate.setDate(parsedDate.getDate() + 1);
+  return parsedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function formatEventSchedule(event) {
+  const date = event?.date || '';
+  const startTime = event?.timeStart || '';
+  const endTime = event?.timeEnd || '';
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = timeToMinutes(endTime);
+  const isOvernight = startMinutes !== null && endMinutes !== null && endMinutes < startMinutes;
+  const isDateRange = /\s[-–]\s|[A-Za-z]+\s+\d{1,2}\s*-\s*\d{1,2}/.test(String(date));
+  const nextDate = isOvernight && !isDateRange ? getNextEventDate(date) : null;
+
+  return {
+    date: nextDate ? `${date} - ${nextDate}` : date,
+    time: startTime && endTime ? `${startTime} - ${endTime}` : startTime || endTime || 'All Day',
+  };
+}
+
 export default function AdminRequests() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -338,6 +376,7 @@ export default function AdminRequests() {
           if (category === 'awaitingpayment') category = 'approved';
           if (!next[category]) next[category] = [];
 
+          const eventSchedule = formatEventSchedule(req.event);
           const formattedReq = {
             id: req.id,
             event: req.event?.title || 'Event',
@@ -350,8 +389,8 @@ export default function AdminRequests() {
             },
             eventDetails: {
               name: req.event?.title || 'Event',
-              date: req.event?.date || '',
-              time: req.event?.timeStart && req.event?.timeEnd ? `${req.event.timeStart} - ${req.event.timeEnd}` : req.event?.timeStart || 'All Day',
+              date: eventSchedule.date,
+              time: eventSchedule.time,
               venue: req.event?.venue || '',
               pax: req.event?.pax || 0,
             },

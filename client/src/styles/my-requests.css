@@ -712,10 +712,28 @@
 .billing-row.downpayment-required .billing-label { color: #4f6f9f; }
 .billing-row.downpayment-required .billing-value {
   color: #4f6f9f;
-  font-size: 17px;
+  font-size: 13px;
   font-weight: 700;
   font-style: normal;
 }
+.billing-payment-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.billing-send-btn {
+  border: 1px solid #4f6f9f;
+  border-radius: 5px;
+  background: #fff;
+  color: #4f6f9f;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.billing-send-btn:hover:not(:disabled) { background: #edf3fb; }
+.billing-send-btn:disabled { opacity: 0.65; cursor: default; }
 .billing-note {
   font-size: 12px;
   color: var(--text-gray);
@@ -858,6 +876,33 @@
   border: 1px solid #dde4f0;
   border-radius: 8px;
   margin: 0 auto 14px;
+}
+.payment-method-window {
+  border: 1px solid #dde4f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+.payment-method-title {
+  color: var(--dark-blue);
+  font-family: 'Garet Heavy', sans-serif;
+  font-size: 12px;
+  margin-bottom: 9px;
+}
+.payment-method-qr {
+  display: block;
+  width: min(190px, 100%);
+  max-height: 190px;
+  object-fit: contain;
+  margin: 0 auto 10px;
+  background: #fff;
+}
+.payment-method-details {
+  color: var(--text-gray);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: left;
 }
 .mr-modal-title {
   font-family: 'Garet Heavy', sans-serif;

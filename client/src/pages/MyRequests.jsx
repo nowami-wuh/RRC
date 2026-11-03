@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchRequests, cancelRequest, submitDownpaymentReceipt } from '../api/api';
+import { fetchRequests, cancelRequest, fetchAboutInfo, submitDownpaymentReceipt } from '../api/api';
 import '../styles/my-requests.css';
 
 // ── Status Tab Config ───────────────────────────────────────────────────────────
@@ -259,7 +259,7 @@ function RentItemsSection({ equipment }) {
 
 // ── Billing Section ─────────────────────────────────────────────────────────────
 
-function BillingSection({ billing, pkg, status }) {
+function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   if (!billing && !pkg) return null;
 
   const b = billing || {};
@@ -275,6 +275,7 @@ function BillingSection({ billing, pkg, status }) {
 
   const effectiveBase = promoApplied && promoPrice > 0 ? promoPrice : basePrice;
   const total = effectiveBase + addonsTotal + mobilization + extensionAmt;
+  const requiredDownpayment = Number(b.downpaymentAmount) || total * 0.2;
   const balance = total - downpayment;
 
   if (total === 0 && downpayment === 0) {
@@ -339,7 +340,17 @@ function BillingSection({ billing, pkg, status }) {
         {isApproved && total > 0 && (
           <div className="billing-row downpayment-required">
             <span className="billing-label">Downpayment Required</span>
-            <span className="billing-value">{formatCurrency(total * 0.2)}</span>
+            <span className="billing-payment-action">
+              <span className="billing-value">{formatCurrency(requiredDownpayment)}</span>
+              <button
+                type="button"
+                className="billing-send-btn"
+                onClick={onSendReceipt}
+                disabled={payment?.status === 'submitted' || payment?.status === 'paid'}
+              >
+                {payment?.status === 'submitted' ? 'Sent' : payment?.status === 'paid' ? 'Paid' : 'Send'}
+              </button>
+            </span>
           </div>
         )}
 
@@ -566,7 +577,13 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
           {(showBilling || showPackage) && (
             <>
               <hr className="card-divider" />
-              <BillingSection billing={req.billing} pkg={req.package} status={req.status} />
+              <BillingSection
+                billing={req.billing}
+                pkg={req.package}
+                status={req.status}
+                payment={req.payment}
+                onSendReceipt={() => onNavigate('receipt', req)}
+              />
             </>
           )}
 
@@ -623,6 +640,12 @@ export default function MyRequests() {
   const [receiptPreview, setReceiptPreview] = useState('');
   const [receiptError, setReceiptError] = useState('');
   const [receiptSubmitting, setReceiptSubmitting] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState({
+    gcash_qr: '',
+    bank_name: '',
+    bank_account_number: '',
+    bank_account_name: '',
+  });
   const [searchId,    setSearchId]    = useState(location.state?.searchId || '');
   const highlightRef = useRef(null);
   const tabsBarRef   = useRef(null);
@@ -640,6 +663,14 @@ export default function MyRequests() {
   }, [user?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    fetchAboutInfo()
+      .then((data) => {
+        if (data?.about) setPaymentInfo((current) => ({ ...current, ...data.about }));
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (location.state?.searchId) {
@@ -918,6 +949,22 @@ export default function MyRequests() {
               Attach a clear invoice or payment receipt for <strong>{receiptModal.id}</strong>.
               It will be sent to the admin chat for verification.
             </p>
+            <div className="payment-method-window">
+              <div className="payment-method-title">Admin Payment Details</div>
+              {paymentInfo.gcash_qr && (
+                <img className="payment-method-qr" src={paymentInfo.gcash_qr} alt="Admin GCash or bank payment QR code" />
+              )}
+              {(paymentInfo.bank_name || paymentInfo.bank_account_number || paymentInfo.bank_account_name) && (
+                <div className="payment-method-details">
+                  {paymentInfo.bank_name && <div><strong>Bank / Wallet:</strong> {paymentInfo.bank_name}</div>}
+                  {paymentInfo.bank_account_name && <div><strong>Account Name:</strong> {paymentInfo.bank_account_name}</div>}
+                  {paymentInfo.bank_account_number && <div><strong>Account Number:</strong> {paymentInfo.bank_account_number}</div>}
+                </div>
+              )}
+              {!paymentInfo.gcash_qr && !paymentInfo.bank_name && (
+                <div className="billing-note">Payment details are available through the admin chat.</div>
+              )}
+            </div>
             <label className="receipt-upload-label">
               Choose Invoice Image
               <input type="file" accept="image/*" onChange={handleReceiptChange} />
