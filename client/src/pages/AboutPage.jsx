@@ -114,29 +114,30 @@ export default function AboutPage() {
       }
     };
 
-    const updatePaymentMethod = (index, field, value) => {
-      setFormData((previous) => ({
-        ...previous,
-        payment_methods: previous.payment_methods.map((method, methodIndex) =>
-          methodIndex === index ? { ...method, [field]: value } : method),
-      }));
-    };
-
-    const addPaymentMethod = () => {
-      setFormData((previous) => ({
-        ...previous,
-        payment_methods: [...previous.payment_methods, emptyPaymentMethod()],
-      }));
-    };
-
-    const removePaymentMethod = (index) => {
-      setFormData((previous) => ({
-        ...previous,
-        payment_methods: previous.payment_methods.filter((_, methodIndex) => methodIndex !== index),
-      }));
-    };
     reader.onerror = () => setMsg({ text: 'Unable to read the selected QR image.', type: 'error' });
     reader.readAsDataURL(file);
+  };
+
+  const updatePaymentMethod = (index, field, value) => {
+    setFormData((previous) => ({
+      ...previous,
+      payment_methods: previous.payment_methods.map((method, methodIndex) =>
+        methodIndex === index ? { ...method, [field]: value } : method),
+    }));
+  };
+
+  const addPaymentMethod = () => {
+    setFormData((previous) => ({
+      ...previous,
+      payment_methods: [...previous.payment_methods, emptyPaymentMethod()],
+    }));
+  };
+
+  const removePaymentMethod = (index) => {
+    setFormData((previous) => ({
+      ...previous,
+      payment_methods: previous.payment_methods.filter((_, methodIndex) => methodIndex !== index),
+    }));
   };
 
   return (
