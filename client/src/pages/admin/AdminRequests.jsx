@@ -1173,7 +1173,7 @@ export default function AdminRequests() {
                 <div className="banner-text">
                   {selectedBooking.booking.payment?.status === 'submitted' ? (
                     <>
-                      <strong>Receipt Submitted.</strong> The customer sent a downpayment invoice. Review the image below before marking it as paid.
+                      <strong>Downpayment Receipt Submitted.</strong> The customer sent an invoice for booking <strong>{selectedBooking.booking.id}</strong>. Review it before marking the downpayment as paid.
                       {selectedBooking.booking.payment.receiptImage && (
                         <img className="payment-receipt-link" src={selectedBooking.booking.payment.receiptImage} alt="Customer downpayment invoice" />
                       )}
@@ -1185,7 +1185,7 @@ export default function AdminRequests() {
                   )}
                 </div>
                 <div className="payment-review-actions">
-                  {(selectedBooking.booking.payment?.status === 'submitted' || selectedBooking.booking.payment?.receiptMessageId) && (
+                  {selectedBooking.booking.payment?.status === 'submitted' && selectedBooking.booking.payment?.receiptMessageId && (
                     <button
                       className="btn-view-receipt"
                       onClick={() => navigate('/admin/inquiries', {

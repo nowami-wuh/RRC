@@ -165,11 +165,23 @@ router.patch('/requests/:requestCode', async (req, res) => {
     );
 
     if (hasDownpayment) {
+      const existingPaymentRows = await query(
+        'SELECT receipt_message_id, receipt_image FROM request_payments WHERE request_code = ? LIMIT 1',
+        [requestCode],
+      );
+      const existingPayment = existingPaymentRows[0] || {};
       await execute(
-        `INSERT INTO request_payments (request_code, status, amount, payment_method, receipt_message_id)
-         VALUES (?, 'paid', ?, ?, ?)
-         ON DUPLICATE KEY UPDATE status = 'paid', amount = VALUES(amount), payment_method = VALUES(payment_method), receipt_message_id = VALUES(receipt_message_id)`,
-        [requestCode, nextBilling.downpaymentAmount || null, nextBilling.paymentMethod || null, nextBilling.receiptMessageId || null],
+        `INSERT INTO request_payments (request_code, status, amount, payment_method, receipt_message_id, receipt_image)
+         VALUES (?, 'paid', ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE status = 'paid', amount = VALUES(amount), payment_method = VALUES(payment_method),
+           receipt_message_id = VALUES(receipt_message_id), receipt_image = VALUES(receipt_image)`,
+        [
+          requestCode,
+          nextBilling.downpaymentAmount || null,
+          nextBilling.paymentMethod || null,
+          nextBilling.receiptMessageId || existingPayment.receipt_message_id || null,
+          existingPayment.receipt_image || null,
+        ],
       );
     }
 
