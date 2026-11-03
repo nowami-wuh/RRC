@@ -310,12 +310,22 @@ function timeToMinutes(value) {
   let hours = Number(match[1]);
   const minutes = Number(match[2]);
   const period = match[3]?.toUpperCase();
-  if (minutes > 59 || hours > 23 || (period && hours > 12)) return null;
+  if (minutes > 59 || hours > 23 || (period && (hours < 1 || hours > 12))) return null;
   if (period) {
     if (hours === 12) hours = 0;
     if (period === 'PM') hours += 12;
   }
   return hours * 60 + minutes;
+}
+
+function formatTime12Hour(value) {
+  const minutes = timeToMinutes(value);
+  if (minutes === null) return String(value || '');
+
+  const hours24 = Math.floor(minutes / 60);
+  const hours12 = hours24 % 12 || 12;
+  const period = hours24 >= 12 ? 'PM' : 'AM';
+  return `${hours12}:${String(minutes % 60).padStart(2, '0')} ${period}`;
 }
 
 function getNextEventDate(date) {
@@ -334,10 +344,14 @@ function formatEventSchedule(event) {
   const isOvernight = startMinutes !== null && endMinutes !== null && endMinutes < startMinutes;
   const isDateRange = /\s[-–]\s|[A-Za-z]+\s+\d{1,2}\s*-\s*\d{1,2}/.test(String(date));
   const nextDate = isOvernight && !isDateRange ? getNextEventDate(date) : null;
+  const formattedStartTime = formatTime12Hour(startTime);
+  const formattedEndTime = formatTime12Hour(endTime);
 
   return {
     date: nextDate ? `${date} - ${nextDate}` : date,
-    time: startTime && endTime ? `${startTime} - ${endTime}` : startTime || endTime || 'All Day',
+    time: startTime && endTime
+      ? `${formattedStartTime} - ${formattedEndTime}${isOvernight ? ' (Next day)' : ''}`
+      : formattedStartTime || formattedEndTime || 'All Day',
   };
 }
 
