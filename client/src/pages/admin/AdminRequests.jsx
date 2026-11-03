@@ -404,7 +404,7 @@ export default function AdminRequests() {
             equipment: req.equipment || {},
             billing: req.billing || {},
             payment: req.payment || null,
-            reason: req.denialReason || '',
+            denialReason: req.denialReason || '',
             addonFee: req.billing?.addonFee || 0,
             mobilizationFee: req.billing?.mobilizationFee || 0,
             promoApplied: false,
@@ -579,7 +579,7 @@ export default function AdminRequests() {
       persistedExtra = {
         ...extra,
         ...(persistedRequest.denialReason !== undefined
-          ? { reason: persistedRequest.denialReason || '' }
+          ? { denialReason: persistedRequest.denialReason || '' }
           : {}),
       };
     } catch (error) {
@@ -756,7 +756,7 @@ export default function AdminRequests() {
     const qty = Number(newEquipQty);
 
     if (!name) {
-      setAddEquipError('Please select an equipment item from inventory.');
+      setAddEquipError('Please select a configured add-on.');
       return;
     }
 
@@ -765,14 +765,9 @@ export default function AdminRequests() {
       return;
     }
 
-    const stockItem = inventoryStock[name];
     const configuredAddon = getAddOnCatalog().find((item) => item.name === name);
-    if (!stockItem && !configuredAddon) {
-      setAddEquipError('Please select a valid inventory item or configured add-on.');
-      return;
-    }
-    if (stockItem && qty > stockItem.available) {
-      setAddEquipError(`Only ${stockItem?.available ?? 0} ${stockItem?.unit ?? 'unit'} of "${name}" available in inventory.`);
+    if (!configuredAddon) {
+      setAddEquipError('Please select a configured add-on.');
       return;
     }
 
@@ -1237,7 +1232,7 @@ export default function AdminRequests() {
             {selectedBooking?.status === 'denied' && (
               <div className="status-banner denied-banner">
                 <div className="banner-text">
-                  <strong>Reason for denial:</strong> <span>{selectedBooking.booking.reason || 'No reason provided.'}</span>
+                  <strong>Reason for denial:</strong> <span>{selectedBooking.booking.denialReason || selectedBooking.booking.reason || 'No reason provided.'}</span>
                 </div>
               </div>
             )}
@@ -1426,26 +1421,17 @@ export default function AdminRequests() {
             <div className="modal-body">
               <label className="m-label">Equipment</label>
               <select className="m-input" value={newEquipSelection} onChange={(event) => setNewEquipSelection(event.target.value)}>
-                <option value="">Select from inventory…</option>
-                {Object.keys(inventoryStock).sort().map((name) => (
-                  <option key={name} value={name}>{name}</option>
+                <option value="">Select a configured add-on…</option>
+                {getAddOnCatalog().map((addon) => (
+                  <option key={`addon-${addon.name}`} value={addon.name}>
+                    {addon.name} - Php {addon.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                  </option>
                 ))}
-                {getAddOnCatalog().length > 0 && (
-                  <optgroup label="Configured Add-ons">
-                    {getAddOnCatalog().map((addon) => (
-                      <option key={`addon-${addon.name}`} value={addon.name}>
-                        {addon.name} - Php {addon.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
               </select>
               <p className="m-hint">
-                {newEquipSelection && inventoryStock[newEquipSelection]
-                  ? `${inventoryStock[newEquipSelection].available} ${inventoryStock[newEquipSelection].unit} available in inventory`
-                  : newEquipSelection && getAddOnCatalog().some((addon) => addon.name === newEquipSelection)
-                    ? 'Configured add-on price will be included in the estimated bill.'
-                    : ''}
+                {newEquipSelection && getAddOnCatalog().some((addon) => addon.name === newEquipSelection)
+                  ? 'Configured add-on price will be included in the estimated bill.'
+                  : ''}
               </p>
 
               <label className="m-label" style={{ marginTop: '14px' }}>Quantity</label>
