@@ -534,7 +534,7 @@ export default function AdminRequests() {
 
   const cancelRequest = async (id) => {
     const result = findBooking(id);
-    if (!result || !['pending', 'approved', 'upcoming'].includes(result.status)) return;
+    if (!result || !['approved', 'upcoming'].includes(result.status)) return;
 
     setCancelingRequestId(id);
     try {
@@ -1066,23 +1066,24 @@ export default function AdminRequests() {
                 </div>
               </div>
             )}
-          </div>
 
-          <div className="detail-navigation">
-            <button className="back-btn" onClick={() => { setDetailState(null); setCurrentEquipment({}); }}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
-              Back to Requests
-            </button>
-            {selectedBooking && ['pending', 'approved', 'upcoming'].includes(selectedBooking.status) && (
-              <button
-                className="btn-cancel-request"
-                onClick={() => confirmCancelRequest(selectedBooking.booking)}
-                disabled={cancelingRequestId === selectedBooking.booking.id}
-              >
-                {cancelingRequestId === selectedBooking.booking.id ? 'Cancelling…' : 'Cancel Request'}
-              </button>
+            {selectedBooking && ['approved', 'upcoming'].includes(selectedBooking.status) && (
+              <div className="detail-card-actions">
+                <button
+                  className="btn-cancel-request"
+                  onClick={() => confirmCancelRequest(selectedBooking.booking)}
+                  disabled={cancelingRequestId === selectedBooking.booking.id}
+                >
+                  {cancelingRequestId === selectedBooking.booking.id ? 'Cancelling…' : 'Cancel Request'}
+                </button>
+              </div>
             )}
           </div>
+
+          <button className="back-btn" onClick={() => { setDetailState(null); setCurrentEquipment({}); }}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
+            Back to Requests
+          </button>
         </div>
       </div>
 

@@ -4229,11 +4229,11 @@ body {
     transition: color 0.2s;
 }
 .requests-admin-page .back-btn:hover { color: #2d4a73; }
-.requests-admin-page .detail-navigation {
+.requests-admin-page .detail-card-actions {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
 }
 .requests-admin-page .btn-cancel-request {
     min-height: 42px;
@@ -4781,9 +4781,8 @@ body {
 
 @media (max-width: 640px) {
     .requests-admin-page .main-content { padding: 12px; }
-    .requests-admin-page .detail-navigation { align-items: stretch; flex-direction: column-reverse; }
-    .requests-admin-page .detail-navigation .back-btn,
-    .requests-admin-page .btn-cancel-request { width: 100%; justify-content: center; }
+    .requests-admin-page .detail-card-actions { justify-content: stretch; }
+    .requests-admin-page .detail-card-actions .btn-cancel-request { width: 100%; }
     .requests-admin-page .status-bar {
         margin-bottom: 10px;
         padding: 0;
