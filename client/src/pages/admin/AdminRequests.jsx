@@ -1220,6 +1220,7 @@ export default function AdminRequests() {
                         selectCustomerId: String(selectedBooking.booking.customerId || ''),
                         selectMessageId: selectedBooking.booking.payment?.receiptMessageId || null,
                         selectRequestCode: selectedBooking.booking.id,
+                        openReceipt: true,
                       },
                     })}
                   >

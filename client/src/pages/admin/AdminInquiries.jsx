@@ -121,6 +121,7 @@ export default function AdminInquiries() {
   const selectCustomerName = location.state?.selectCustomerName || null;
   const selectMessageId = location.state?.selectMessageId || null;
   const selectRequestCode = location.state?.selectRequestCode || null;
+  const openReceipt = location.state?.openReceipt === true;
 
   useEffect(() => {
     Promise.all([fetchAdminInquiries(), fetchAdminRequests()])
@@ -309,7 +310,7 @@ export default function AdminInquiries() {
   });
 
   useEffect(() => {
-    if ((!selectMessageId && !selectRequestCode) || !activeMessages.length) return;
+    if (!openReceipt || (!selectMessageId && !selectRequestCode) || !activeMessages.length) return;
     const requestCode = String(selectRequestCode || '');
     const message = activeMessages.find((item) => (
       (selectMessageId && String(item.id) === String(selectMessageId))
@@ -324,7 +325,7 @@ export default function AdminInquiries() {
     const timer = window.setTimeout(() => scrollToMessage(message.id), 0);
     navigate('/admin/inquiries', { replace: true, state: {} });
     return () => window.clearTimeout(timer);
-  }, [selectMessageId, selectRequestCode, activeMessages, navigate]);
+  }, [openReceipt, selectMessageId, selectRequestCode, activeMessages, navigate]);
 
   const handleSelectConversation = (conversationId) => {
     setActiveConv(conversationId);
@@ -674,6 +675,14 @@ export default function AdminInquiries() {
               {activeMessages.map((msg, index) => {
                 const isOutgoing = msg.senderRole === 'admin' || msg.type === 'sent';
                 const isReceiptImage = !isOutgoing && msg.image;
+                const receiptRequestCode = requestCodeFromMessage(msg);
+                const receiptRequest = receiptRequestCode
+                  ? adminRequests.find((req) => String(req.id) === String(receiptRequestCode))
+                  : activeBookingRequest;
+                const receiptIsPaid = receiptRequest?.payment?.status === 'paid'
+                  || receiptRequest?.billing?.downpaymentStatus === 'paid'
+                  || receiptRequest?.billing?.downpaymentPaid === true
+                  || receiptRequest?.billing?.paymentStatus === 'paid';
                 const currentDateHeader = getMessageDateHeader(msg.createdAt, msg.time);
                 const prevDateHeader = index > 0 ? getMessageDateHeader(activeMessages[index - 1].createdAt, activeMessages[index - 1].time) : null;
                 const showDateHeader = currentDateHeader && currentDateHeader !== prevDateHeader;
@@ -766,21 +775,25 @@ export default function AdminInquiries() {
                         </button>
                       )}
                     </div>
-                    {isReceiptImage && activeBookingRequest && receiptPromptMsgIndex !== index && (
+                    {isReceiptImage && receiptRequest && receiptPromptMsgIndex !== index && (
                       <div className="receipt-prompt">
                         <span className="receipt-prompt-icon">🧾</span>
-                        <span className="receipt-prompt-text">Receipt uploaded — mark this request as paid?</span>
-                        <button
-                          className="receipt-prompt-btn"
-                          onClick={() => {
-                            const receiptRequestCode = requestCodeFromMessage(msg);
-                            const receiptRequest = adminRequests.find((req) => String(req.id) === String(receiptRequestCode));
-                            setReceiptPromptMsgIndex(index);
-                            navigate('/admin/requests', { state: { searchId: receiptRequest?.id || activeBookingRequest.id } });
-                          }}
-                        >
-                          Mark as Paid
-                        </button>
+                        <span className="receipt-prompt-text">
+                          {receiptIsPaid
+                            ? 'Receipt reviewed — this downpayment is already marked as paid.'
+                            : 'Receipt uploaded — mark this request as paid?'}
+                        </span>
+                        {!receiptIsPaid && (
+                          <button
+                            className="receipt-prompt-btn"
+                            onClick={() => {
+                              setReceiptPromptMsgIndex(index);
+                              navigate('/admin/requests', { state: { searchId: receiptRequest.id } });
+                            }}
+                          >
+                            Mark as Paid
+                          </button>
+                        )}
                         <button
                           className="receipt-prompt-dismiss"
                           title="Dismiss"
