@@ -116,6 +116,12 @@ export default function AdminLayout() {
               key={item.path}
               to={item.path}
               end={item.end}
+              onClick={(event) => {
+                if (item.path === '/admin/inquiries') {
+                  event.preventDefault();
+                  navigate(item.path, { replace: true, state: {} });
+                }
+              }}
               className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
             >
               {item.icon}

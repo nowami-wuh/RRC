@@ -115,6 +115,7 @@ export default function AdminInquiries() {
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const receiptFocusConsumedRef = useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
   const selectCustomerId = location.state?.selectCustomerId || null;
@@ -310,7 +311,18 @@ export default function AdminInquiries() {
   });
 
   useEffect(() => {
-    if (!openReceipt || (!selectMessageId && !selectRequestCode) || !activeMessages.length) return;
+    if (!openReceipt) {
+      receiptFocusConsumedRef.current = false;
+    }
+  }, [openReceipt]);
+
+  useEffect(() => {
+    if (
+      !openReceipt
+      || receiptFocusConsumedRef.current
+      || (!selectMessageId && !selectRequestCode)
+      || !activeMessages.length
+    ) return;
     const requestCode = String(selectRequestCode || '');
     const message = activeMessages.find((item) => (
       (selectMessageId && String(item.id) === String(selectMessageId))
@@ -322,12 +334,17 @@ export default function AdminInquiries() {
       )
     ));
     if (!message) return;
+    receiptFocusConsumedRef.current = true;
     const timer = window.setTimeout(() => scrollToMessage(message.id), 0);
     navigate('/admin/inquiries', { replace: true, state: {} });
     return () => window.clearTimeout(timer);
   }, [openReceipt, selectMessageId, selectRequestCode, activeMessages, navigate]);
 
   const handleSelectConversation = (conversationId) => {
+    if (openReceipt) {
+      receiptFocusConsumedRef.current = true;
+      navigate('/admin/inquiries', { replace: true, state: {} });
+    }
     setActiveConv(conversationId);
     if (isMobile) {
       setShowChatView(true);
