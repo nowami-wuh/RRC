@@ -139,7 +139,9 @@ export default function PackageRate() {
                                 return (
                                   <div key={iIdx} className="equip-row">
                                     <span className="equip-name">{item.name}</span>
-                                    <span className="qty-val">{qNum}</span>
+                                    <span className="qty-val">
+                                      {qNum} / {item.available == null ? '—' : item.available}
+                                    </span>
                                     <span className="equip-unit">{qUnit}</span>
                                   </div>
                                 );

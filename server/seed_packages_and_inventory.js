@@ -112,7 +112,7 @@ const PACKAGES = [
 
   // ── MISCELLANEOUS ──
   { section: 'misc', name: 'Booking Duration',                  subtitle: '4 hours',             occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
-  { section: 'misc', name: 'Booking Duration Extension',        subtitle: '2,500.00 per hour',   occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
+  { section: 'misc', name: 'Booking Duration Extension',        subtitle: '2,500.00 per hour after 30 minutes', occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
   { section: 'misc', name: 'Mobilization Fee (Boac)',           subtitle: '1,500.00',            occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
   { section: 'misc', name: 'Mobilization Fee (Gasan)',          subtitle: '2,000.00',            occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
   { section: 'misc', name: 'Mobilization Fee (Mogpog)',         subtitle: '2,000.00',            occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },

@@ -186,7 +186,7 @@ export default function LoginSignup() {
     if (Object.keys(errors).length > 0) return;
     try {
       const result = await loginWithGoogle(googleRegData.token, trimmedUsername, trimmedContact);
-      if (result.user) { signIn(result.user); navigate('/'); }
+      if (result.user) { signIn({ ...result.user, token: result.token }); navigate('/'); }
     } catch (err) {
       if (err.code === 'USERNAME_TAKEN' || err.field === 'signupUsername') {
         setFieldErrors((prev) => ({ ...prev, signupUsername: err.message }));
@@ -217,7 +217,7 @@ export default function LoginSignup() {
     setIsSubmitting(true);
     try {
       const profile = await login(formData.loginUsername.trim(), formData.loginPassword, isAdminMode ? 'admin' : 'customer');
-      signIn(profile.user || profile);
+      signIn({ ...(profile.user || profile), token: profile.token });
       navigate(isAdminMode ? '/admin' : '/');
     } catch (err) {
       setError(err.message);
@@ -246,7 +246,7 @@ export default function LoginSignup() {
     try {
       const result = await signupInitiate(formData.signupUsername.trim(), formData.signupEmail.trim(), formData.signupContact.trim(), formData.signupPassword);
       if (result?.user) {
-        signIn(result.user);
+        signIn({ ...result.user, token: result.token });
         navigate('/');
         return;
       }
@@ -301,7 +301,7 @@ export default function LoginSignup() {
     setOtpError('');
     try {
       const result = await signupVerify(otpEmail, code);
-      if (result.user) { signIn(result.user); navigate('/'); }
+      if (result.user) { signIn({ ...result.user, token: result.token }); navigate('/'); }
     } catch (err) {
       setOtpError(err.message || 'Invalid or expired code.');
       setOtpCode(['', '', '', '', '', '']);

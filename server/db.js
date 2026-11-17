@@ -1,7 +1,7 @@
 import mysql from 'mysql2/promise';
 
 const ssl = process.env.MYSQL_SSL === 'true' || process.env.MYSQL_SSL === '1'
-  ? { rejectUnauthorized: false }
+  ? { rejectUnauthorized: process.env.MYSQL_SSL_REJECT_UNAUTHORIZED !== 'false' }
   : undefined;
 
 const pool = mysql.createPool({

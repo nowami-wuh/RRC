@@ -1,8 +1,10 @@
 const apiBase = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 async function request(path, options = {}) {
+  const storedUser = localStorage.getItem('rrc-auth-user');
+  const token = storedUser ? JSON.parse(storedUser).token : null;
   const response = await fetch(`${apiBase}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     ...options,
   });
 

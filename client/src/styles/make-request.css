@@ -435,25 +435,6 @@
   line-height: 1;
 }
 
-.equip-stock-tag {
-  font-size: 12px;
-  color: #666;
-  white-space: nowrap;
-  background: #f0f0f0;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.equip-stock-tag.stock-low {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.equip-stock-tag.stock-zero {
-  background: #f8d7da;
-  color: #842029;
-}
-
 .equip-no-results,
 .equip-loading {
   padding: 18px 20px;

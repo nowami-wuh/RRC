@@ -1,0 +1,20 @@
+name: Keep API awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Render API and database
+        env:
+          API_HEALTH_URL: ${{ vars.API_HEALTH_URL }}
+        run: |
+          if [ -z "$API_HEALTH_URL" ]; then
+            echo "Repository variable API_HEALTH_URL is not configured."
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 30 "$API_HEALTH_URL"

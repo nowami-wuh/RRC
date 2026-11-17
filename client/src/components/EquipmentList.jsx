@@ -18,7 +18,6 @@ export default function EquipmentList({ groups, selectedEquipment, onToggle, onQ
                 onChange={() => onToggle(item)}
               />
               <span className="equipment-name">{item.name}</span>
-              <span className="equip-stock-tag">{item.stock} avail.</span>
               {item.requiresAuth && <span className="equipment-auth-badge">*</span>}
             </label>
           ))}

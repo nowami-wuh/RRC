@@ -328,6 +328,36 @@ function formatTime12Hour(value) {
   return `${hours12}:${String(minutes % 60).padStart(2, '0')} ${period}`;
 }
 
+function getDurationSettings(pricingPackages) {
+  const durationItem = pricingPackages.find((item) =>
+    String(item.name || '').trim().toLowerCase() === 'booking duration',
+  );
+  const extensionItem = pricingPackages.find((item) =>
+    String(item.name || '').trim().toLowerCase() === 'booking duration extension',
+  );
+  const baseHoursMatch = String(durationItem?.subtitle || '').match(/[\d.]+/);
+  const rateMatch = String(extensionItem?.subtitle || '').replace(/,/g, '').match(/[\d.]+/);
+  const graceMatch = String(extensionItem?.subtitle || '').match(/after\s+(\d+(?:\.\d+)?)\s*minutes?/i);
+  return {
+    baseMinutes: Math.round((Number(baseHoursMatch?.[0]) || 4) * 60),
+    extensionRate: Number(rateMatch?.[0]) || 2500,
+    graceMinutes: Number(graceMatch?.[1]) || 30,
+  };
+}
+
+function getDurationExtension(booking, pricingPackages) {
+  if (booking.requestType !== 'booking') return { hours: 0, fee: 0 };
+  const start = timeToMinutes(booking.eventDetails?.timeStart);
+  const end = timeToMinutes(booking.eventDetails?.timeEnd);
+  if (start === null || end === null) return { hours: 0, fee: 0 };
+
+  const { baseMinutes, extensionRate, graceMinutes } = getDurationSettings(pricingPackages);
+  const durationMinutes = (end >= start ? end : end + 24 * 60) - start;
+  const excessMinutes = durationMinutes - baseMinutes;
+  const hours = excessMinutes > graceMinutes ? Math.ceil((excessMinutes - graceMinutes) / 60) : 0;
+  return { hours, fee: hours * extensionRate };
+}
+
 function getNextEventDate(date) {
   const parsedDate = new Date(date);
   if (Number.isNaN(parsedDate.getTime())) return null;
@@ -411,8 +441,10 @@ export default function AdminRequests() {
               name: req.event?.title || 'Event',
               date: eventSchedule.date,
               time: eventSchedule.time,
+              timeStart: req.event?.timeStart || '',
+              timeEnd: req.event?.timeEnd || '',
               venue: req.event?.venue || '',
-              pax: req.event?.pax || 0,
+              pax: req.event?.pax ?? null,
             },
             package: req.package?.name?.replace('PACKAGE ', '') || null,
             equipment: req.equipment || {},
@@ -852,6 +884,8 @@ export default function AdminRequests() {
             addonFee: billingBreakdown.addonFee,
             mobilization: billingBreakdown.mobFee,
             mobilizationFee: billingBreakdown.mobFee,
+            durationExtensionHours: billingBreakdown.durationExtensionHours,
+            durationExtensionFee: billingBreakdown.durationExtensionFee,
             total: billingBreakdown.total,
             downpaymentAmount: billingBreakdown.total * 0.2,
             promoApplied: Boolean(selectedBooking.booking.promoApplied),
@@ -1015,7 +1049,7 @@ export default function AdminRequests() {
   };
 
   const billingBreakdown = (() => {
-    if (!selectedBooking) return { equipAmt: 0, mobFee: 0, addonFee: 0, total: 0 };
+    if (!selectedBooking) return { equipAmt: 0, mobFee: 0, addonFee: 0, durationExtensionFee: 0, durationExtensionHours: 0, total: 0 };
     const booking = selectedBooking.booking;
     let equipAmt = calcEquipmentAmount();
     const configuredPackage = pricingPackages.find((pkg) =>
@@ -1028,8 +1062,17 @@ export default function AdminRequests() {
     const addonFee = selectedAddonFee === null
       ? Number(booking.billing?.addonsTotal ?? booking.billing?.addonFee ?? booking.addonFee) || 0
       : selectedAddonFee;
-    const total = equipAmt + mobFee + addonFee;
-    return { equipAmt, promoPrice, mobFee, addonFee, total };
+    const durationExtension = getDurationExtension(booking, pricingPackages);
+    const total = equipAmt + mobFee + addonFee + durationExtension.fee;
+    return {
+      equipAmt,
+      promoPrice,
+      mobFee,
+      addonFee,
+      durationExtensionFee: durationExtension.fee,
+      durationExtensionHours: durationExtension.hours,
+      total,
+    };
   })();
 
   const isEditable = selectedBooking?.status === 'pending';
@@ -1186,7 +1229,7 @@ export default function AdminRequests() {
                   <p>{selectedBooking ? `Date: ${selectedBooking.booking.eventDetails.date}` : '—'}</p>
                   <p>{selectedBooking ? `Time: ${selectedBooking.booking.eventDetails.time}` : '—'}</p>
                   <p>{selectedBooking ? `Venue: ${selectedBooking.booking.eventDetails.venue}` : '—'}</p>
-                  <p>{selectedBooking ? `Pax: ${selectedBooking.booking.eventDetails.pax}` : '—'}</p>
+                  {!isRentBooking && <p>{selectedBooking ? `Pax: ${selectedBooking.booking.eventDetails.pax}` : '—'}</p>}
                   {selectedBooking?.booking.rentDuration && <p>{selectedBooking.booking.rentDuration}</p>}
                   <p id="dRequirements" style={{ display: selectedBooking?.booking.additionalRequirements ? 'block' : 'none' }}>
                     {selectedBooking?.booking.additionalRequirements ? `Additional Requirements: ${selectedBooking.booking.additionalRequirements}` : '—'}
@@ -1376,6 +1419,14 @@ export default function AdminRequests() {
                     <span className="billing-label">Add-On Fee</span>
                     <span className="billing-val">{peso(billingBreakdown.addonFee)}</span>
                   </div>
+                  {billingBreakdown.durationExtensionFee > 0 && (
+                    <div className="billing-row">
+                      <span className="billing-label">
+                        Duration Extension ({billingBreakdown.durationExtensionHours} hour{billingBreakdown.durationExtensionHours === 1 ? '' : 's'})
+                      </span>
+                      <span className="billing-val">{peso(billingBreakdown.durationExtensionFee)}</span>
+                    </div>
+                  )}
                   <div className="billing-divider" />
                   <div className="billing-row total-row">
                     <span className="billing-label">Total Amount Due</span>

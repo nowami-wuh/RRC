@@ -37,10 +37,11 @@ const buildSummary = (items) => {
   items.forEach((item) => {
     const variation = getVariationName(item.name);
     const units = parseUnits(item.notes);
+    if (!map[variation]) {
+      map[variation] = { variation, inoperational: 0, operational: 0, inUse: 0, total: 0, available: 0 };
+    }
+    map[variation].available += Number(item.stock) || 0;
     units.forEach((u) => {
-      if (!map[variation]) {
-        map[variation] = { variation, inoperational: 0, operational: 0, inUse: 0, total: 0 };
-      }
       const row = map[variation];
       row.total++;
       if (u.condition === 'Inoperational' || u.condition === 'Inoperative') row.inoperational++;
@@ -48,7 +49,7 @@ const buildSummary = (items) => {
       if (u.inUse) row.inUse++;
     });
   });
-  return Object.values(map).map((r) => ({ ...r, available: Math.max(0, r.operational - r.inUse) }));
+  return Object.values(map);
 };
 
 // ── Toast ──────────────────────────────────────────────────────

@@ -1,7 +1,13 @@
 import express from 'express';
 import { execute, parseJson, query, safeJson } from '../db.js';
 import { sendRequestStatusEmail, sendChatReplyEmail } from '../mailer.js';
-import { parseEquipmentList, validateEquipmentStock, reserveEquipmentStock, releaseEquipmentStock } from '../inventoryHelpers.js';
+import {
+  attachInventoryAvailability,
+  parseEquipmentList,
+  validateEquipmentStock,
+  reserveEquipmentStock,
+  releaseEquipmentStock,
+} from '../inventoryHelpers.js';
 
 const router = express.Router();
 
@@ -17,6 +23,45 @@ function formatYMD(dateInput) {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function getEventEndDate(value) {
+  if (!value) return null;
+  const text = String(value).trim();
+  const rangeMatch = text.match(/^([A-Za-z]+)\s+\d{1,2}\s*[-–]\s*(\d{1,2}),?\s+(\d{4})$/);
+  const dateText = rangeMatch
+    ? `${rangeMatch[1]} ${rangeMatch[2]}, ${rangeMatch[3]}`
+    : text;
+  const parsedDate = new Date(dateText);
+  if (Number.isNaN(parsedDate.getTime())) return null;
+  return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+}
+
+function hasEventEnded(value) {
+  const eventEndDate = getEventEndDate(value);
+  if (!eventEndDate) return false;
+
+  const today = new Date();
+  const localToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return eventEndDate < localToday;
+}
+
+async function completePastEvents(rows) {
+  const eligibleStatuses = new Set(['upcoming', 'confirmed', 'paid']);
+  const expiredRequests = rows.filter((row) => (
+    eligibleStatuses.has(String(row.status || '').toLowerCase())
+    && hasEventEnded(parseJson(row.event_json, {}).date)
+  ));
+
+  await Promise.all(expiredRequests.map((row) => (
+    execute('UPDATE requests SET status = ? WHERE request_code = ? AND status = ?', [
+      'completed',
+      row.request_code,
+      row.status,
+    ])
+  )));
+
+  return expiredRequests.map((row) => row.request_code);
 }
 
 function formatRequest(row) {
@@ -93,6 +138,11 @@ router.get('/requests', async (req, res) => {
       LEFT JOIN request_payments p ON p.request_code = r.request_code
       ORDER BY r.created_at DESC, r.id DESC
     `);
+
+    const completedRequestCodes = await completePastEvents(rows);
+    rows.forEach((row) => {
+      if (completedRequestCodes.includes(row.request_code)) row.status = 'completed';
+    });
 
     res.json({ requests: rows.map(formatRequest) });
   } catch (error) {
@@ -525,20 +575,24 @@ router.delete('/inventory/:itemCode', async (req, res) => {
 
 router.get('/packages', async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM packages ORDER BY id ASC');
+    const [rows, inventoryRows] = await Promise.all([
+      query('SELECT * FROM packages ORDER BY id ASC'),
+      query('SELECT item_code, name, stock FROM inventory_items'),
+    ]);
+    const packages = rows.map((row) => ({
+      id: row.id,
+      section: row.section,
+      name: row.name,
+      subtitle: row.subtitle,
+      occasion: row.occasion,
+      note: row.note,
+      price: Number(row.price),
+      promo: Number(row.promo),
+      color: row.color,
+      groups: parseJson(row.groups_json, []),
+    }));
     res.json({
-      packages: rows.map((row) => ({
-        id: row.id,
-        section: row.section,
-        name: row.name,
-        subtitle: row.subtitle,
-        occasion: row.occasion,
-        note: row.note,
-        price: Number(row.price),
-        promo: Number(row.promo),
-        color: row.color,
-        groups: parseJson(row.groups_json, []),
-      })),
+      packages: attachInventoryAvailability(packages, inventoryRows),
     });
   } catch (error) {
     res.status(500).json({ error: error.message || 'Unable to load packages' });

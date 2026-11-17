@@ -22,6 +22,45 @@ function isFutureDate(value) {
   return value > localToday;
 }
 
+function getEventEndDate(value) {
+  if (!value) return null;
+  const text = String(value).trim();
+  const rangeMatch = text.match(/^([A-Za-z]+)\s+\d{1,2}\s*[-–]\s*(\d{1,2}),?\s+(\d{4})$/);
+  const dateText = rangeMatch
+    ? `${rangeMatch[1]} ${rangeMatch[2]}, ${rangeMatch[3]}`
+    : text;
+  const parsedDate = new Date(dateText);
+  if (Number.isNaN(parsedDate.getTime())) return null;
+  return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+}
+
+function hasEventEnded(value) {
+  const eventEndDate = getEventEndDate(value);
+  if (!eventEndDate) return false;
+
+  const today = new Date();
+  const localToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return eventEndDate < localToday;
+}
+
+async function completePastEvents(rows) {
+  const eligibleStatuses = new Set(['upcoming', 'confirmed', 'paid']);
+  const expiredRequests = rows.filter((row) => (
+    eligibleStatuses.has(String(row.status || '').toLowerCase())
+    && hasEventEnded(parseJson(row.event_json, {}).date)
+  ));
+
+  await Promise.all(expiredRequests.map((row) => (
+    execute('UPDATE requests SET status = ? WHERE request_code = ? AND status = ?', [
+      'completed',
+      row.request_code,
+      row.status,
+    ])
+  )));
+
+  return expiredRequests.map((row) => row.request_code);
+}
+
 function formatRequest(row) {
   return {
     id: row.request_code,
@@ -121,7 +160,11 @@ router.get('/', (req, res) => {
        ORDER BY r.created_at DESC, r.id DESC`;
 
   query(sql, customerId ? [customerId] : [])
-    .then((rows) => {
+    .then(async (rows) => {
+      const completedRequestCodes = await completePastEvents(rows);
+      rows.forEach((row) => {
+        if (completedRequestCodes.includes(row.request_code)) row.status = 'completed';
+      });
       res.json({ requests: rows.map(formatRequest) });
     })
     .catch((error) => {
@@ -197,6 +240,9 @@ router.patch('/:requestCode/cancel', async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: 'Request not found' });
 
     const current = rows[0];
+    if (req.user?.role === 'customer' && current.customer_public_id !== req.user.id) {
+      return res.status(403).json({ error: 'You may only cancel your own requests.' });
+    }
     const cancellableStatuses = ['pending', 'approved', 'awaitingpayment'];
     if (!cancellableStatuses.includes(current.status)) {
       return res.status(400).json({ error: 'This request can no longer be cancelled.' });
@@ -239,6 +285,9 @@ router.post('/', async (req, res) => {
     if (requestType === 'book' && payload.serviceAgreementAccepted !== true) {
       return res.status(400).json({ error: 'Please accept the service agreement before submitting a booking.' });
     }
+    if (requestType === 'book' && !/^\d+$/.test(String(payload.pax))) {
+      return res.status(400).json({ error: 'Number of guests must be a whole, non-negative number.' });
+    }
     if (!isFutureDate(payload.date)) {
       return res.status(400).json({ error: 'Please choose a future event date.' });
     }
@@ -247,7 +296,7 @@ router.post('/', async (req, res) => {
     const event = {
       title: payload.title,
       venue: payload.venue,
-      pax: payload.pax,
+      ...(requestType === 'book' ? { pax: payload.pax } : {}),
       date: payload.date,
       timeStart: payload.timeStart,
       timeEnd: payload.timeEnd,

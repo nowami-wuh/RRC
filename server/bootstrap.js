@@ -1,8 +1,6 @@
 import bcrypt from 'bcrypt';
 import { execute, query, safeJson } from './db.js';
 
-const defaultPassword = 'password123';
-
 async function ensureTables() {
   await execute(`
     CREATE TABLE IF NOT EXISTS customers (
@@ -220,21 +218,12 @@ async function ensureTables() {
 }
 
 async function seedAuthData() {
-  const authPasswordHash = await bcrypt.hash(defaultPassword, 10);
-
-  const customerRows = await query('SELECT 1 FROM customers WHERE username = ? LIMIT 1', ['testuser']);
-  if (customerRows.length === 0) {
-    await execute(
-      'INSERT INTO customers (public_id, username, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)',
-      ['RRC-000001', 'testuser', 'test@example.com', '09171234567', authPasswordHash],
-    );
-  }
-
   const adminRows = await query('SELECT 1 FROM admins LIMIT 1');
-  if (adminRows.length === 0) {
+  if (adminRows.length === 0 && process.env.ADMIN_BOOTSTRAP_USERNAME && process.env.ADMIN_BOOTSTRAP_PASSWORD) {
+    const authPasswordHash = await bcrypt.hash(process.env.ADMIN_BOOTSTRAP_PASSWORD, 12);
     await execute(
       'INSERT INTO admins (username, email, full_name, password_hash) VALUES (?, ?, ?, ?)',
-      ['admin', 'admin@rrc.local', 'RRC Admin', authPasswordHash],
+      [process.env.ADMIN_BOOTSTRAP_USERNAME, process.env.ADMIN_BOOTSTRAP_EMAIL || '', process.env.ADMIN_BOOTSTRAP_FULL_NAME || 'RRC Admin', authPasswordHash],
     );
   }
 }
@@ -320,7 +309,7 @@ async function seedReferenceData() {
       { section: 'effects',   name: 'Smoke Machine',                           subtitle: '', occasion: 'Addon', note: '', price: 1000,  promo: 0,     color: 'blue', groups: [] },
       // ── Miscellaneous ──
       { section: 'misc', name: 'Booking Duration',               subtitle: '4 hours',           occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
-      { section: 'misc', name: 'Booking Duration Extension',     subtitle: '2,500.00 per hour', occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
+      { section: 'misc', name: 'Booking Duration Extension',     subtitle: '2,500.00 per hour after 30 minutes', occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
       { section: 'misc', name: 'Mobilization Fee (Boac)',        subtitle: '1,500.00',          occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
       { section: 'misc', name: 'Mobilization Fee (Gasan)',       subtitle: '2,000.00',          occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
       { section: 'misc', name: 'Mobilization Fee (Mogpog)',      subtitle: '2,000.00',          occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },

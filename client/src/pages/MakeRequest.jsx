@@ -188,6 +188,10 @@ export default function MakeRequest() {
       setError('Please fill out all required event details.');
       return;
     }
+    if (type === 'book' && !/^\d+$/.test(String(form.pax))) {
+      setError('Please enter a whole, non-negative number of guests.');
+      return;
+    }
     const location = venueLocation[type];
     const barangay = findBarangay(location.city, location.barangay);
     if (!location.city || !barangay) {
@@ -226,7 +230,7 @@ export default function MakeRequest() {
       customerId: user.id,
       title: form.title,
       venue: `${barangay}, ${location.city}`,
-      pax: form.pax,
+      ...(type === 'book' ? { pax: form.pax } : {}),
       date: form.date,
       timeStart: form.timeStart,
       timeEnd: form.timeEnd,
@@ -300,7 +304,7 @@ export default function MakeRequest() {
     <div className="form-fields">
       {[
         { label: 'Title of Event', key: 'title', type: 'text' },
-        { label: 'No. of Guests', key: 'pax', type: 'number' },
+        ...(formKey === 'book' ? [{ label: 'No. of Guests', key: 'pax', type: 'number' }] : []),
         { label: 'Date', key: 'date', type: 'date' },
         { label: 'Time Start', key: 'timeStart', type: 'time' },
         { label: 'Time End', key: 'timeEnd', type: 'time' },
@@ -311,8 +315,13 @@ export default function MakeRequest() {
             className="field-input"
             type={type}
             value={formValues[key]}
-            min={key === 'date' ? getLocalDateString() : undefined}
-            onChange={(e) => setForm(prev => ({ ...prev, [key]: e.target.value }))}
+            min={key === 'date' ? getLocalDateString() : key === 'pax' ? '0' : undefined}
+            step={key === 'pax' ? '1' : undefined}
+            inputMode={key === 'pax' ? 'numeric' : undefined}
+            onChange={(e) => {
+              if (key === 'pax' && !/^\d*$/.test(e.target.value)) return;
+              setForm(prev => ({ ...prev, [key]: e.target.value }));
+            }}
             required
           />
         </div>
@@ -525,9 +534,6 @@ export default function MakeRequest() {
                               <span className="equipment-name">
                                 {item.name}
                                 {item.requiresAuth && <span className="equipment-auth-badge"> *</span>}
-                              </span>
-                              <span className={`equip-stock-tag ${item.stock === 0 ? 'stock-zero' : item.stock <= 2 ? 'stock-low' : ''}`}>
-                                {item.stock === 0 ? 'Out of stock' : `${item.stock} avail.`}
                               </span>
                             </label>
                           ))}

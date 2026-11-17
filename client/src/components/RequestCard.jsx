@@ -11,7 +11,7 @@ export default function RequestCard({ request }) {
       <div className="request-card-body">
         <div className="request-row"><strong>Date:</strong> {request.event.date}</div>
         <div className="request-row"><strong>Venue:</strong> {request.event.venue}</div>
-        <div className="request-row"><strong>Guests:</strong> {request.event.pax}</div>
+        {request.type !== 'rent' && <div className="request-row"><strong>Guests:</strong> {request.event.pax}</div>}
         <div className="request-row"><strong>Time:</strong> {request.event.timeStart} - {request.event.timeEnd}</div>
         {request.package && <div className="request-row"><strong>Package:</strong> {request.package.name}</div>}
       </div>

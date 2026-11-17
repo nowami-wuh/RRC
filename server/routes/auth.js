@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import { sendVerificationEmail, sendSignupConfirmationEmail } from '../mailer.js';
 import { execute, query } from '../db.js';
+import { createSession } from '../authMiddleware.js';
 
 const router = express.Router();
 
@@ -152,7 +153,8 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  return res.json({ user: role === 'admin' ? buildAdminUser(user) : buildCustomerUser(user) });
+  const profile = role === 'admin' ? buildAdminUser(user) : buildCustomerUser(user);
+  return res.json({ user: profile, token: createSession(profile) });
 });
 
 router.post('/signup', async (req, res) => {
@@ -212,7 +214,7 @@ router.post('/signup', async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 10);
   const newUser = await createCustomerAccount({ username, email, phone: contact, passwordHash });
 
-  return res.status(201).json({ user: newUser });
+  return res.status(201).json({ user: newUser, token: createSession(newUser) });
 });
 
 router.post('/signup-initiate', async (req, res) => {
@@ -286,6 +288,7 @@ router.post('/signup-initiate', async (req, res) => {
         success: true,
         message: 'Account created successfully.',
         user: newUser,
+        token: createSession(newUser),
         bypassVerification: true,
       });
     }
@@ -347,7 +350,7 @@ router.post('/signup-verify', async (req, res) => {
     };
 
     queueSignupConfirmationEmail(reg.email, reg.username);
-    return res.status(201).json({ user: newUser });
+    return res.status(201).json({ user: newUser, token: createSession(newUser) });
   } catch (error) {
     console.error('Signup Verify Error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });

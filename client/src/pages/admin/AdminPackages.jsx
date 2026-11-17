@@ -113,7 +113,7 @@ export default function AdminPackages() {
       (inv) => inv.name.toLowerCase().trim() === name.toLowerCase().trim()
     );
     if (!match) return null;
-    return match.quantityOperational ?? match.quantityTotal ?? 0;
+    return Number(match.stock) || 0;
   }
 
   // ── derived slices ──
@@ -205,12 +205,23 @@ export default function AdminPackages() {
 
     if (itemIndex !== null) {
       // edit existing
-      groups[groupIndex].items[itemIndex] = { qty: `${qtyNum} ${unit}`, name: name.trim() };
+      const inventoryItem = inventoryList.find((inv) => inv.name.toLowerCase().trim() === name.toLowerCase().trim());
+      groups[groupIndex].items[itemIndex] = {
+        ...groups[groupIndex].items[itemIndex],
+        qty: `${qtyNum} ${unit}`,
+        name: name.trim(),
+        ...(inventoryItem ? { inventoryId: inventoryItem.id } : {}),
+      };
     } else {
       // add new — find or create group for this category
       let gIdx = groups.findIndex((g) => g.category === category);
       if (gIdx === -1) { groups.push({ category, items: [] }); gIdx = groups.length - 1; }
-      groups[gIdx].items.push({ qty: `${qtyNum} ${unit}`, name: name.trim() });
+      const inventoryItem = inventoryList.find((inv) => inv.name.toLowerCase().trim() === name.toLowerCase().trim());
+      groups[gIdx].items.push({
+        qty: `${qtyNum} ${unit}`,
+        name: name.trim(),
+        ...(inventoryItem ? { inventoryId: inventoryItem.id } : {}),
+      });
     }
 
     setSaving(true);
@@ -755,7 +766,7 @@ export default function AdminPackages() {
                 <option value="">Select from inventory…</option>
                 {inventoryList.map((inv) => (
                   <option key={inv.id || inv.itemCode || inv.name} value={inv.name}>
-                    {inv.name} ({inv.quantityOperational ?? 0} available)
+                    {inv.name} ({Number(inv.stock) || 0} available)
                   </option>
                 ))}
               </select>
@@ -874,7 +885,17 @@ export default function AdminPackages() {
               className="m-input"
               value={miscModal.value}
               onChange={(e) => setMiscModal((p) => ({ ...p, value: e.target.value }))}
+              placeholder={
+                miscModal.label.toLowerCase() === 'booking duration extension'
+                  ? 'e.g. 2,500.00 per hour after 30 minutes'
+                  : ''
+              }
             />
+            {miscModal.label.toLowerCase() === 'booking duration extension' && (
+              <p style={{ marginTop: 6, fontSize: '12px', color: '#666' }}>
+                Use the format “amount per hour after minutes”. This controls the extension fee and grace period on customer bills.
+              </p>
+            )}
             {miscModal.err && <p className="m-error">{miscModal.err}</p>}
             <div className="m-actions">
               <button className="m-btn-cancel" onClick={() => setMiscModal(MISC_EMPTY)}>Cancel</button>

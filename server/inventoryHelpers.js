@@ -31,6 +31,25 @@ export function parseEquipmentList(equipmentJsonOrArray) {
     .filter((item) => item !== null && item.itemCode !== null);
 }
 
+export function attachInventoryAvailability(packages, inventoryRows) {
+  const byCode = new Map(inventoryRows.map((row) => [String(row.item_code), row]));
+  const byName = new Map(inventoryRows.map((row) => [String(row.name).trim().toLowerCase(), row]));
+
+  return packages.map((pkg) => ({
+    ...pkg,
+    groups: (pkg.groups || []).map((group) => ({
+      ...group,
+      items: (group.items || []).map((item) => {
+        const inventory = (item.inventoryId && byCode.get(String(item.inventoryId)))
+          || byName.get(String(item.name || '').trim().toLowerCase());
+        return inventory
+          ? { ...item, inventoryId: inventory.item_code, available: Number(inventory.stock) || 0 }
+          : { ...item, available: null };
+      }),
+    })),
+  }));
+}
+
 function inventoryLookup(itemCode) {
   const value = String(itemCode);
   return /^\d+$/.test(value)

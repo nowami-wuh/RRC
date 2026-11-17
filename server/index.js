@@ -14,7 +14,9 @@ import adminRoutes from './routes/admin.js';
 import debugRoutes from './routes/debug.js';
 import aboutRoutes from './routes/about.js';
 import { bootstrapDatabase } from './bootstrap.js';
+import { query } from './db.js';
 import { verifyMailer } from './mailer.js';
+import { requireAuth, requireAdmin, scopeCustomerRequest } from './authMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,25 +31,38 @@ const allowedOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_ORIGIN ||
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors({
-  origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+  origin: allowedOrigins.length > 0 ? allowedOrigins : false,
   credentials: true,
 }));
 
+app.get('/healthz', async (_req, res) => {
+  try {
+    await query('SELECT 1');
+    res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error('Health check failed:', error.message);
+    res.status(503).json({ ok: false });
+  }
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventsRoutes);
-app.use('/api/requests', requestsRoutes);
+app.use('/api/requests', requireAuth, scopeCustomerRequest, requestsRoutes);
 app.use('/api/packages', packagesRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/debug', debugRoutes);
+app.use('/api/user', requireAuth, scopeCustomerRequest, userRoutes);
+app.use('/api/chat', requireAuth, scopeCustomerRequest, chatRoutes);
+app.use('/api/admin', requireAuth, requireAdmin, adminRoutes);
+if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEBUG_ROUTES === 'true') {
+  app.use('/api/debug', requireAuth, requireAdmin, debugRoutes);
+}
 app.use('/api/about', aboutRoutes);
 
 // ── ONE-TIME RESEED ENDPOINT ──────────────────────────────────────────────
 // Protected by RESEED_SECRET env var. Call once, then remove this block.
 // Usage: GET /api/reseed-packages?secret=YOUR_SECRET
 app.get('/api/reseed-packages', async (req, res) => {
-  const secret = process.env.RESEED_SECRET || 'rrc-reseed-2026';
+  const secret = process.env.RESEED_SECRET;
+  if (!secret) return res.status(404).json({ error: 'Not found' });
   if (req.query.secret !== secret) {
     return res.status(403).json({ error: 'Forbidden – invalid or missing secret.' });
   }
@@ -68,7 +83,7 @@ app.get('/api/reseed-packages', async (req, res) => {
       { section: 'effects',   name: 'Low Lying Fog Machine',                subtitle: '', occasion: 'Addon', note: '', price: 3500,  promo: 2500,  color: 'blue', groups: [] },
       { section: 'effects',   name: 'Smoke Machine',                        subtitle: '', occasion: 'Addon', note: '', price: 1000,  promo: 0,     color: 'blue', groups: [] },
       { section: 'misc', name: 'Booking Duration',               subtitle: '4 hours',           occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
-      { section: 'misc', name: 'Booking Duration Extension',     subtitle: '2,500.00 per hour', occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
+      { section: 'misc', name: 'Booking Duration Extension',     subtitle: '2,500.00 per hour after 30 minutes', occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
       { section: 'misc', name: 'Mobilization Fee (Boac)',        subtitle: '1,500.00',          occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
       { section: 'misc', name: 'Mobilization Fee (Gasan)',       subtitle: '2,000.00',          occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
       { section: 'misc', name: 'Mobilization Fee (Mogpog)',      subtitle: '2,000.00',          occasion: 'Misc', note: '', price: 0, promo: 0, color: 'blue', groups: [] },
