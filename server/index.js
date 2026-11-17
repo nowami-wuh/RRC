@@ -31,7 +31,7 @@ const allowedOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_ORIGIN ||
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors({
-  origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+  origin: allowedOrigins.length > 0 ? allowedOrigins : true,
   credentials: true,
 }));
 

@@ -465,7 +465,7 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
                 </span>
               </div>
             </div>
-            {request.type !== 'rent' && ev.pax && (
+            {req.type !== 'rent' && ev.pax && (
               <div className="event-pax">
                 Pax: <strong>{ev.pax}</strong>
               </div>
