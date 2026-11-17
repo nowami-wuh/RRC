@@ -4118,6 +4118,22 @@ body {
 }
 .requests-admin-page .list-area { display: flex; flex-direction: column; gap: 14px; }
 .requests-admin-page .sort-row { display: flex; justify-content: flex-end; }
+.requests-admin-page .sort-row label {
+    align-self: center;
+    margin-right: 8px;
+    color: var(--text-dark);
+    font-size: 13px;
+}
+.requests-admin-page .sort-select {
+    min-width: 180px;
+    padding: 8px 10px;
+    border: 1px solid #c8d3e6;
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text-dark);
+    font-family: 'Garet', sans-serif;
+    font-size: 13px;
+}
 .requests-admin-page .sort-btn {
     display: flex;
     align-items: center;

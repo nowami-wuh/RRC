@@ -404,7 +404,7 @@ export default function AdminRequests() {
   const statusProgressRef = useRef(null);
   const statusTabRefs = useRef({});
   const statusScrollAnimationRef = useRef(null);
-  const [sortAsc, setSortAsc] = useState(false);
+  const [sortOption, setSortOption] = useState('newest');
   const [detailState, setDetailState] = useState(null);
   const [cancelingRequestId, setCancelingRequestId] = useState(null);
   const [activeSection, setActiveSection] = useState('approval');
@@ -438,6 +438,7 @@ export default function AdminRequests() {
             id: requestId,
             event: req.event?.title || 'Event',
             requestDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '',
+            createdAt: req.createdAt || '',
             customerId: req.customerId || null,  // real public_id — used for chat navigation
             client: {
               username: req.customerName || req.customerId || 'Customer',
@@ -512,8 +513,30 @@ export default function AdminRequests() {
 
   const visibleList = useMemo(() => {
     const list = bookings[currentStatus] || [];
-    return sortAsc ? [...list].reverse() : list;
-  }, [bookings, currentStatus, sortAsc]);
+    const getTimestamp = (value) => {
+      const timestamp = new Date(value || '').getTime();
+      return Number.isNaN(timestamp) ? 0 : timestamp;
+    };
+    const getEventTimestamp = (value) => {
+      const firstDate = String(value || '').replace(
+        /^([A-Za-z]+\s+\d{1,2})\s*[-–]\s*\d{1,2}(,\s*\d{4})$/,
+        '$1$2',
+      );
+      return getTimestamp(firstDate);
+    };
+    return [...list].sort((a, b) => {
+      if (sortOption === 'booking-first' || sortOption === 'rent-first') {
+        const preferredType = sortOption === 'rent-first' ? 'rent' : 'booking';
+        return (a.requestType === preferredType ? 0 : 1) - (b.requestType === preferredType ? 0 : 1);
+      }
+      if (sortOption === 'event-oldest' || sortOption === 'event-newest') {
+        const difference = getEventTimestamp(a.eventDetails?.date) - getEventTimestamp(b.eventDetails?.date);
+        return sortOption === 'event-oldest' ? difference : -difference;
+      }
+      const difference = getTimestamp(a.createdAt || a.requestDate) - getTimestamp(b.createdAt || b.requestDate);
+      return sortOption === 'oldest' ? difference : -difference;
+    });
+  }, [bookings, currentStatus, sortOption]);
 
   useEffect(() => {
     const tabs = statusTabsRef.current;
@@ -571,10 +594,6 @@ export default function AdminRequests() {
     setCurrentStatus(status);
     setActiveSection(status === 'pending' ? 'approval' : 'billing');
     setPkgDropdownOpen(false);
-  };
-
-  const toggleSort = () => {
-    setSortAsc((prev) => !prev);
   };
 
   const openDetail = (id) => {
@@ -887,6 +906,7 @@ export default function AdminRequests() {
           equipment: cloneData(currentEquipment),
           billing: {
             basePrice: billingBreakdown.equipAmt,
+            equipmentAmount: isRentBooking ? billingBreakdown.equipAmt : undefined,
             promoPrice: billingBreakdown.promoPrice,
             addonsTotal: billingBreakdown.addonFee,
             addonFee: billingBreakdown.addonFee,
@@ -987,7 +1007,26 @@ export default function AdminRequests() {
     );
   };
 
+  const getRentEquipmentAmount = (booking) => {
+    const savedAmount = Number(booking.billing?.equipmentAmount ?? booking.billing?.basePrice);
+    if (Number.isFinite(savedAmount) && savedAmount > 0) return savedAmount;
+
+    const catalog = getAddOnCatalog();
+    return Object.values(currentEquipment).flat().reduce((total, item) => {
+      const configuredItem = catalog.find((catalogItem) =>
+        String(catalogItem.name).trim().toLowerCase() === String(item.name).trim().toLowerCase(),
+      );
+      const unitPrice = Number(item.price ?? configuredItem?.price) || 0;
+      const promoPrice = Number(item.promoPrice ?? configuredItem?.promo) || 0;
+      const selectedPrice = booking.promoApplied && promoPrice > 0 ? promoPrice : unitPrice;
+      return total + selectedPrice * (Number(item.qty) || 1);
+    }, 0);
+  };
+
   const calcEquipmentAmount = () => {
+    if (selectedBooking?.booking.requestType === 'rent') {
+      return getRentEquipmentAmount(selectedBooking.booking);
+    }
     const packageCode = selectedBooking?.booking.package;
     const configuredPackage = pricingPackages.find((pkg) =>
       String(pkg.name || '').trim().toUpperCase() === `PACKAGE ${packageCode}`,
@@ -1021,9 +1060,11 @@ export default function AdminRequests() {
   const getAddOnFee = (booking) => {
     const catalog = getAddOnCatalog();
     const selectedAddOns = Object.entries(currentEquipment).flatMap(([category, items]) => items
-      .filter((item) => category === 'ADD-ONS' || catalog.some((addon) =>
-        String(addon.name).trim().toLowerCase() === String(item.name).trim().toLowerCase(),
-      )));
+      .filter((item) => booking.requestType === 'rent'
+        ? category === 'ADD-ONS'
+        : category === 'ADD-ONS' || catalog.some((addon) =>
+          String(addon.name).trim().toLowerCase() === String(item.name).trim().toLowerCase(),
+        )));
 
     const pricedAddOns = selectedAddOns.filter((item) => {
       const configuredAddon = catalog.find((addon) =>
@@ -1063,7 +1104,7 @@ export default function AdminRequests() {
   };
 
   const billingBreakdown = (() => {
-    if (!selectedBooking) return { equipAmt: 0, mobFee: 0, addonFee: 0, durationExtensionFee: 0, durationExtensionHours: 0, total: 0 };
+    if (!selectedBooking) return { equipAmt: 0, mobFee: 0, deliveryFee: 0, addonFee: 0, durationExtensionFee: 0, durationExtensionHours: 0, total: 0 };
     const booking = selectedBooking.booking;
     let equipAmt = calcEquipmentAmount();
     const configuredPackage = pricingPackages.find((pkg) =>
@@ -1120,12 +1161,20 @@ export default function AdminRequests() {
 
           <div className="list-area">
             <div className="sort-row">
-              <button className="sort-btn" onClick={toggleSort}>
-                <svg className="sort-icon" id="sortIcon" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style={{ transform: sortAsc ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                  <path d="M11 4h2v12l4-4 1.41 1.41L12 19.83l-6.41-6.42L7 12l4 4V4z" />
-                </svg>
-                <span>Sort</span>
-              </button>
+              <label htmlFor="request-sort">Sort by</label>
+              <select
+                id="request-sort"
+                className="sort-select"
+                value={sortOption}
+                onChange={(event) => setSortOption(event.target.value)}
+              >
+                <option value="newest">Newest request</option>
+                <option value="oldest">Oldest request</option>
+                <option value="event-newest">Latest event date</option>
+                <option value="event-oldest">Earliest event date</option>
+                <option value="booking-first">Booking requests first</option>
+                <option value="rent-first">Rent requests first</option>
+              </select>
             </div>
             <div className="booking-list">
               {requestsLoading ? (
@@ -1432,7 +1481,27 @@ export default function AdminRequests() {
                 <div className="billing-table">
                   <div className="billing-row">
                     <span className="billing-label">Equipment Amount</span>
-                    <span className="billing-val">{peso(billingBreakdown.equipAmt)}</span>
+                    {isRentBooking && selectedBooking.status === 'pending' ? (
+                      <input
+                        type="number"
+                        min="0"
+                        className="billing-fee-input"
+                        value={billingBreakdown.equipAmt}
+                        onChange={(event) => {
+                          const equipmentAmount = Math.max(0, Number(event.target.value) || 0);
+                          updateBooking(selectedBooking.booking.id, (booking) => ({
+                            ...booking,
+                            billing: {
+                              ...(booking.billing || {}),
+                              equipmentAmount,
+                              basePrice: equipmentAmount,
+                            },
+                          }));
+                        }}
+                      />
+                    ) : (
+                      <span className="billing-val">{peso(billingBreakdown.equipAmt)}</span>
+                    )}
                   </div>
                   {(!isRentBooking || selectedBooking.booking.eventDetails.deliveryMethod === 'delivery') && (
                   <div className="billing-row">

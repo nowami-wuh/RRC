@@ -298,6 +298,11 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   const total = effectiveBase + addonsTotal + mobilization + deliveryFee + extensionAmt;
   const requiredDownpayment = Number(b.downpaymentAmount) || total * 0.2;
   const balance = Boolean(b.fullyPaid) ? 0 : total - downpayment;
+  const packageLabel = pkg?.name && !/undefined/i.test(String(pkg.name))
+    ? pkg.name
+    : b.equipmentAmount != null
+      ? 'Rental Equipment'
+      : 'Package';
 
   if (total === 0 && downpayment === 0) {
     return (
@@ -317,7 +322,7 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
         {basePrice > 0 && (
           <div className="billing-row">
             <span className="billing-label">
-              {pkg?.name || 'Package'} — Base Price
+              {packageLabel} — Base Price
               {promoApplied && promoPrice > 0 && (
                 <span className="billing-promo-tag">PROMO</span>
               )}
@@ -410,7 +415,7 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
   // Determine what sections to show in card body
   const showPackage  = req.type === 'book' && req.package;
   const showRentItems = req.type === 'rent' && rentItems.length > 0;
-  const showBilling  = !!req.billing;
+  const showBilling  = !!req.billing || req.type === 'rent';
 
   // Banners
   const isAwaiting = req.status?.toLowerCase() === 'awaitingpayment';
@@ -610,7 +615,7 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
             <>
               <hr className="card-divider" />
               <BillingSection
-                billing={req.billing}
+                billing={req.billing || {}}
                 pkg={req.package}
                 status={req.status}
                 payment={req.payment}
