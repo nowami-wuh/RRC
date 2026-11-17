@@ -116,6 +116,7 @@ export default function AdminInquiries() {
   };
 
   const fileInputRef = useRef(null);
+  const chatMessagesRef = useRef(null);
   const receiptFocusConsumedRef = useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -258,6 +259,16 @@ export default function AdminInquiries() {
       setActiveConv(displayedConversations[0].id);
     }
   }, [displayedConversations.length, activeConv, selectCustomerId, isMobile]);
+
+  // Start newly opened conversations at the latest message without reacting to later updates.
+  useEffect(() => {
+    if (!activeConv || openReceipt) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const chatMessages = chatMessagesRef.current;
+      if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeConv]);
 
   // Load all inquiry profiles together so avatars appear without waiting for a conversation click.
   useEffect(() => {
@@ -734,7 +745,7 @@ export default function AdminInquiries() {
               </div>
             </div>
 
-            <div className="chat-messages">
+            <div className="chat-messages" ref={chatMessagesRef}>
               {activeMessages.map((msg, index) => {
                 const isOutgoing = msg.senderRole === 'admin' || msg.type === 'sent';
                 const isReceiptImage = !isOutgoing && msg.image;
