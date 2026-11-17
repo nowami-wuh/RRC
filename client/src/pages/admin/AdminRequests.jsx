@@ -323,29 +323,30 @@ function getDurationSettings(pricingPackages) {
   const graceMatch = String(extensionItem?.subtitle || '').match(/after\s+(\d+(?:\.\d+)?)\s*minutes?/i);
   return {
     baseMinutes: Math.round((Number(baseHoursMatch?.[0]) || 4) * 60),
+    baseHours: Number(baseHoursMatch?.[0]) || 4,
+    baseFee: Number(durationItem?.price) || 0,
     extensionRate: Number(rateMatch?.[0]) || 2500,
     graceMinutes: Number(graceMatch?.[1]) || 30,
   };
 }
 
 function getDurationExtension(booking, pricingPackages) {
-  if (booking.requestType !== 'booking') return { hours: 0, fee: 0 };
+  if (booking.requestType !== 'booking') return { eventHours: 0, baseFee: 0, hours: 0, fee: 0 };
   const start = timeToMinutes(booking.eventDetails?.timeStart);
   const end = timeToMinutes(booking.eventDetails?.timeEnd);
-  if (start === null || end === null) return { hours: 0, fee: 0 };
+  if (start === null || end === null) return { eventHours: 0, baseFee: 0, hours: 0, fee: 0 };
 
-  const { baseMinutes, extensionRate, graceMinutes } = getDurationSettings(pricingPackages);
+  const { baseMinutes, baseFee, extensionRate, graceMinutes } = getDurationSettings(pricingPackages);
   const durationMinutes = (end >= start ? end : end + 24 * 60) - start;
   const excessMinutes = durationMinutes - baseMinutes;
   const hours = excessMinutes > graceMinutes ? Math.ceil((excessMinutes - graceMinutes) / 60) : 0;
-  return { hours, fee: hours * extensionRate };
-}
-
-function getNextEventDate(date) {
-  const parsedDate = new Date(date);
-  if (Number.isNaN(parsedDate.getTime())) return null;
-  parsedDate.setDate(parsedDate.getDate() + 1);
-  return parsedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return {
+    eventHours: durationMinutes / 60,
+    baseFee,
+    hours,
+    fee: hours * extensionRate,
+    rate: extensionRate,
+  };
 }
 
 function formatEventSchedule(event) {
@@ -355,13 +356,13 @@ function formatEventSchedule(event) {
   const startMinutes = timeToMinutes(startTime);
   const endMinutes = timeToMinutes(endTime);
   const isOvernight = startMinutes !== null && endMinutes !== null && endMinutes < startMinutes;
-  const isDateRange = /\s[-–]\s|[A-Za-z]+\s+\d{1,2}\s*-\s*\d{1,2}/.test(String(date));
-  const nextDate = isOvernight && !isDateRange ? getNextEventDate(date) : null;
   const formattedStartTime = formatTime12Hour(startTime);
   const formattedEndTime = formatTime12Hour(endTime);
 
   return {
-    date: formatDisplayDate(nextDate ? `${date} - ${nextDate}` : date),
+    date: event?.endDate && event.endDate !== date
+      ? `${formatDisplayDate(date)} - ${formatDisplayDate(event.endDate)}`
+      : formatDisplayDate(date),
     time: startTime && endTime
       ? `${formattedStartTime} - ${formattedEndTime}${isOvernight ? ' (Next day)' : ''}`
       : formattedStartTime || formattedEndTime || 'All Day',
@@ -891,6 +892,9 @@ export default function AdminRequests() {
             deliveryFee: billingBreakdown.deliveryFee,
             durationExtensionHours: billingBreakdown.durationExtensionHours,
             durationExtensionFee: billingBreakdown.durationExtensionFee,
+            durationBaseFee: billingBreakdown.durationBaseFee,
+            durationBaseHours: billingBreakdown.durationBaseHours,
+            bookingDurationHours: billingBreakdown.bookingDurationHours,
             extensionHours: billingBreakdown.durationExtensionHours,
             extensionFee: billingBreakdown.durationExtensionFee,
             extensionRate: billingBreakdown.durationExtensionHours > 0
@@ -1085,7 +1089,18 @@ export default function AdminRequests() {
   };
 
   const billingBreakdown = (() => {
-    if (!selectedBooking) return { equipAmt: 0, mobFee: 0, deliveryFee: 0, addonFee: 0, durationExtensionFee: 0, durationExtensionHours: 0, total: 0 };
+    if (!selectedBooking) return {
+      equipAmt: 0,
+      mobFee: 0,
+      deliveryFee: 0,
+      addonFee: 0,
+      durationBaseFee: 0,
+      durationBaseHours: 4,
+      durationExtensionFee: 0,
+      durationExtensionHours: 0,
+      bookingDurationHours: 0,
+      total: 0,
+    };
     const booking = selectedBooking.booking;
     let equipAmt = calcEquipmentAmount();
     const configuredPackage = pricingPackages.find((pkg) =>
@@ -1100,15 +1115,19 @@ export default function AdminRequests() {
       ? Number(booking.billing?.addonsTotal ?? booking.billing?.addonFee ?? booking.addonFee) || 0
       : selectedAddonFee;
     const durationExtension = getDurationExtension(booking, pricingPackages);
-    const total = equipAmt + mobFee + deliveryFee + addonFee + durationExtension.fee;
+    const durationSettings = getDurationSettings(pricingPackages);
+    const total = equipAmt + mobFee + deliveryFee + addonFee + durationExtension.baseFee + durationExtension.fee;
     return {
       equipAmt,
       promoPrice,
       mobFee,
       deliveryFee,
       addonFee,
+      durationBaseFee: durationExtension.baseFee,
+      durationBaseHours: durationSettings.baseHours,
       durationExtensionFee: durationExtension.fee,
       durationExtensionHours: durationExtension.hours,
+      bookingDurationHours: durationExtension.eventHours,
       total,
     };
   })();
@@ -1510,6 +1529,14 @@ export default function AdminRequests() {
                     <span className="billing-label">Add-On Fee</span>
                     <span className="billing-val">{peso(billingBreakdown.addonFee)}</span>
                   </div>
+                  {!isRentBooking && (
+                    <div className="billing-row">
+                      <span className="billing-label">
+                        Booking Duration (up to {billingBreakdown.durationBaseHours} hours)
+                      </span>
+                      <span className="billing-val">{peso(billingBreakdown.durationBaseFee)}</span>
+                    </div>
+                  )}
                   {billingBreakdown.durationExtensionFee > 0 && (
                     <div className="billing-row">
                       <span className="billing-label">

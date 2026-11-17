@@ -13,27 +13,6 @@ function isFutureDate(value) {
     return false;
   }
 
-  function timeToMinutes(value) {
-    const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-    if (!match) return null;
-    let hours = Number(match[1]);
-    const minutes = Number(match[2]);
-    const period = match[3]?.toUpperCase();
-    if (minutes > 59 || hours > 23 || (period && (hours < 1 || hours > 12))) return null;
-    if (period) {
-      if (hours === 12) hours = 0;
-      if (period === 'PM') hours += 12;
-    }
-    return hours * 60 + minutes;
-  }
-
-  function formatRequestDate(value) {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime())
-      ? null
-      : date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  }
-
   const today = new Date();
   const localToday = [
     today.getFullYear(),
@@ -41,6 +20,42 @@ function isFutureDate(value) {
     String(today.getDate()).padStart(2, '0'),
   ].join('-');
   return value > localToday;
+}
+
+function timeToMinutes(value) {
+  const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return null;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const period = match[3]?.toUpperCase();
+  if (minutes > 59 || hours > 23 || (period && (hours < 1 || hours > 12))) return null;
+  if (period) {
+    if (hours === 12) hours = 0;
+    if (period === 'PM') hours += 12;
+  }
+  return hours * 60 + minutes;
+}
+
+function formatRequestDate(value) {
+  const text = String(value || '').trim();
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = isoMatch
+    ? new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]))
+    : new Date(value);
+  return Number.isNaN(date.getTime())
+    ? null
+    : date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function getNextDateString(value) {
+  const [year, month, day] = String(value || '').split('-').map(Number);
+  if (!year || !month || !day) return value;
+  const nextDate = new Date(year, month - 1, day + 1);
+  return [
+    nextDate.getFullYear(),
+    String(nextDate.getMonth() + 1).padStart(2, '0'),
+    String(nextDate.getDate()).padStart(2, '0'),
+  ].join('-');
 }
 
 function getEventEndDate(value) {
@@ -68,7 +83,10 @@ async function completePastEvents(rows) {
   const eligibleStatuses = new Set(['upcoming', 'confirmed', 'paid']);
   const expiredRequests = rows.filter((row) => (
     eligibleStatuses.has(String(row.status || '').toLowerCase())
-    && hasEventEnded(parseJson(row.event_json, {}).date)
+    && (() => {
+      const event = parseJson(row.event_json, {});
+      return hasEventEnded(event.endDate || event.date);
+    })()
   ));
 
   await Promise.all(expiredRequests.map((row) => (
@@ -315,8 +333,8 @@ router.post('/', async (req, res) => {
     if (requestType === 'book') {
       const startMinutes = timeToMinutes(payload.timeStart);
       const endMinutes = timeToMinutes(payload.timeEnd);
-      if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
-        return res.status(400).json({ error: 'The booking end time must be later than the start time.' });
+      if (startMinutes === null || endMinutes === null || endMinutes === startMinutes) {
+        return res.status(400).json({ error: 'The booking start and end times must be different.' });
       }
     }
     const deliveryMethod = requestType === 'rent' && payload.deliveryMethod === 'delivery'
@@ -332,6 +350,9 @@ router.post('/', async (req, res) => {
       venue: payload.venue,
       ...(requestType === 'book' ? { pax: payload.pax } : {}),
       date: payload.date,
+      ...(requestType === 'book'
+        ? { endDate: payload.endDate || (timeToMinutes(payload.timeEnd) < timeToMinutes(payload.timeStart) ? getNextDateString(payload.date) : payload.date) }
+        : {}),
       timeStart: payload.timeStart,
       timeEnd: payload.timeEnd,
       ...(requestType === 'rent' ? { deliveryMethod } : {}),

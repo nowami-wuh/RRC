@@ -71,7 +71,10 @@ async function completePastEvents(rows) {
   const eligibleStatuses = new Set(['upcoming', 'confirmed', 'paid']);
   const expiredRequests = rows.filter((row) => (
     eligibleStatuses.has(String(row.status || '').toLowerCase())
-    && hasEventEnded(parseJson(row.event_json, {}).date)
+    && (() => {
+      const event = parseJson(row.event_json, {});
+      return hasEventEnded(event.endDate || event.date);
+    })()
   ));
 
   await Promise.all(expiredRequests.map((row) => (

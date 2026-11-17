@@ -289,6 +289,7 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   const addonsTotal  = Number(b.addonsTotal)  || 0;
   const mobilization = Number(b.mobilization) || 0;
   const deliveryFee  = Number(b.deliveryFee) || 0;
+  const durationBaseFee = Number(b.durationBaseFee) || 0;
   const extensionHrs = Number(b.durationExtensionHours ?? b.extensionHours) || 0;
   const extensionAmt = Number(b.durationExtensionFee ?? b.extensionFee) || extensionHrs * (Number(b.extensionRate) || 2500);
   const extensionRate = Number(b.extensionRate) || (extensionHrs > 0 ? extensionAmt / extensionHrs : 2500);
@@ -297,7 +298,7 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   const isApproved = ['approved', 'awaitingpayment'].includes(status?.toLowerCase());
 
   const effectiveBase = promoApplied && promoPrice > 0 ? promoPrice : basePrice;
-  const total = effectiveBase + addonsTotal + mobilization + deliveryFee + extensionAmt;
+  const total = effectiveBase + addonsTotal + mobilization + deliveryFee + durationBaseFee + extensionAmt;
   const requiredDownpayment = Number(b.downpaymentAmount) || total * 0.2;
   const balance = Boolean(b.fullyPaid) ? 0 : total - downpayment;
   const packageLabel = pkg?.name && !/undefined/i.test(String(pkg.name))
@@ -355,6 +356,14 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
           <div className="billing-row">
             <span className="billing-label">Delivery Fee</span>
             <span className="billing-value">{formatCurrency(deliveryFee)}</span>
+          </div>
+        )}
+        {(b.durationBaseHours != null || b.durationBaseFee != null) && (
+          <div className="billing-row">
+            <span className="billing-label">
+              Booking Duration (up to {Number(b.durationBaseHours) || 4} hours)
+            </span>
+            <span className="billing-value">{formatCurrency(durationBaseFee)}</span>
           </div>
         )}
         {extensionHrs > 0 && (
@@ -476,7 +485,9 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <path d="M3 9H21M7 3V5M17 3V5M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
-                  {formatDisplayDate(ev.date)} &nbsp;|&nbsp; {formatTime12Hour(ev.timeStart)} – {formatTime12Hour(ev.timeEnd)}
+                  {formatDisplayDate(ev.date)}
+                  {ev.endDate && ev.endDate !== ev.date ? ` - ${formatDisplayDate(ev.endDate)}` : ''}
+                  &nbsp;|&nbsp; {formatTime12Hour(ev.timeStart)} – {formatTime12Hour(ev.timeEnd)}
                 </span>
                 <span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">

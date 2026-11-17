@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { createRequest, fetchAboutInfo, fetchInventory } from '../api/api';
-import { timeToMinutes } from '../utils/dateTime';
+import { formatDisplayDate, timeToMinutes } from '../utils/dateTime';
 import '../styles/make-request.css';
 
 function generateId(prefix = 'BK') {
@@ -37,6 +37,23 @@ function getLocalDateString() {
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');
   return `${today.getFullYear()}-${month}-${day}`;
+}
+
+function getNextDateString(dateValue) {
+  const [year, month, day] = String(dateValue || '').split('-').map(Number);
+  if (!year || !month || !day) return '';
+  const nextDate = new Date(year, month - 1, day + 1);
+  return [
+    nextDate.getFullYear(),
+    String(nextDate.getMonth() + 1).padStart(2, '0'),
+    String(nextDate.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+function isOvernightBooking(form) {
+  const startMinutes = timeToMinutes(form.timeStart);
+  const endMinutes = timeToMinutes(form.timeEnd);
+  return startMinutes !== null && endMinutes !== null && endMinutes < startMinutes;
 }
 
 export default function MakeRequest() {
@@ -194,8 +211,8 @@ export default function MakeRequest() {
     if (type === 'book') {
       const startMinutes = timeToMinutes(form.timeStart);
       const endMinutes = timeToMinutes(form.timeEnd);
-      if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
-        setError('The booking end time must be later than the start time.');
+      if (startMinutes === null || endMinutes === null || endMinutes === startMinutes) {
+        setError('The booking start and end times must be different.');
         return;
       }
     }
@@ -235,6 +252,7 @@ export default function MakeRequest() {
     }
 
     const id = type === 'book' ? bookingId : requestId;
+    const overnight = type === 'book' && isOvernightBooking(form);
     const payload = {
       type,
       id,
@@ -244,6 +262,7 @@ export default function MakeRequest() {
       ...(type === 'rent' ? { deliveryMethod: rentDeliveryMethod } : {}),
       ...(type === 'book' ? { pax: form.pax } : {}),
       date: form.date,
+      ...(overnight ? { endDate: getNextDateString(form.date) } : {}),
       timeStart: form.timeStart,
       timeEnd: form.timeEnd,
       additional,
@@ -338,6 +357,11 @@ export default function MakeRequest() {
           />
         </div>
       ))}
+      {formKey === 'book' && isOvernightBooking(formValues) && (
+        <div className="field-help">
+          This booking ends on {formatDisplayDate(getNextDateString(formValues.date))} (next day).
+        </div>
+      )}
       <div className="field-row venue-field-row">
         <label className="field-label" htmlFor={`${formKey}-venue-barangay`}>Venue</label>
         <div className="venue-fields">

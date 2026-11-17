@@ -37,7 +37,7 @@ export function timeToMinutes(value) {
 function formatSingleDate(value) {
   const text = String(value || '').trim();
   if (!text) return '';
-  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
   const date = isoMatch
     ? new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]))
     : new Date(text);
@@ -47,12 +47,13 @@ function formatSingleDate(value) {
 
 export function formatDisplayDate(value) {
   const text = String(value || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return formatSingleDate(text);
   const sharedMonthRange = text.match(/^([A-Za-z]+)\s+(\d{1,2})\s*[-–]\s*(\d{1,2}),?\s+(\d{4})$/);
   if (sharedMonthRange) {
     const [, month, startDay, endDay, year] = sharedMonthRange;
     return `${formatSingleDate(`${month} ${startDay}, ${year}`)} - ${formatSingleDate(`${month} ${endDay}, ${year}`)}`;
   }
-  const rangeMatch = text.match(/^(.+?)\s*[-–]\s*(.+)$/);
+  const rangeMatch = text.match(/^([A-Za-z]+\s+\d{1,2},?\s+\d{4})\s*[-–]\s*([A-Za-z]+\s+\d{1,2},?\s+\d{4})$/);
   if (!rangeMatch) return formatSingleDate(text);
 
   const start = formatSingleDate(rangeMatch[1]);
