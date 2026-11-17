@@ -305,10 +305,13 @@ export default function AdminInquiries() {
   const activeReceiptRequest = selectRequestCode
     ? adminRequests.find((req) => String(req.id) === String(selectRequestCode))
     : null;
-  const activeBookingRequest = activeReceiptRequest || adminRequests.find((req) => {
+  const activeCustomerRequests = adminRequests.filter((req) => {
     const requestCustomerId = req.customerId || req.customer_public_id || req.customerId?.toString?.();
     return requestCustomerId && String(requestCustomerId) === String(activeConv);
   });
+  const activeBookingRequest = activeReceiptRequest
+    || activeCustomerRequests.find((req) => req.type === 'rent')
+    || activeCustomerRequests[0];
 
   useEffect(() => {
     if (!openReceipt) {
@@ -662,7 +665,7 @@ export default function AdminInquiries() {
                   <button
                     type="button"
                     className="chat-action-btn booking-icon"
-                    title={`View Booking ${activeBookingRequest.id}`}
+                    title={`View ${activeBookingRequest.type === 'rent' ? 'Rent Request' : 'Booking'} ${activeBookingRequest.id}`}
                     onClick={() => navigate('/admin/requests', { state: { searchId: activeBookingRequest.id } })}
                   >
                     <svg viewBox="0 0 24 24">

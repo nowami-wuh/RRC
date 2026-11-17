@@ -291,6 +291,12 @@ router.post('/', async (req, res) => {
     if (!isFutureDate(payload.date)) {
       return res.status(400).json({ error: 'Please choose a future event date.' });
     }
+    const deliveryMethod = requestType === 'rent' && payload.deliveryMethod === 'delivery'
+      ? 'delivery'
+      : 'pickup';
+    if (requestType === 'rent' && !String(payload.venue || '').trim()) {
+      return res.status(400).json({ error: 'A location is required for rent requests.' });
+    }
 
     const requestCode = payload.id || `REQ-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 10)}`;
     const event = {
@@ -300,6 +306,7 @@ router.post('/', async (req, res) => {
       date: payload.date,
       timeStart: payload.timeStart,
       timeEnd: payload.timeEnd,
+      ...(requestType === 'rent' ? { deliveryMethod } : {}),
     };
 
     const equipmentItems = parseEquipmentList(payload.equipment);

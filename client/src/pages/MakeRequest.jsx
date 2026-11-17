@@ -54,6 +54,7 @@ export default function MakeRequest() {
   });
   const [bookAdditional, setBookAdditional] = useState('');
   const [rentAdditional, setRentAdditional] = useState('');
+  const [rentDeliveryMethod, setRentDeliveryMethod] = useState('pickup');
 
   // Generated IDs
   const [bookingId, setBookingId] = useState(() => generateId('BK'));
@@ -168,6 +169,7 @@ export default function MakeRequest() {
     setVenueLocation({ book: { city: '', barangay: '' }, rent: { city: '', barangay: '' } });
     setBookAdditional('');
     setRentAdditional('');
+    setRentDeliveryMethod('pickup');
     setSelectedEquipment({});
     setSearchTerm('');
     setDropdownOpen(false);
@@ -230,6 +232,7 @@ export default function MakeRequest() {
       customerId: user.id,
       title: form.title,
       venue: `${barangay}, ${location.city}`,
+      ...(type === 'rent' ? { deliveryMethod: rentDeliveryMethod } : {}),
       ...(type === 'book' ? { pax: form.pax } : {}),
       date: form.date,
       timeStart: form.timeStart,
@@ -342,7 +345,7 @@ export default function MakeRequest() {
             }}
             required
           >
-            <option value="">Select city</option>
+            <option value="">Select location</option>
             {Object.keys(MARINDUQUE_LOCATIONS).map((city) => <option key={city} value={city}>{city}</option>)}
           </select>
           <input
@@ -390,7 +393,7 @@ export default function MakeRequest() {
           </datalist>
         </div>
       </div>
-    </div>
+      </div>
   );
 
   // ── Main Render ─────────────────────────────────────────────────────────────
@@ -468,6 +471,35 @@ export default function MakeRequest() {
             <hr className="form-divider" />
 
             <p className="form-instruction"><em>Kindly fill out the following event details.</em></p>
+            <div className="field-row">
+              <label className="field-label">Fulfillment</label>
+              <div className="venue-fields">
+                <label className="field-choice">
+                  <input
+                    type="radio"
+                    name="rent-delivery-method"
+                    value="pickup"
+                    checked={rentDeliveryMethod === 'pickup'}
+                    onChange={() => {
+                      setRentDeliveryMethod('pickup');
+                      setVenueLocation((previous) => ({ ...previous, rent: { city: '', barangay: '' } }));
+                      setRentForm((previous) => ({ ...previous, venue: '' }));
+                    }}
+                  />
+                  Customer pickup
+                </label>
+                <label className="field-choice">
+                  <input
+                    type="radio"
+                    name="rent-delivery-method"
+                    value="delivery"
+                    checked={rentDeliveryMethod === 'delivery'}
+                    onChange={() => setRentDeliveryMethod('delivery')}
+                  />
+                  Deliver to me
+                </label>
+              </div>
+            </div>
             {renderFields(rentForm, setRentForm, 'rent')}
 
             {/* Equipment Dropdown */}

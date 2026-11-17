@@ -87,6 +87,12 @@ function formatCurrency(val) {
   return `₱${num.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
 }
 
+function getRentItems(equipment) {
+  if (Array.isArray(equipment)) return equipment;
+  if (!equipment || typeof equipment !== 'object') return [];
+  return Object.values(equipment).flatMap((items) => Array.isArray(items) ? items : []);
+}
+
 function daysUntil(dateStr) {
   if (!dateStr) return null;
   const target = new Date(dateStr);
@@ -281,6 +287,7 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   const promoPrice   = Number(b.promoPrice)   || 0;
   const addonsTotal  = Number(b.addonsTotal)  || 0;
   const mobilization = Number(b.mobilization) || 0;
+  const deliveryFee  = Number(b.deliveryFee) || 0;
   const extensionHrs = Number(b.extensionHours) || 0;
   const extensionAmt = extensionHrs * 2500;
   const downpayment  = Number(b.downpayment)  || 0;
@@ -288,7 +295,7 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   const isApproved = ['approved', 'awaitingpayment'].includes(status?.toLowerCase());
 
   const effectiveBase = promoApplied && promoPrice > 0 ? promoPrice : basePrice;
-  const total = effectiveBase + addonsTotal + mobilization + extensionAmt;
+  const total = effectiveBase + addonsTotal + mobilization + deliveryFee + extensionAmt;
   const requiredDownpayment = Number(b.downpaymentAmount) || total * 0.2;
   const balance = Boolean(b.fullyPaid) ? 0 : total - downpayment;
 
@@ -335,6 +342,12 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
           <div className="billing-row">
             <span className="billing-label">Mobilization Fee</span>
             <span className="billing-value">{formatCurrency(mobilization)}</span>
+          </div>
+        )}
+        {deliveryFee > 0 && (
+          <div className="billing-row">
+            <span className="billing-label">Delivery Fee</span>
+            <span className="billing-value">{formatCurrency(deliveryFee)}</span>
           </div>
         )}
         {extensionHrs > 0 && (
@@ -390,12 +403,13 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
 function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNavigate }) {
   const tabKey = getTabKey(req.status);
   const ev = req.event || {};
+  const rentItems = req.type === 'rent' ? getRentItems(req.equipment) : [];
   const days = tabKey === 'upcoming' ? daysUntil(ev.date) : null;
   const canCancel = ['pending', 'approved', 'awaitingpayment'].includes(req.status?.toLowerCase());
 
   // Determine what sections to show in card body
   const showPackage  = req.type === 'book' && req.package;
-  const showRentItems = req.type === 'rent' && req.equipment && req.equipment.length > 0;
+  const showRentItems = req.type === 'rent' && rentItems.length > 0;
   const showBilling  = !!req.billing;
 
   // Banners
@@ -461,7 +475,11 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#666" />
                   </svg>
-                  {ev.venue}
+                  {req.type === 'rent'
+                    ? ev.deliveryMethod === 'delivery'
+                      ? `Delivery to ${ev.venue}`
+                      : 'Customer pickup'
+                    : ev.venue}
                 </span>
               </div>
             </div>
@@ -583,7 +601,7 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
           {showRentItems && (
             <>
               <hr className="card-divider" style={{ marginTop: '16px' }} />
-              <RentItemsSection equipment={req.equipment} />
+              <RentItemsSection equipment={rentItems} />
             </>
           )}
 

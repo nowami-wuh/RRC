@@ -190,6 +190,20 @@
   border-left: 1px solid #d5dced;
 }
 
+.field-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  font-family: 'Garet', sans-serif;
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+.field-choice input {
+  accent-color: var(--dark-blue);
+}
+
 .venue-city-input {
   cursor: pointer;
 }

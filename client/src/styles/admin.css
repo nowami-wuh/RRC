@@ -4596,6 +4596,15 @@ body {
 }
 .requests-admin-page .billing-label { color: var(--text-dark); }
 .requests-admin-page .billing-val { font-family: 'Garet Heavy', sans-serif; }
+.requests-admin-page .billing-fee-input {
+    width: 120px;
+    padding: 7px 9px;
+    border: 1px solid #c8d3e6;
+    border-radius: 6px;
+    text-align: right;
+    font-family: 'Garet', sans-serif;
+    font-size: 13px;
+}
 .requests-admin-page .billing-divider { border: none; border-top: 1.5px solid #ddd; margin: 4px 0; }
 .requests-admin-page .total-row { font-size: 16px; }
 .requests-admin-page .total-row .billing-val { color: var(--dark-blue); font-size: 17px; }

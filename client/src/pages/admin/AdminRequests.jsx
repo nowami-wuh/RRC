@@ -299,6 +299,13 @@ function cloneData(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function normalizeEquipmentGroups(equipment) {
+  if (Array.isArray(equipment)) {
+    return equipment.length > 0 ? { RENTAL: cloneData(equipment) } : {};
+  }
+  return equipment && typeof equipment === 'object' ? cloneData(equipment) : {};
+}
+
 function peso(value) {
   return `Php ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -445,6 +452,7 @@ export default function AdminRequests() {
               timeEnd: req.event?.timeEnd || '',
               venue: req.event?.venue || '',
               pax: req.event?.pax ?? null,
+              deliveryMethod: req.event?.deliveryMethod || 'pickup',
             },
             package: req.package?.name?.replace('PACKAGE ', '') || null,
             equipment: req.equipment || {},
@@ -578,7 +586,7 @@ export default function AdminRequests() {
     let nextEquipment = {};
 
     if (isRent) {
-      nextEquipment = cloneData(booking.equipment || {});
+      nextEquipment = normalizeEquipmentGroups(booking.equipment);
     } else if (hasSavedEquipment) {
       nextEquipment = cloneData(booking.equipment);
     } else if (booking.package && packageEquipment[booking.package]) {
@@ -827,9 +835,9 @@ export default function AdminRequests() {
       nextEquipment[cat].push({
         name,
         qty,
-        unit: stockItem?.unit || 'item',
-        price: configuredAddon?.price || 0,
-        promoPrice: configuredAddon?.promo || 0,
+        unit: 'item',
+        price: configuredAddon.price,
+        promoPrice: configuredAddon.promo,
       });
     }
 
@@ -884,6 +892,7 @@ export default function AdminRequests() {
             addonFee: billingBreakdown.addonFee,
             mobilization: billingBreakdown.mobFee,
             mobilizationFee: billingBreakdown.mobFee,
+            deliveryFee: billingBreakdown.deliveryFee,
             durationExtensionHours: billingBreakdown.durationExtensionHours,
             durationExtensionFee: billingBreakdown.durationExtensionFee,
             total: billingBreakdown.total,
@@ -1048,6 +1057,11 @@ export default function AdminRequests() {
     return city ? defaultMobilizationFees[city] : Number(booking.mobilizationFee) || 0;
   };
 
+  const getDeliveryFee = (booking) => {
+    if (booking.requestType !== 'rent' || booking.eventDetails?.deliveryMethod !== 'delivery') return 0;
+    return Number(booking.billing?.deliveryFee ?? booking.deliveryFee) || 0;
+  };
+
   const billingBreakdown = (() => {
     if (!selectedBooking) return { equipAmt: 0, mobFee: 0, addonFee: 0, durationExtensionFee: 0, durationExtensionHours: 0, total: 0 };
     const booking = selectedBooking.booking;
@@ -1057,17 +1071,19 @@ export default function AdminRequests() {
     );
     const promoPrice = Number(configuredPackage?.promo) || 0;
     if (booking.promoApplied && promoPrice > 0) equipAmt = promoPrice;
-    const mobFee = booking.requestType === 'booking' ? getMobilizationFee(booking) : Number(booking.mobilizationFee) || 0;
+    const mobFee = booking.requestType === 'booking' ? getMobilizationFee(booking) : 0;
+    const deliveryFee = getDeliveryFee(booking);
     const selectedAddonFee = getAddOnFee(booking);
     const addonFee = selectedAddonFee === null
       ? Number(booking.billing?.addonsTotal ?? booking.billing?.addonFee ?? booking.addonFee) || 0
       : selectedAddonFee;
     const durationExtension = getDurationExtension(booking, pricingPackages);
-    const total = equipAmt + mobFee + addonFee + durationExtension.fee;
+    const total = equipAmt + mobFee + deliveryFee + addonFee + durationExtension.fee;
     return {
       equipAmt,
       promoPrice,
       mobFee,
+      deliveryFee,
       addonFee,
       durationExtensionFee: durationExtension.fee,
       durationExtensionHours: durationExtension.hours,
@@ -1228,7 +1244,14 @@ export default function AdminRequests() {
                   <p>{selectedBooking ? `Event: ${selectedBooking.booking.eventDetails.name}` : '—'}</p>
                   <p>{selectedBooking ? `Date: ${selectedBooking.booking.eventDetails.date}` : '—'}</p>
                   <p>{selectedBooking ? `Time: ${selectedBooking.booking.eventDetails.time}` : '—'}</p>
-                  <p>{selectedBooking ? `Venue: ${selectedBooking.booking.eventDetails.venue}` : '—'}</p>
+                  {isRentBooking && (
+                    <p>
+                      {selectedBooking.booking.eventDetails.deliveryMethod === 'delivery'
+                        ? `Delivery: ${selectedBooking.booking.eventDetails.venue || 'Address not provided'}`
+                        : 'Fulfillment: Customer pickup'}
+                    </p>
+                  )}
+                  {!isRentBooking && <p>{selectedBooking ? `Venue: ${selectedBooking.booking.eventDetails.venue}` : '—'}</p>}
                   {!isRentBooking && <p>{selectedBooking ? `Pax: ${selectedBooking.booking.eventDetails.pax}` : '—'}</p>}
                   {selectedBooking?.booking.rentDuration && <p>{selectedBooking.booking.rentDuration}</p>}
                   <p id="dRequirements" style={{ display: selectedBooking?.booking.additionalRequirements ? 'block' : 'none' }}>
@@ -1390,7 +1413,7 @@ export default function AdminRequests() {
                   <div className="equip-divider" />
                   {isEditable && (
                     <>
-                      <button className="add-equip-btn" onClick={openAddEquipmentModal}>
+                      <button type="button" className="add-equip-btn" onClick={openAddEquipmentModal}>
                         <em>Add Equipments</em> <span>+</span>
                       </button>
                       {isRentBooking && anyOperatorRequired && <p className="operator-note">* This item requires an authorized operator. Our team will coordinate with the client.</p>}
@@ -1411,10 +1434,28 @@ export default function AdminRequests() {
                     <span className="billing-label">Equipment Amount</span>
                     <span className="billing-val">{peso(billingBreakdown.equipAmt)}</span>
                   </div>
+                  {(!isRentBooking || selectedBooking.booking.eventDetails.deliveryMethod === 'delivery') && (
                   <div className="billing-row">
-                    <span className="billing-label">Mobilization Fee</span>
-                    <span className="billing-val">{peso(billingBreakdown.mobFee)}</span>
+                    <span className="billing-label">{isRentBooking ? 'Delivery Fee' : 'Mobilization Fee'}</span>
+                    {isRentBooking && selectedBooking.booking.eventDetails.deliveryMethod === 'delivery' && selectedBooking.status === 'pending' ? (
+                      <input
+                        type="number"
+                        min="0"
+                        className="billing-fee-input"
+                        value={billingBreakdown.deliveryFee}
+                        onChange={(event) => {
+                          const deliveryFee = Math.max(0, Number(event.target.value) || 0);
+                          updateBooking(selectedBooking.booking.id, (booking) => ({
+                            ...booking,
+                            billing: { ...(booking.billing || {}), deliveryFee },
+                          }));
+                        }}
+                      />
+                    ) : (
+                      <span className="billing-val">{peso(isRentBooking ? billingBreakdown.deliveryFee : billingBreakdown.mobFee)}</span>
+                    )}
                   </div>
+                  )}
                   <div className="billing-row">
                     <span className="billing-label">Add-On Fee</span>
                     <span className="billing-val">{peso(billingBreakdown.addonFee)}</span>
@@ -1482,7 +1523,7 @@ export default function AdminRequests() {
           <div className="modal">
             <div className="modal-header">
               <h2 className="modal-title">Add Equipment</h2>
-              <button className="modal-close" onClick={closeAddEquipmentModal}>&times;</button>
+              <button type="button" className="modal-close" onClick={closeAddEquipmentModal}>&times;</button>
             </div>
             <div className="modal-body">
               <label className="m-label">Equipment</label>
@@ -1506,8 +1547,8 @@ export default function AdminRequests() {
               <p className="m-error">{addEquipError}</p>
 
               <div className="m-actions">
-                <button className="m-btn-cancel" onClick={closeAddEquipmentModal}>Cancel</button>
-                <button className="m-btn-save" onClick={handleAddEquipment}>Add</button>
+                <button type="button" className="m-btn-cancel" onClick={closeAddEquipmentModal}>Cancel</button>
+                <button type="button" className="m-btn-save" onClick={handleAddEquipment}>Add</button>
               </div>
             </div>
           </div>
