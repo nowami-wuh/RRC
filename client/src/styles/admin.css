@@ -1866,6 +1866,7 @@ body {
     background: #27ae60;
     border: 2px solid white;
 }
+.online-dot.offline { background: #bbb; }
 
 .conv-info { flex: 1; min-width: 0; }
 

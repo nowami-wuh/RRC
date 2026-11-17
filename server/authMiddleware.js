@@ -5,7 +5,7 @@ const sessionTtlMs = 8 * 60 * 60 * 1000;
 
 export function createSession(user) {
   const token = crypto.randomBytes(32).toString('hex');
-  sessions.set(token, { user, expiresAt: Date.now() + sessionTtlMs });
+  sessions.set(token, { user, expiresAt: Date.now() + sessionTtlMs, lastActivityAt: Date.now() });
   return token;
 }
 
@@ -21,8 +21,24 @@ export function requireAuth(req, res, next) {
     if (token) sessions.delete(token);
     return res.status(401).json({ error: 'Authentication required.' });
   }
+  session.lastActivityAt = Date.now();
+  session.expiresAt = Date.now() + sessionTtlMs;
   req.user = session.user;
   return next();
+}
+
+export function isUserOnline(userId) {
+  const now = Date.now();
+  for (const [token, session] of sessions.entries()) {
+    if (session.expiresAt <= now) {
+      sessions.delete(token);
+      continue;
+    }
+    if (String(session.user?.id) === String(userId) && now - session.lastActivityAt <= 45 * 1000) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function requireAdmin(req, res, next) {

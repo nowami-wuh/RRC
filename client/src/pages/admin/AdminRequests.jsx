@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { deleteAdminRequest, fetchAdminPackages, fetchAdminRequests, updateAdminRequest } from '../../api/api';
+import { deleteAdminRequest, fetchAdminInventory, fetchAdminPackages, fetchAdminRequests, updateAdminRequest } from '../../api/api';
 import { formatDisplayDate, formatTime12Hour, timeToMinutes } from '../../utils/dateTime';
 
 const initialBookings = {
@@ -307,6 +307,29 @@ function normalizeEquipmentGroups(equipment) {
   return equipment && typeof equipment === 'object' ? cloneData(equipment) : {};
 }
 
+function parseDateOnly(value) {
+  const text = String(value || '').trim();
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return new Date(Date.UTC(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3])));
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime())
+    ? null
+    : new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()));
+}
+
+function getBookingDateRange(booking) {
+  const start = parseDateOnly(booking?.eventDetails?.startDate || booking?.eventDetails?.date);
+  const end = parseDateOnly(booking?.eventDetails?.endDate || booking?.eventDetails?.startDate || booking?.eventDetails?.date);
+  return start && end ? { start: start <= end ? start : end, end: start <= end ? end : start } : null;
+}
+
+function bookingDatesOverlap(firstBooking, secondBooking) {
+  const firstRange = getBookingDateRange(firstBooking);
+  const secondRange = getBookingDateRange(secondBooking);
+  return Boolean(firstRange && secondRange && firstRange.start <= secondRange.end && secondRange.start <= firstRange.end);
+}
+
 function peso(value) {
   return `Php ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -376,6 +399,7 @@ export default function AdminRequests() {
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [requestsLoadError, setRequestsLoadError] = useState('');
   const [pricingPackages, setPricingPackages] = useState([]);
+  const [inventoryItems, setInventoryItems] = useState([]);
   const [currentStatus, setCurrentStatus] = useState('pending');
   const statusTabsRef = useRef(null);
   const statusProgressRef = useRef(null);
@@ -400,9 +424,14 @@ export default function AdminRequests() {
 
   // Populate the page from persisted requests; never expose sample bookings as actionable data.
   useEffect(() => {
-    Promise.all([fetchAdminRequests(), fetchAdminPackages()])
-      .then(([data, packageData]) => {
+    Promise.all([
+      fetchAdminRequests(),
+      fetchAdminPackages(),
+      fetchAdminInventory().catch(() => ({ items: [] })),
+    ])
+      .then(([data, packageData, inventoryData]) => {
         setPricingPackages(packageData.packages || []);
+        setInventoryItems(inventoryData.items || []);
         const apiRequests = data.requests || [];
         const next = createEmptyBookings();
         apiRequests.forEach((req) => {
@@ -425,6 +454,8 @@ export default function AdminRequests() {
             eventDetails: {
               name: req.event?.title || 'Event',
               date: eventSchedule.date,
+              startDate: req.event?.date || '',
+              endDate: req.event?.endDate || req.event?.date || '',
               time: eventSchedule.time,
               timeStart: req.event?.timeStart || '',
               timeEnd: req.event?.timeEnd || '',
@@ -769,6 +800,7 @@ export default function AdminRequests() {
       const item = next[cat]?.[idx];
       if (!item) return prev;
       if (isPackageEquipment(cat, item)) return prev;
+      if (delta === 1 && getAvailableEquipmentQty(item.name) === 0) return prev;
       if (delta === 1) item.qty += 1;
       if (delta === -1 && item.qty > 1) item.qty -= 1;
       const updatedEquipment = cloneData(next);
@@ -820,6 +852,12 @@ export default function AdminRequests() {
     const configuredAddon = getAddOnCatalog().find((item) => item.name === name);
     if (!configuredAddon) {
       setAddEquipError('Please select a configured add-on.');
+      return;
+    }
+
+    const available = getAvailableEquipmentQty(name);
+    if (available !== null && qty > available) {
+      setAddEquipError(`Only ${available} ${available === 1 ? 'unit is' : 'units are'} available for ${name}.`);
       return;
     }
 
@@ -1053,6 +1091,58 @@ export default function AdminRequests() {
       promo: Number(item.promo) || 0,
     }));
 
+  const getInventoryItem = (name) => {
+    const normalizedName = String(name || '').trim().toLowerCase();
+    const liveItem = inventoryItems.find((item) => String(item.name || '').trim().toLowerCase() === normalizedName);
+    if (liveItem) return liveItem;
+    return inventoryStock[name] || Object.entries(inventoryStock).find(([inventoryName]) =>
+      inventoryName.trim().toLowerCase() === normalizedName,
+    )?.[1] || null;
+  };
+
+  const getCurrentEquipmentQty = (name) => Object.values(currentEquipment).flat().reduce((total, item) => (
+    String(item.name || '').trim().toLowerCase() === String(name || '').trim().toLowerCase()
+      ? total + (Number(item.qty) || 0)
+      : total
+  ), 0);
+
+  const getReservedEquipmentQty = (name) => Object.entries(bookings).reduce((total, [status, statusBookings]) => {
+    if (['denied', 'cancelled'].includes(String(status).toLowerCase())) return total;
+
+    return total + statusBookings.reduce((statusTotal, booking) => statusTotal + Object.values(booking.equipment || {}).flat().reduce((bookingTotal, item) => (
+      String(item.name || '').trim().toLowerCase() === String(name || '').trim().toLowerCase()
+        ? bookingTotal + (Number(item.qty) || 0)
+        : bookingTotal
+    ), 0), 0);
+  }, 0);
+
+  const getConfirmedEquipmentQtyForDate = (name) => Object.entries(bookings).reduce((total, [status, statusBookings]) => {
+    const isConfirmed = ['approved', 'upcoming', 'confirmed', 'paid'].includes(status);
+    if (!isConfirmed) return total;
+
+    return total + statusBookings.reduce((statusTotal, booking) => {
+      if (booking.id === selectedBooking?.booking.id || !bookingDatesOverlap(booking, selectedBooking?.booking)) {
+        return statusTotal;
+      }
+      return statusTotal + Object.values(booking.equipment || {}).flat().reduce((bookingTotal, item) => (
+        String(item.name || '').trim().toLowerCase() === String(name || '').trim().toLowerCase()
+          ? bookingTotal + (Number(item.qty) || 0)
+          : bookingTotal
+      ), 0);
+    }, 0);
+  }, 0);
+
+  const getAvailableEquipmentQty = (name) => {
+    const inventoryItem = getInventoryItem(name);
+    if (!inventoryItem) return null;
+    const stock = Number(inventoryItem.stock ?? inventoryItem.available);
+    if (!Number.isFinite(stock)) return null;
+
+    const totalInventory = stock + getReservedEquipmentQty(name);
+    const confirmedForDate = getConfirmedEquipmentQtyForDate(name);
+    return Math.max(0, totalInventory - confirmedForDate - getCurrentEquipmentQty(name));
+  };
+
   const getAddOnFee = (booking) => {
     const catalog = getAddOnCatalog();
     const selectedAddOns = Object.entries(currentEquipment).flatMap(([category, items]) => items
@@ -1146,7 +1236,7 @@ export default function AdminRequests() {
   const isEditable = selectedBooking?.status === 'pending';
   const isRentBooking = selectedBooking?.booking.requestType === 'rent';
   const categories = Object.keys(currentEquipment);
-  const anyOperatorRequired = categories.some((cat) => currentEquipment[cat].some((item) => inventoryStock[item.name]?.operatorRequired));
+  const anyOperatorRequired = categories.some((cat) => currentEquipment[cat].some((item) => getInventoryItem(item.name)?.requiresAuth || getInventoryItem(item.name)?.operatorRequired));
 
   return (
     <section className="requests-admin-page">
@@ -1461,7 +1551,12 @@ export default function AdminRequests() {
                                   <span className="qty-stepper">
                                     <button className="qty-btn" onClick={() => adjustEquipmentQty(cat, idx, -1)}>−</button>
                                     <span className="qty-val">{item.qty}</span>
-                                    <button className="qty-btn" onClick={() => adjustEquipmentQty(cat, idx, 1)}>+</button>
+                                    <button
+                                      className="qty-btn"
+                                      onClick={() => adjustEquipmentQty(cat, idx, 1)}
+                                      disabled={getAvailableEquipmentQty(item.name) === 0}
+                                      title={getAvailableEquipmentQty(item.name) === 0 ? 'No more inventory available' : 'Add one'}
+                                    >+</button>
                                   </span>
                                 ) : (
                                   <span className="equip-qty-static">{item.qty}</span>
@@ -1619,22 +1714,44 @@ export default function AdminRequests() {
             </div>
             <div className="modal-body">
               <label className="m-label">Equipment</label>
-              <select className="m-input" value={newEquipSelection} onChange={(event) => setNewEquipSelection(event.target.value)}>
+              <select
+                className="m-input"
+                value={newEquipSelection}
+                onChange={(event) => {
+                  setNewEquipSelection(event.target.value);
+                  setAddEquipError('');
+                }}
+              >
                 <option value="">Select a configured add-on…</option>
-                {getAddOnCatalog().map((addon) => (
-                  <option key={`addon-${addon.name}`} value={addon.name}>
-                    {addon.name} - Php {addon.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                  </option>
-                ))}
+                {getAddOnCatalog().map((addon) => {
+                  const available = getAvailableEquipmentQty(addon.name);
+                  return (
+                    <option key={`addon-${addon.name}`} value={addon.name}>
+                      {addon.name} - Php {addon.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                      {available !== null ? ` (${available} available)` : ''}
+                    </option>
+                  );
+                })}
               </select>
               <p className="m-hint">
                 {newEquipSelection && getAddOnCatalog().some((addon) => addon.name === newEquipSelection)
-                  ? 'Configured add-on price will be included in the estimated bill.'
+                  ? `Configured add-on price will be included in the estimated bill.${getAvailableEquipmentQty(newEquipSelection) !== null
+                    ? ` ${getAvailableEquipmentQty(newEquipSelection)} available based on inventory.`
+                    : ''}`
                   : ''}
               </p>
 
               <label className="m-label" style={{ marginTop: '14px' }}>Quantity</label>
-              <input type="number" className="m-input" min="1" value={newEquipQty} onChange={(event) => setNewEquipQty(Number(event.target.value))} />
+              <input
+                type="number"
+                className="m-input"
+                min="1"
+                max={newEquipSelection && getAvailableEquipmentQty(newEquipSelection) !== null
+                  ? getAvailableEquipmentQty(newEquipSelection)
+                  : undefined}
+                value={newEquipQty}
+                onChange={(event) => setNewEquipQty(Number(event.target.value))}
+              />
 
               <p className="m-error">{addEquipError}</p>
 

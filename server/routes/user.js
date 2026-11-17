@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import express from 'express';
 import { execute, query } from '../db.js';
+import { isUserOnline } from '../authMiddleware.js';
 
 const router = express.Router();
 
@@ -33,11 +34,33 @@ router.get('/', (req, res) => {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      return res.json({ user: { id: user.public_id, username: user.username, email: user.email, phone: user.phone, avatar: user.avatar || null } });
+      return res.json({
+        user: {
+          id: user.public_id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          avatar: user.avatar || null,
+          online: isUserOnline(user.public_id),
+        },
+      });
     })
     .catch((error) => {
       res.status(500).json({ error: error.message || 'Unable to load user' });
     });
+});
+
+router.get('/presence', (req, res) => {
+  const userId = req.query.userId || req.body?.userId;
+  if (!userId) return res.status(400).json({ error: 'userId is required' });
+  if (req.user?.role === 'customer' && String(req.user.id) !== String(userId)) {
+    return res.status(403).json({ error: 'You may only check your own presence.' });
+  }
+  res.json({ online: isUserOnline(userId) });
+});
+
+router.post('/presence', (req, res) => {
+  res.json({ ok: true });
 });
 
 router.post('/profile', async (req, res) => {

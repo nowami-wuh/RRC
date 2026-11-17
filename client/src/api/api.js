@@ -124,6 +124,14 @@ export function fetchUser(userId) {
   return request(`/user?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' });
 }
 
+export function touchPresence() {
+  return request('/user/presence', { method: 'POST' });
+}
+
+export function fetchUserPresence(userId) {
+  return request(`/user/presence?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' });
+}
+
 export function updateUserProfile(userId, profile) {
   return request('/user/profile', {
     method: 'POST',

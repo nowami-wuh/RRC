@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { editAdminInquiryMessage, fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, markConversationRead, deleteConversation } from '../../api/api';
+import { editAdminInquiryMessage, fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, fetchUserPresence, markConversationRead, deleteConversation } from '../../api/api';
 import { formatTime12Hour } from '../../utils/dateTime';
 
 function getMessageDateHeader(createdAt, timeLabel) {
@@ -37,6 +37,7 @@ export default function AdminInquiries() {
   const [adminRequests, setAdminRequests] = useState([]);
   const [receiptPromptMsgIndex, setReceiptPromptMsgIndex] = useState(null);
   const [customerAvatars, setCustomerAvatars] = useState({});
+  const [customerOnlineStatus, setCustomerOnlineStatus] = useState({});
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [expandedOriginalId, setExpandedOriginalId] = useState(null);
@@ -114,7 +115,6 @@ export default function AdminInquiries() {
     setLongPressConvId(null);
   };
 
-  const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const receiptFocusConsumedRef = useRef(false);
   const location = useLocation();
@@ -259,43 +259,84 @@ export default function AdminInquiries() {
     }
   }, [displayedConversations.length, activeConv, selectCustomerId, isMobile]);
 
-  // Scroll to bottom of chat area when messages change
+  // Load all inquiry profiles together so avatars appear without waiting for a conversation click.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeConv, messages]);
-
-  // Refresh the active customer's avatar so profile changes appear in the inbox promptly.
-  useEffect(() => {
-    if (!activeConv) return;
+    const customerIds = [...new Set([
+      ...messages.map((message) => message.customerPublicId).filter(Boolean),
+      activeConv,
+    ])];
+    if (customerIds.length === 0) return undefined;
 
     let active = true;
-    const refreshAvatar = () => {
-      fetchUser(activeConv)
-        .then((res) => {
+    const profileIds = customerIds.filter((customerId) => !Object.prototype.hasOwnProperty.call(customerAvatars, customerId));
+    if (profileIds.length === 0) return undefined;
+
+    Promise.all(profileIds.map((customerId) => fetchUser(customerId)))
+      .then((responses) => {
+        if (!active) return;
+        const users = responses
+          .map((response, index) => ({ id: profileIds[index], user: response?.user }))
+          .filter(({ user }) => user);
+
+        setCustomerAvatars((prev) => users.reduce((next, { id, user }) => ({
+          ...next,
+          [id]: user.avatar || null,
+        }), prev));
+        setCustomerOnlineStatus((prev) => users.reduce((next, { id, user }) => ({
+          ...next,
+          [id]: Boolean(user.online),
+        }), prev));
+        setMessages((prev) => {
+          let changed = false;
+          const next = prev.map((message) => {
+            const user = users.find(({ id }) => id === message.customerPublicId)?.user;
+            if (!user?.username || message.senderRole !== 'customer' || message.senderName === user.username) {
+              return message;
+            }
+            changed = true;
+            return { ...message, senderName: user.username };
+          });
+          return changed ? next : prev;
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [activeConv, customerAvatars, messages]);
+
+  // Presence is polled separately so status stays live without re-downloading avatars.
+  useEffect(() => {
+    const customerIds = [...new Set([
+      ...messages.map((message) => message.customerPublicId).filter(Boolean),
+      activeConv,
+    ])];
+    if (customerIds.length === 0) return undefined;
+
+    let active = true;
+    const refreshPresence = () => {
+      Promise.all(customerIds.map((customerId) => fetchUserPresence(customerId)))
+        .then((responses) => {
           if (!active) return;
-          const avatar = res?.user?.avatar || null;
-          setCustomerAvatars((prev) => ({ ...prev, [activeConv]: avatar }));
-          if (res?.user?.username) {
-            setMessages((prev) => prev.map((message) => (
-              message.customerPublicId === activeConv && message.senderRole === 'customer'
-                ? { ...message, senderName: res.user.username }
-                : message
-            )));
-          }
+          setCustomerOnlineStatus((prev) => responses.reduce((next, response, index) => ({
+            ...next,
+            [customerIds[index]]: Boolean(response?.online),
+          }), prev));
         })
         .catch(() => {});
     };
 
-    refreshAvatar();
-    const interval = window.setInterval(refreshAvatar, 5000);
-    window.addEventListener('focus', refreshAvatar);
+    refreshPresence();
+    const interval = window.setInterval(refreshPresence, 5000);
+    window.addEventListener('focus', refreshPresence);
 
     return () => {
       active = false;
       window.clearInterval(interval);
-      window.removeEventListener('focus', refreshAvatar);
+      window.removeEventListener('focus', refreshPresence);
     };
-  }, [activeConv]);
+  }, [activeConv, messages]);
 
   const activeConversation = conversationMap[activeConv];
   const activeMessages = activeConversation?.messages || [];
@@ -328,7 +369,7 @@ export default function AdminInquiries() {
       || !activeMessages.length
     ) return;
     const requestCode = String(selectRequestCode || '');
-    const message = activeMessages.find((item) => (
+    const messageIndex = activeMessages.findIndex((item) => (
       (selectMessageId && String(item.id) === String(selectMessageId))
       || (
         requestCode
@@ -337,9 +378,10 @@ export default function AdminInquiries() {
         && String(item.text || '').includes(`Downpayment receipt submitted for ${requestCode}`)
       )
     ));
-    if (!message) return;
+    if (messageIndex < 0) return;
+    const message = activeMessages[messageIndex];
     receiptFocusConsumedRef.current = true;
-    const timer = window.setTimeout(() => scrollToMessage(message.id), 0);
+    const timer = window.setTimeout(() => scrollToMessage(message.id || messageIndex), 0);
     navigate('/admin/inquiries', { replace: true, state: {} });
     return () => window.clearTimeout(timer);
   }, [openReceipt, selectMessageId, selectRequestCode, activeMessages, navigate]);
@@ -615,7 +657,7 @@ export default function AdminInquiries() {
                   {customerAvatars[conv.id]
                     ? <img src={customerAvatars[conv.id]} alt={conv.name} className="conv-avatar-img" />
                     : conv.name.substring(0, 2).toUpperCase()}
-                  <span className="online-dot"></span>
+                  <span className={`online-dot ${customerOnlineStatus[conv.id] ? 'online' : 'offline'}`}></span>
                 </div>
                 <div className="conv-info">
                   <div className="conv-name">{conv.name}</div>
@@ -657,8 +699,8 @@ export default function AdminInquiries() {
               <div className="chat-header-info" onClick={isMobile ? handleShowInfo : undefined} style={isMobile ? { cursor: 'pointer' } : {}}>
                 <div className="chat-header-name">{activeConversation?.name || activeConv}</div>
                 <div className="chat-header-status">
-                  <span className="status-dot online"></span>
-                  Online
+                  <span className={`status-dot ${customerOnlineStatus[activeConv] ? 'online' : 'offline'}`}></span>
+                  {customerOnlineStatus[activeConv] ? 'Online' : 'Offline'}
                 </div>
               </div>
               <div className="chat-header-actions">
@@ -827,7 +869,6 @@ export default function AdminInquiries() {
                   </React.Fragment>
                 );
               })}
-              <div ref={messagesEndRef} />
             </div>
 
             {/* Reply Preview Bar above input bar */}
