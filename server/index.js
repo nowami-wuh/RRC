@@ -23,7 +23,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const allowedOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_ORIGIN || '')
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_ORIGIN || 'https://rrc-client.vercel.app')
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
