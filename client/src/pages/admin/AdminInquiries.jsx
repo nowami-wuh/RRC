@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { editAdminInquiryMessage, fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, fetchUserPresence, markConversationRead, deleteConversation } from '../../api/api';
+import { editAdminInquiryMessage, fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, fetchUserPresence, markConversationRead, deleteConversation, updateAdminRequest } from '../../api/api';
 import { formatTime12Hour } from '../../utils/dateTime';
 
 function getMessageDateHeader(createdAt, timeLabel) {
@@ -46,6 +46,13 @@ export default function AdminInquiries() {
   const [touchCurrentX, setTouchCurrentX] = useState(0);
   const [swipingMsgId, setSwipingMsgId] = useState(null);
   const [messageMenu, setMessageMenu] = useState(null);
+  const [photoViewer, setPhotoViewer] = useState(null);
+  const [photoZoom, setPhotoZoom] = useState(1);
+  const [photoBaseScale, setPhotoBaseScale] = useState(1);
+  const [photoImageSize, setPhotoImageSize] = useState(null);
+  const [photoActionLoading, setPhotoActionLoading] = useState(false);
+  const [photoActionError, setPhotoActionError] = useState('');
+  const photoStageRef = useRef(null);
   const messageLongPressTimer = useRef(null);
 
   const handleTouchStart = (e, msgId) => {
@@ -365,6 +372,71 @@ export default function AdminInquiries() {
   const activeBookingRequest = activeReceiptRequest
     || activeCustomerRequests.find((req) => req.type === 'rent')
     || activeCustomerRequests[0];
+  const photoRequest = photoViewer?.requestCode
+    ? adminRequests.find((request) => String(request.id) === String(photoViewer.requestCode))
+    : photoViewer?.request || null;
+  const photoRequestIsPaid = photoRequest?.payment?.status === 'paid'
+    || photoRequest?.billing?.downpaymentStatus === 'paid'
+    || photoRequest?.billing?.downpaymentPaid === true
+    || photoRequest?.billing?.paymentStatus === 'paid';
+
+  useEffect(() => {
+    if (!photoViewer) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setPhotoViewer(null);
+      if (event.key === '+' || event.key === '=') setPhotoZoom((zoom) => Math.min(4, zoom + 0.25));
+      if (event.key === '-') setPhotoZoom((zoom) => Math.max(0.5, zoom - 0.25));
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [photoViewer]);
+
+  const openPhotoViewer = (image, request) => {
+    setPhotoViewer({ image, request: request || null, requestCode: request?.id || null });
+    setPhotoZoom(1);
+    setPhotoBaseScale(1);
+    setPhotoImageSize(null);
+    setPhotoActionError('');
+  };
+
+  const markPhotoRequestPaid = async () => {
+    if (!photoRequest || photoRequestIsPaid || photoActionLoading) return;
+    const billing = photoRequest.billing || {};
+    const total = Number(billing.total || 0);
+    const downpayment = Number(
+      billing.downpaymentAmount
+      || billing.downpayment
+      || photoRequest.payment?.amount
+      || total * 0.2,
+    );
+
+    setPhotoActionLoading(true);
+    setPhotoActionError('');
+    try {
+      const response = await updateAdminRequest(photoRequest.id, {
+        status: 'upcoming',
+        billing: {
+          ...billing,
+          downpaymentStatus: 'paid',
+          downpaymentPaid: true,
+          downpayment,
+          downpaymentAmount: downpayment,
+          downpaymentRecordedAt: new Date().toISOString(),
+          paymentMethod: 'chat_receipt',
+        },
+      });
+      const updatedRequest = response.request;
+      if (!updatedRequest) throw new Error('The server did not return the updated request.');
+      setAdminRequests((previous) => previous.map((request) => (
+        String(request.id) === String(updatedRequest.id) ? updatedRequest : request
+      )));
+      setPhotoViewer((previous) => previous ? { ...previous, request: updatedRequest } : previous);
+    } catch (error) {
+      setPhotoActionError(error.message || `Unable to mark request ${photoRequest.id} as paid.`);
+    } finally {
+      setPhotoActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!openReceipt) {
@@ -826,7 +898,16 @@ export default function AdminInquiries() {
                           <div className="original-message">{msg.originalText}</div>
                         )}
                         {msg.text && <div>{msg.text}</div>}
-                        {msg.image && <img src={msg.image} alt="Attachment" />}
+                        {msg.image && (
+                          <button
+                            type="button"
+                            className="photo-thumbnail"
+                            onClick={() => openPhotoViewer(msg.image, isReceiptImage ? receiptRequest : null)}
+                            aria-label="View photo"
+                          >
+                            <img src={msg.image} alt="Attachment — click to enlarge" />
+                          </button>
+                        )}
                         <div className="bubble-meta">
                           <span className="bubble-time">{msg.time}</span>
                           {isOutgoing && <span className="read-tick">✓</span>}
@@ -1004,6 +1085,76 @@ export default function AdminInquiries() {
               <button type="button" onClick={() => { startEditing(messageMenu.message); setMessageMenu(null); }}>Edit</button>
             )}
           </div>
+        </div>
+      )}
+      {photoViewer && (
+        <div className="photo-viewer-overlay" onClick={() => setPhotoViewer(null)}>
+          <section
+            className="photo-viewer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Photo viewer"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="photo-viewer-header">
+              <div className="photo-viewer-title">
+                <strong>{photoRequest ? `Receipt${photoRequest.id ? ` — ${photoRequest.id}` : ''}` : 'Photo'}</strong>
+                <span>Use zoom controls to inspect image details</span>
+              </div>
+              <button type="button" className="photo-viewer-close" onClick={() => setPhotoViewer(null)} aria-label="Close photo viewer">
+                &times;
+              </button>
+            </header>
+            <div className="photo-viewer-tools">
+              <div className="photo-zoom-controls" aria-label="Image zoom controls">
+                <button type="button" onClick={() => setPhotoZoom((zoom) => Math.max(0.5, zoom - 0.25))} disabled={photoZoom <= 0.5} aria-label="Zoom out">−</button>
+                <span>{Math.round(photoZoom * 100)}%</span>
+                <button type="button" onClick={() => setPhotoZoom((zoom) => Math.min(4, zoom + 0.25))} disabled={photoZoom >= 4} aria-label="Zoom in">+</button>
+                <button type="button" className="photo-zoom-reset" onClick={() => setPhotoZoom(1)}>Fit</button>
+              </div>
+              <div className="photo-viewer-actions">
+                {photoViewer.image.startsWith('data:image/') && (
+                  <a
+                    className="photo-download-btn"
+                    href={photoViewer.image}
+                    download={`receipt-${photoRequest?.id || 'image'}.${photoViewer.image.slice(11).split(/[;,]/)[0].replace('jpeg', 'jpg') || 'jpg'}`}
+                  >
+                    Download
+                  </a>
+                )}
+                {photoRequest && ['approved', 'awaitingpayment'].includes(String(photoRequest.status).toLowerCase()) && !photoRequestIsPaid && (
+                  <button
+                    type="button"
+                    className="photo-mark-paid-btn"
+                    onClick={markPhotoRequestPaid}
+                    disabled={photoActionLoading}
+                  >
+                    {photoActionLoading ? 'Saving…' : 'Mark as Paid'}
+                  </button>
+                )}
+                {photoRequestIsPaid && <span className="photo-paid-status">Downpayment marked as paid</span>}
+              </div>
+            </div>
+            {photoActionError && <p className="photo-viewer-error" role="alert">{photoActionError}</p>}
+            <div className="photo-viewer-stage" ref={photoStageRef}>
+              <img
+                src={photoViewer.image}
+                alt="Enlarged attachment"
+                onLoad={(event) => {
+                  const { naturalWidth, naturalHeight } = event.currentTarget;
+                  const stage = photoStageRef.current;
+                  const maxWidth = Math.max(1, (stage?.clientWidth || window.innerWidth) - 48);
+                  const maxHeight = Math.max(1, (stage?.clientHeight || window.innerHeight) - 48);
+                  setPhotoImageSize({ width: naturalWidth, height: naturalHeight });
+                  setPhotoBaseScale(Math.min(maxWidth / naturalWidth, maxHeight / naturalHeight, 1));
+                }}
+                style={photoImageSize ? {
+                  width: `${photoImageSize.width * photoBaseScale * photoZoom}px`,
+                  height: `${photoImageSize.height * photoBaseScale * photoZoom}px`,
+                } : undefined}
+              />
+            </div>
+          </section>
         </div>
       )}
       {showInfo && (
