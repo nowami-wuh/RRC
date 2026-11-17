@@ -324,7 +324,7 @@ function getDurationSettings(pricingPackages) {
   return {
     baseMinutes: Math.round((Number(baseHoursMatch?.[0]) || 4) * 60),
     baseHours: Number(baseHoursMatch?.[0]) || 4,
-    baseFee: Number(durationItem?.price) || 0,
+    baseFee: Number(durationItem?.price) > 0 ? Number(durationItem.price) : 4000,
     extensionRate: Number(rateMatch?.[0]) || 2500,
     graceMinutes: Number(graceMatch?.[1]) || 30,
   };
@@ -749,7 +749,7 @@ export default function AdminRequests() {
     const packageItems = getPackageEquipment(pkg);
     const existingExtras = Object.fromEntries(
       Object.entries(currentEquipment)
-        .filter(([category]) => !['SOUNDS', 'LIGHTS'].includes(category))
+        .filter(([category]) => !Object.prototype.hasOwnProperty.call(packageItems, category))
         .map(([category, items]) => [category, cloneData(items)]),
     );
     const nextEquipment = { ...packageItems, ...existingExtras };
@@ -768,6 +768,7 @@ export default function AdminRequests() {
       const next = cloneData(prev);
       const item = next[cat]?.[idx];
       if (!item) return prev;
+      if (isPackageEquipment(cat, item)) return prev;
       if (delta === 1) item.qty += 1;
       if (delta === -1 && item.qty > 1) item.qty -= 1;
       const updatedEquipment = cloneData(next);
@@ -780,6 +781,7 @@ export default function AdminRequests() {
     if (!selectedBooking || selectedBooking.status !== 'pending') return;
     setCurrentEquipment((prev) => {
       const next = cloneData(prev);
+      if (isPackageEquipment(cat, next[cat]?.[idx])) return prev;
       next[cat].splice(idx, 1);
       if (next[cat].length === 0) delete next[cat];
       const updatedEquipment = cloneData(next);
@@ -1032,6 +1034,15 @@ export default function AdminRequests() {
         return { name: item.name, qty: Number(parts[0]) || 1, unit: parts.slice(1).join(' ') || 'pc' };
       }),
     ]));
+  };
+
+  const isPackageEquipment = (category, item) => {
+    if (selectedBooking?.booking.requestType === 'rent' || !selectedBooking?.booking.package || !item) {
+      return false;
+    }
+
+    return (getPackageEquipment(selectedBooking.booking.package)[category] || [])
+      .some((packageItem) => packageItem.name === item.name);
   };
 
   const getAddOnCatalog = () => pricingPackages
@@ -1437,24 +1448,28 @@ export default function AdminRequests() {
                         <div key={cat}>
                           <div className="equip-category-label">{cat}</div>
                           <hr className="equip-category-divider" />
-                          {currentEquipment[cat].map((item, idx) => (
-                            <div key={`${cat}-${idx}`} className={`equip-row ${isEditable ? 'removable' : ''}`}>
-                              {isEditable && (
-                                <button className="equip-remove-x" onClick={() => removeEquipmentItem(cat, idx)} title="Remove">&times;</button>
-                              )}
-                              <span>{item.name}</span>
-                              {isEditable ? (
-                                <span className="qty-stepper">
-                                  <button className="qty-btn" onClick={() => adjustEquipmentQty(cat, idx, -1)}>−</button>
-                                  <span className="qty-val">{item.qty}</span>
-                                  <button className="qty-btn" onClick={() => adjustEquipmentQty(cat, idx, 1)}>+</button>
-                                </span>
-                              ) : (
-                                <span className="equip-qty-static">{item.qty}</span>
-                              )}
-                              <span className="equip-unit">{item.unit}</span>
-                            </div>
-                          ))}
+                          {currentEquipment[cat].map((item, idx) => {
+                            const packageItem = isPackageEquipment(cat, item);
+                            const rowEditable = isEditable && !packageItem;
+                            return (
+                              <div key={`${cat}-${idx}`} className={`equip-row ${rowEditable ? 'removable' : ''}`}>
+                                {rowEditable && (
+                                  <button className="equip-remove-x" onClick={() => removeEquipmentItem(cat, idx)} title="Remove">&times;</button>
+                                )}
+                                <span>{item.name}</span>
+                                {rowEditable ? (
+                                  <span className="qty-stepper">
+                                    <button className="qty-btn" onClick={() => adjustEquipmentQty(cat, idx, -1)}>−</button>
+                                    <span className="qty-val">{item.qty}</span>
+                                    <button className="qty-btn" onClick={() => adjustEquipmentQty(cat, idx, 1)}>+</button>
+                                  </span>
+                                ) : (
+                                  <span className="equip-qty-static">{item.qty}</span>
+                                )}
+                                <span className="equip-unit">{item.unit}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       ))
                     )}

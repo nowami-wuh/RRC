@@ -289,8 +289,9 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   const addonsTotal  = Number(b.addonsTotal)  || 0;
   const mobilization = Number(b.mobilization) || 0;
   const deliveryFee  = Number(b.deliveryFee) || 0;
-  const durationBaseFee = Number(b.durationBaseFee) || 0;
   const extensionHrs = Number(b.durationExtensionHours ?? b.extensionHours) || 0;
+  const hasBookingDuration = b.durationBaseHours != null || b.durationBaseFee != null || extensionHrs > 0;
+  const durationBaseFee = hasBookingDuration ? (Number(b.durationBaseFee) || 4000) : 0;
   const extensionAmt = Number(b.durationExtensionFee ?? b.extensionFee) || extensionHrs * (Number(b.extensionRate) || 2500);
   const extensionRate = Number(b.extensionRate) || (extensionHrs > 0 ? extensionAmt / extensionHrs : 2500);
   const downpayment  = Number(b.downpayment)  || 0;
@@ -358,7 +359,7 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
             <span className="billing-value">{formatCurrency(deliveryFee)}</span>
           </div>
         )}
-        {(b.durationBaseHours != null || b.durationBaseFee != null) && (
+        {hasBookingDuration && (
           <div className="billing-row">
             <span className="billing-label">
               Booking Duration (up to {Number(b.durationBaseHours) || 4} hours)
