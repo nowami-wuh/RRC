@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchEvents, fetchRequests } from '../api/api';
 import '../styles/home.css';
+import { formatTime12Hour, formatTimeRange } from '../utils/dateTime';
 
 function formatDate(date) {
   const year = date.getFullYear();
@@ -90,7 +91,7 @@ export default function HomePage() {
                   ...e,
                   title: e.title || req.event?.title || 'Event',
                   location: e.location || req.event?.venue || '',
-                  time: e.time || (req.event?.timeStart && req.event?.timeEnd ? `${req.event.timeStart} - ${req.event.timeEnd}` : req.event?.timeStart || 'All Day'),
+                  time: e.time ? formatTimeRange(e.time) : (req.event?.timeStart && req.event?.timeEnd ? `${formatTime12Hour(req.event.timeStart)} - ${formatTime12Hour(req.event.timeEnd)}` : formatTime12Hour(req.event?.timeStart) || 'All Day'),
                 };
               }
               return e;
@@ -112,8 +113,8 @@ export default function HomePage() {
                   title: req.event.title || 'Event',
                   time:
                     req.event.timeStart && req.event.timeEnd
-                      ? `${req.event.timeStart} - ${req.event.timeEnd}`
-                      : req.event.timeStart || req.event.timeEnd || 'All Day',
+                      ? `${formatTime12Hour(req.event.timeStart)} - ${formatTime12Hour(req.event.timeEnd)}`
+                      : formatTime12Hour(req.event.timeStart) || formatTime12Hour(req.event.timeEnd) || 'All Day',
                   location: req.event.venue || '',
                   status: req.status,
                 });

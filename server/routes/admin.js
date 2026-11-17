@@ -25,6 +25,27 @@ function formatYMD(dateInput) {
   return `${year}-${month}-${day}`;
 }
 
+function formatTime12Hour(value) {
+  const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return String(value || '');
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const period = match[3]?.toUpperCase();
+  if (minutes > 59 || hours > 23 || (period && (hours < 1 || hours > 12))) return String(value || '');
+  if (period) {
+    if (hours === 12) hours = 0;
+    if (period === 'PM') hours += 12;
+  }
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${String(minutes).padStart(2, '0')} ${hours >= 12 ? 'PM' : 'AM'}`;
+}
+
+function formatEventTime(start, end) {
+  if (!start && !end) return 'All Day';
+  if (!end) return formatTime12Hour(start);
+  return `${formatTime12Hour(start)} - ${formatTime12Hour(end)}`;
+}
+
 function getEventEndDate(value) {
   if (!value) return null;
   const text = String(value).trim();
@@ -324,7 +345,7 @@ router.patch('/requests/:requestCode', async (req, res) => {
             const eventsArr = parseJson(existing[0].events_json, []);
             const filtered = eventsArr.filter((e) => e.bookingId !== requestCode);
             if (isCalendarVisible) {
-              const timeLabel = ev.timeStart && ev.timeEnd ? `${ev.timeStart} - ${ev.timeEnd}` : ev.timeStart || 'All Day';
+              const timeLabel = formatEventTime(ev.timeStart, ev.timeEnd);
               filtered.push({ time: timeLabel, title: ev.title || 'Event', location: ev.venue || '', bookingId: requestCode });
             }
             if (filtered.length > 0) {
@@ -333,7 +354,7 @@ router.patch('/requests/:requestCode', async (req, res) => {
               await execute('DELETE FROM events WHERE event_date = ?', [dateKey]);
             }
           } else if (isCalendarVisible) {
-            const timeLabel = ev.timeStart && ev.timeEnd ? `${ev.timeStart} - ${ev.timeEnd}` : ev.timeStart || 'All Day';
+            const timeLabel = formatEventTime(ev.timeStart, ev.timeEnd);
             const newEntry = [{ time: timeLabel, title: ev.title || 'Event', location: ev.venue || '', bookingId: requestCode }];
             await execute('INSERT INTO events (event_date, events_json) VALUES (?, ?)', [dateKey, safeJson(newEntry)]);
           }
@@ -430,7 +451,7 @@ router.delete('/inquiries/:customerId', async (req, res) => {
 router.post('/inquiries', async (req, res) => {
   try {
     const payload = req.body || {};
-    const timeLabel = payload.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeLabel = payload.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const customerPublicId = payload.customerPublicId || null;
     const replyToJson = payload.replyTo ? JSON.stringify(payload.replyTo) : null;
 

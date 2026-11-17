@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { editAdminInquiryMessage, fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, markConversationRead, deleteConversation } from '../../api/api';
+import { formatTime12Hour } from '../../utils/dateTime';
 
 function getMessageDateHeader(createdAt, timeLabel) {
   if (!createdAt) return null;
@@ -19,9 +20,9 @@ function getMessageDateHeader(createdAt, timeLabel) {
   } else if (targetDay.getTime() === yesterday.getTime()) {
     return 'Yesterday';
   } else if (now.getFullYear() === msgDate.getFullYear()) {
-    return msgDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return msgDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   } else {
-    return msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return msgDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   }
 }
 
@@ -128,7 +129,7 @@ export default function AdminInquiries() {
     Promise.all([fetchAdminInquiries(), fetchAdminRequests()])
       .then(([inquiryData, requestData]) => {
         const msgs = inquiryData.messages || [];
-        setMessages(msgs);
+        setMessages(msgs.map((message) => ({ ...message, time: formatTime12Hour(message.time) })));
         setAdminRequests(requestData.requests || []);
         // Auto-select the conversation passed from AdminRequests
         if (selectCustomerId) {
@@ -501,7 +502,7 @@ export default function AdminInquiries() {
 
   const handleReply = async () => {
     if (!reply.trim() || !activeConv) return;
-    const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeLabel = formatTime12Hour(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
     const currentReply = replyingTo ? {
       id: replyingTo.id,
       senderName: replyingTo.senderName,
@@ -534,7 +535,7 @@ export default function AdminInquiries() {
     reader.onloadend = async () => {
       const base64Str = reader.result;
       if (!activeConv) return;
-      const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const timeLabel = formatTime12Hour(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
       const currentReply = replyingTo ? {
         id: replyingTo.id,
         senderName: replyingTo.senderName,

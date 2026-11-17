@@ -55,7 +55,7 @@ router.post('/messages', (req, res) => {
   const senderRole = payload.senderRole || (payload.type === 'received' ? 'admin' : 'customer');
   const senderName = payload.senderName || (senderRole === 'admin' ? 'RRC Admin' : 'Customer');
   const customerPublicId = payload.customerPublicId || null;
-  const timeLabel = payload.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const timeLabel = payload.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   const replyToJson = payload.replyTo ? JSON.stringify(payload.replyTo) : null;
 
   execute(

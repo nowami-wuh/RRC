@@ -13,6 +13,27 @@ function isFutureDate(value) {
     return false;
   }
 
+  function timeToMinutes(value) {
+    const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (!match) return null;
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const period = match[3]?.toUpperCase();
+    if (minutes > 59 || hours > 23 || (period && (hours < 1 || hours > 12))) return null;
+    if (period) {
+      if (hours === 12) hours = 0;
+      if (period === 'PM') hours += 12;
+    }
+    return hours * 60 + minutes;
+  }
+
+  function formatRequestDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? null
+      : date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
   const today = new Date();
   const localToday = [
     today.getFullYear(),
@@ -66,7 +87,7 @@ function formatRequest(row) {
     id: row.request_code,
     type: row.type,
     status: row.status,
-    dateRequested: row.created_at ? new Date(row.created_at).toLocaleDateString() : null,
+    dateRequested: row.created_at ? formatRequestDate(row.created_at) : null,
     customerId: row.customer_public_id,
     event: parseJson(row.event_json, {}),
     package: parseJson(row.package_json, null),
@@ -200,7 +221,7 @@ router.post('/:requestCode/downpayment-receipt', async (req, res) => {
         const billing = parseJson(requestRow.billing_json, {}) || {};
         const amount = Number(billing.downpaymentAmount) || Number(billing.total || 0) * 0.2;
         const messageText = `Downpayment receipt submitted for ${requestCode}. Please review the attached invoice.`;
-        const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const timeLabel = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         const result = await execute(
           `INSERT INTO chat_messages
            (sender_role, sender_name, customer_public_id, text, image, time_label)
@@ -291,6 +312,13 @@ router.post('/', async (req, res) => {
     if (!isFutureDate(payload.date)) {
       return res.status(400).json({ error: 'Please choose a future event date.' });
     }
+    if (requestType === 'book') {
+      const startMinutes = timeToMinutes(payload.timeStart);
+      const endMinutes = timeToMinutes(payload.timeEnd);
+      if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+        return res.status(400).json({ error: 'The booking end time must be later than the start time.' });
+      }
+    }
     const deliveryMethod = requestType === 'rent' && payload.deliveryMethod === 'delivery'
       ? 'delivery'
       : 'pickup';
@@ -346,7 +374,7 @@ router.post('/', async (req, res) => {
       id: requestCode,
       type: requestType,
       status: 'pending',
-      dateRequested: new Date().toLocaleDateString(),
+      dateRequested: formatRequestDate(new Date().toISOString()),
       customerId,
       event,
       package: payload.package || null,

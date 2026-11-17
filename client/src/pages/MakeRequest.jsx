@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { createRequest, fetchAboutInfo, fetchInventory } from '../api/api';
+import { timeToMinutes } from '../utils/dateTime';
 import '../styles/make-request.css';
 
 function generateId(prefix = 'BK') {
@@ -189,6 +190,14 @@ export default function MakeRequest() {
     if (!form.title || !form.venue || !form.date || !form.timeStart || !form.timeEnd) {
       setError('Please fill out all required event details.');
       return;
+    }
+    if (type === 'book') {
+      const startMinutes = timeToMinutes(form.timeStart);
+      const endMinutes = timeToMinutes(form.timeEnd);
+      if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+        setError('The booking end time must be later than the start time.');
+        return;
+      }
     }
     if (type === 'book' && !/^\d+$/.test(String(form.pax))) {
       setError('Please enter a whole, non-negative number of guests.');

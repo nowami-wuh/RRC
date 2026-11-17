@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { editChatMessage, fetchChatMessages, postChatMessage } from '../api/api';
 import '../styles/chat.css';
+import { formatTime12Hour } from '../utils/dateTime';
 
 function getMessageDateHeader(createdAt, timeLabel) {
   if (!createdAt) return null;
@@ -20,9 +21,9 @@ function getMessageDateHeader(createdAt, timeLabel) {
   } else if (targetDay.getTime() === yesterday.getTime()) {
     return 'Yesterday';
   } else if (now.getFullYear() === msgDate.getFullYear()) {
-    return msgDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return msgDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   } else {
-    return msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return msgDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   }
 }
 
@@ -84,7 +85,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     fetchChatMessages(user?.id)
-      .then((data) => setMessages(data.messages || []))
+      .then((data) => setMessages((data.messages || []).map((message) => ({ ...message, time: formatTime12Hour(message.time) }))))
       .catch(() => setError('Unable to load chat history.'))
       .finally(() => setLoading(false));
   }, [user?.id]);
@@ -144,7 +145,7 @@ export default function ChatPage() {
       senderName: user?.username || 'Customer',
       customerPublicId: user?.id || null,
       text: text.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: formatTime12Hour(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })),
       createdAt: new Date().toISOString(),
       replyTo: currentReply,
     };
@@ -185,7 +186,7 @@ export default function ChatPage() {
         customerPublicId: user?.id || null,
         text: '',
         image: base64Str,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime12Hour(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })),
         createdAt: new Date().toISOString(),
         replyTo: currentReply,
       };

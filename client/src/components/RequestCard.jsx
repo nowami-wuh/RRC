@@ -1,3 +1,5 @@
+import { formatDisplayDate, formatTime12Hour } from '../utils/dateTime';
+
 export default function RequestCard({ request }) {
   return (
     <div className="request-card">
@@ -9,10 +11,10 @@ export default function RequestCard({ request }) {
         <div className="request-id">{request.id}</div>
       </div>
       <div className="request-card-body">
-        <div className="request-row"><strong>Date:</strong> {request.event.date}</div>
+        <div className="request-row"><strong>Date:</strong> {formatDisplayDate(request.event.date)}</div>
         <div className="request-row"><strong>Venue:</strong> {request.event.venue}</div>
         {request.type !== 'rent' && <div className="request-row"><strong>Guests:</strong> {request.event.pax}</div>}
-        <div className="request-row"><strong>Time:</strong> {request.event.timeStart} - {request.event.timeEnd}</div>
+        <div className="request-row"><strong>Time:</strong> {formatTime12Hour(request.event.timeStart)} - {formatTime12Hour(request.event.timeEnd)}</div>
         {request.package && <div className="request-row"><strong>Package:</strong> {request.package.name}</div>}
       </div>
     </div>

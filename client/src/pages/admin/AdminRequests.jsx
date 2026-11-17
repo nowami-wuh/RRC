@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { deleteAdminRequest, fetchAdminPackages, fetchAdminRequests, updateAdminRequest } from '../../api/api';
+import { formatDisplayDate, formatTime12Hour, timeToMinutes } from '../../utils/dateTime';
 
 const initialBookings = {
   pending: [
@@ -310,31 +311,6 @@ function peso(value) {
   return `Php ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function timeToMinutes(value) {
-  const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-  if (!match) return null;
-
-  let hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  const period = match[3]?.toUpperCase();
-  if (minutes > 59 || hours > 23 || (period && (hours < 1 || hours > 12))) return null;
-  if (period) {
-    if (hours === 12) hours = 0;
-    if (period === 'PM') hours += 12;
-  }
-  return hours * 60 + minutes;
-}
-
-function formatTime12Hour(value) {
-  const minutes = timeToMinutes(value);
-  if (minutes === null) return String(value || '');
-
-  const hours24 = Math.floor(minutes / 60);
-  const hours12 = hours24 % 12 || 12;
-  const period = hours24 >= 12 ? 'PM' : 'AM';
-  return `${hours12}:${String(minutes % 60).padStart(2, '0')} ${period}`;
-}
-
 function getDurationSettings(pricingPackages) {
   const durationItem = pricingPackages.find((item) =>
     String(item.name || '').trim().toLowerCase() === 'booking duration',
@@ -385,7 +361,7 @@ function formatEventSchedule(event) {
   const formattedEndTime = formatTime12Hour(endTime);
 
   return {
-    date: nextDate ? `${date} - ${nextDate}` : date,
+    date: formatDisplayDate(nextDate ? `${date} - ${nextDate}` : date),
     time: startTime && endTime
       ? `${formattedStartTime} - ${formattedEndTime}${isOvernight ? ' (Next day)' : ''}`
       : formattedStartTime || formattedEndTime || 'All Day',
@@ -437,7 +413,7 @@ export default function AdminRequests() {
           const formattedReq = {
             id: requestId,
             event: req.event?.title || 'Event',
-            requestDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '',
+            requestDate: req.createdAt ? formatDisplayDate(req.createdAt) : '',
             createdAt: req.createdAt || '',
             customerId: req.customerId || null,  // real public_id — used for chat navigation
             client: {
@@ -915,6 +891,11 @@ export default function AdminRequests() {
             deliveryFee: billingBreakdown.deliveryFee,
             durationExtensionHours: billingBreakdown.durationExtensionHours,
             durationExtensionFee: billingBreakdown.durationExtensionFee,
+            extensionHours: billingBreakdown.durationExtensionHours,
+            extensionFee: billingBreakdown.durationExtensionFee,
+            extensionRate: billingBreakdown.durationExtensionHours > 0
+              ? billingBreakdown.durationExtensionFee / billingBreakdown.durationExtensionHours
+              : 0,
             total: billingBreakdown.total,
             downpaymentAmount: billingBreakdown.total * 0.2,
             promoApplied: Boolean(selectedBooking.booking.promoApplied),

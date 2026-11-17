@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fetchRequests, cancelRequest, fetchAboutInfo, submitDownpaymentReceipt } from '../api/api';
+import { formatDisplayDate, formatTime12Hour } from '../utils/dateTime';
 import '../styles/my-requests.css';
 
 // ── Status Tab Config ───────────────────────────────────────────────────────────
@@ -288,8 +289,9 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   const addonsTotal  = Number(b.addonsTotal)  || 0;
   const mobilization = Number(b.mobilization) || 0;
   const deliveryFee  = Number(b.deliveryFee) || 0;
-  const extensionHrs = Number(b.extensionHours) || 0;
-  const extensionAmt = extensionHrs * 2500;
+  const extensionHrs = Number(b.durationExtensionHours ?? b.extensionHours) || 0;
+  const extensionAmt = Number(b.durationExtensionFee ?? b.extensionFee) || extensionHrs * (Number(b.extensionRate) || 2500);
+  const extensionRate = Number(b.extensionRate) || (extensionHrs > 0 ? extensionAmt / extensionHrs : 2500);
   const downpayment  = Number(b.downpayment)  || 0;
   const promoApplied = Boolean(b.promoApplied);
   const isApproved = ['approved', 'awaitingpayment'].includes(status?.toLowerCase());
@@ -357,7 +359,7 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
         )}
         {extensionHrs > 0 && (
           <div className="billing-row">
-            <span className="billing-label">Extension ({extensionHrs} hr{extensionHrs > 1 ? 's' : ''} × ₱2,500)</span>
+            <span className="billing-label">Extension ({extensionHrs} hr{extensionHrs > 1 ? 's' : ''} × {formatCurrency(extensionRate)})</span>
             <span className="billing-value">{formatCurrency(extensionAmt)}</span>
           </div>
         )}
@@ -441,7 +443,7 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
             <strong>{req.id}</strong>
           </span>
           <span className="card-date-requested">
-            Date of Request: <strong>{req.dateRequested}</strong>
+            Date of Request: <strong>{formatDisplayDate(req.dateRequested)}</strong>
           </span>
         </div>
         <div className="card-right">
@@ -474,7 +476,7 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <path d="M3 9H21M7 3V5M17 3V5M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
-                  {ev.date} &nbsp;|&nbsp; {ev.timeStart} – {ev.timeEnd}
+                  {formatDisplayDate(ev.date)} &nbsp;|&nbsp; {formatTime12Hour(ev.timeStart)} – {formatTime12Hour(ev.timeEnd)}
                 </span>
                 <span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
