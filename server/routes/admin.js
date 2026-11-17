@@ -311,6 +311,9 @@ router.patch('/requests/:requestCode', async (req, res) => {
     const updates = [];
     const params = [];
     if (status !== undefined)       { updates.push('status = ?');         params.push(status); }
+    if (requestedStatus && requestedStatus !== oldStatus) {
+      updates.push('status_updated_at = CURRENT_TIMESTAMP');
+    }
     if (pkg !== undefined)          { updates.push('package_json = ?');   params.push(pkg ? safeJson(pkg) : null); }
     if (equipment !== undefined)    { updates.push('equipment_json = ?'); params.push(safeJson(equipment)); }
     if (billing !== undefined)      { updates.push('billing_json = ?');   params.push(nextBilling ? safeJson(nextBilling) : null); }

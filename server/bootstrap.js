@@ -85,6 +85,7 @@ async function ensureTables() {
       denial_reason TEXT NULL,
       additional_notes TEXT NULL,
       service_agreement_accepted TINYINT(1) NOT NULL DEFAULT 0,
+      status_updated_at TIMESTAMP NULL DEFAULT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_requests_customer (customer_public_id),
       INDEX idx_requests_status (status)
@@ -112,6 +113,16 @@ async function ensureTables() {
   } catch (error) {
     if (error.code !== 'ER_DUP_FIELDNAME') throw error;
   }
+  try {
+    await execute('ALTER TABLE requests ADD COLUMN status_updated_at TIMESTAMP NULL DEFAULT NULL AFTER service_agreement_accepted');
+  } catch (error) {
+    if (error.code !== 'ER_DUP_FIELDNAME') throw error;
+  }
+  await execute(`
+    UPDATE requests
+    SET status_updated_at = CURRENT_TIMESTAMP
+    WHERE status_updated_at IS NULL AND LOWER(status) IN ('approved', 'awaitingpayment')
+  `);
 
   await execute(`
     CREATE TABLE IF NOT EXISTS notifications (

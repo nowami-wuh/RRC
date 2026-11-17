@@ -16,6 +16,7 @@ import aboutRoutes from './routes/about.js';
 import { bootstrapDatabase } from './bootstrap.js';
 import { query } from './db.js';
 import { verifyMailer } from './mailer.js';
+import { startRequestExpiryJob } from './requestExpiry.js';
 import { requireAuth, requireAdmin, scopeCustomerRequest } from './authMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -181,6 +182,7 @@ console.log('NODE_ENV=', process.env.NODE_ENV);
 console.log('CORS_ORIGINS=', process.env.CORS_ORIGINS || process.env.CLIENT_ORIGIN);
 
 const startServer = () => {
+  startRequestExpiryJob();
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
     // Verify SMTP connectivity at startup — check Render logs for ✅ or ❌

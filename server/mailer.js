@@ -12,6 +12,16 @@
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[character]));
+}
+
 /**
  * Low-level send helper using Brevo's Transactional Email API.
  * Falls back to console logging in local dev when BREVO_API_KEY is missing.
@@ -224,7 +234,6 @@ export async function sendRequestStatusEmail(email, request) {
   };
 
   const cfg = statusConfig[status] || { color: '#38629B', label: status.charAt(0).toUpperCase() + status.slice(1), msg: 'Your request status has been updated.' };
-
   await sendMail({
     to: email,
     subject: `RRC Lights & Sounds – Request ${cfg.label} (${id})`,
@@ -248,13 +257,13 @@ Thank you for choosing RRC Lights & Sounds!
         <p>Your <strong>${typeLabel.toLowerCase()} request</strong> status has been updated:</p>
         <div style="text-align: center; margin: 24px 0;">
           <span style="display: inline-block; padding: 10px 28px; border-radius: 999px; background: ${cfg.color}; color: #fff; font-size: 18px; font-weight: bold; letter-spacing: 1px;">
-            ${cfg.label}
+            ${escapeHtml(cfg.label)}
           </span>
         </div>
         <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
           <tr style="background: #f5f7fb;">
             <td style="padding: 8px 12px; font-weight: bold; color: #555;">Request ID</td>
-            <td style="padding: 8px 12px;">${id}</td>
+            <td style="padding: 8px 12px;">${escapeHtml(id)}</td>
           </tr>
           <tr>
             <td style="padding: 8px 12px; font-weight: bold; color: #555;">Type</td>
@@ -262,21 +271,38 @@ Thank you for choosing RRC Lights & Sounds!
           </tr>
           <tr style="background: #f5f7fb;">
             <td style="padding: 8px 12px; font-weight: bold; color: #555;">Event Title</td>
-            <td style="padding: 8px 12px;">${event.title || 'N/A'}</td>
+            <td style="padding: 8px 12px;">${escapeHtml(event.title || 'N/A')}</td>
           </tr>
           <tr>
             <td style="padding: 8px 12px; font-weight: bold; color: #555;">Event Date</td>
-            <td style="padding: 8px 12px;">${event.date || 'N/A'}</td>
+            <td style="padding: 8px 12px;">${escapeHtml(event.date || 'N/A')}</td>
           </tr>
           <tr style="background: #f5f7fb;">
             <td style="padding: 8px 12px; font-weight: bold; color: #555;">Venue</td>
-            <td style="padding: 8px 12px;">${event.venue || 'N/A'}</td>
+            <td style="padding: 8px 12px;">${escapeHtml(event.venue || 'N/A')}</td>
           </tr>
         </table>
-        <p style="color: ${cfg.color}; font-weight: bold;">${cfg.msg}</p>
+        <p style="color: ${cfg.color}; font-weight: bold;">${escapeHtml(cfg.msg)}</p>
         <p>Thank you for choosing <strong>RRC Lights &amp; Sounds</strong>!</p>
         <hr style="border: none; border-top: 1px solid #eee; margin-top: 24px;" />
         <p style="font-size: 12px; color: #777; text-align: center;">This is an automated message. Please do not reply.</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendAdminRequestExpiryEmail(email, request) {
+  const { id, event = {}, denialReason } = request;
+  await sendMail({
+    to: email,
+    subject: `RRC Lights & Sounds – Request ${id} Automatically Denied`,
+    text: `Request ${id} for ${event.title || 'an event'} was automatically denied after 5 business days without the required action.\n\n${denialReason}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #38629B; text-align: center;">RRC Lights &amp; Sounds</h2>
+        <p>Request <strong>${escapeHtml(id)}</strong> for <strong>${escapeHtml(event.title || 'an event')}</strong> was automatically denied after 5 business days without the required action.</p>
+        <p>${escapeHtml(denialReason)}</p>
+        <p>This is an automated message. Please do not reply.</p>
       </div>
     `,
   });

@@ -1,4 +1,6 @@
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { fetchAdminSummary } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import '../styles/admin.css';
 
@@ -87,6 +89,27 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const loadPendingCount = () => {
+      fetchAdminSummary()
+        .then(({ summary }) => {
+          if (active) setPendingRequestCount(Number(summary?.pendingRequests) || 0);
+        })
+        .catch((error) => {
+          console.error('Unable to load pending request count:', error);
+        });
+    };
+
+    loadPendingCount();
+    const intervalId = window.setInterval(loadPendingCount, 60000);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -126,6 +149,11 @@ export default function AdminLayout() {
             >
               {item.icon}
               {item.label}
+              {item.path === '/admin/requests' && pendingRequestCount > 0 && (
+                <span className="nav-count-badge" aria-label={`${pendingRequestCount} pending requests`}>
+                  {pendingRequestCount > 99 ? '99+' : pendingRequestCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
