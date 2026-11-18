@@ -10,7 +10,7 @@
     "dev": "nodemon --watch . --ext js,env --exec node index.js"
   },
   "dependencies": {
-    "bcrypt": "^5.1.0",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.2",
     "dotenv": "^16.1.4",
     "express": "^4.18.2",
