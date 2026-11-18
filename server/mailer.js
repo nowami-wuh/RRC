@@ -132,6 +132,24 @@ export async function sendVerificationEmail(email, code) {
   });
 }
 
+export async function sendAdminEmailChangeVerificationEmail(email, code) {
+  await sendMail({
+    to: email,
+    subject: 'RRC Lights & Sounds – Verify Your Admin Email',
+    text: `Your admin email change verification code is: ${code}\n\nThis code will expire in 10 minutes. If you did not request this change, you can ignore this email.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #38629B; text-align: center;">RRC Lights &amp; Sounds</h2>
+        <p>Enter this code to verify the new email address for your admin account:</p>
+        <div style="font-size: 32px; font-weight: bold; text-align: center; letter-spacing: 5px; margin: 30px 0; color: #1E3F9E;">
+          ${escapeHtml(code)}
+        </div>
+        <p>This code expires in <strong>10 minutes</strong>. If you did not request this change, ignore this email.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendSignupConfirmationEmail(email, username = '') {
   await sendMail({
     to: email,
@@ -209,6 +227,29 @@ Thank you for choosing RRC Lights & Sounds!
         <p>Thank you for choosing <strong>RRC Lights &amp; Sounds</strong>!</p>
         <hr style="border: none; border-top: 1px solid #eee; margin-top: 24px;" />
         <p style="font-size: 12px; color: #777; text-align: center;">This is an automated message. Please do not reply.</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendAdminNewRequestEmail(email, request) {
+  const { id, type, event = {}, customerName, customerEmail } = request;
+  const typeLabel = type === 'book' ? 'Booking' : 'Rent';
+  await sendMail({
+    to: email,
+    subject: `RRC Lights & Sounds – New ${typeLabel} Request (${id})`,
+    text: `A new ${typeLabel.toLowerCase()} request (${id}) is awaiting review.\n\nCustomer: ${customerName || 'Unknown'}\nCustomer email: ${customerEmail || 'N/A'}\nEvent: ${event.title || 'N/A'}\nDate: ${event.date || 'N/A'}\nVenue: ${event.venue || 'N/A'}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #38629B; text-align: center;">RRC Lights &amp; Sounds</h2>
+        <p>A new <strong>${escapeHtml(typeLabel.toLowerCase())} request</strong> is awaiting review.</p>
+        <p><strong>Request ID:</strong> ${escapeHtml(id)}</p>
+        <p><strong>Customer:</strong> ${escapeHtml(customerName || 'Unknown')}</p>
+        <p><strong>Customer email:</strong> ${escapeHtml(customerEmail || 'N/A')}</p>
+        <p><strong>Event:</strong> ${escapeHtml(event.title || 'N/A')}</p>
+        <p><strong>Date:</strong> ${escapeHtml(event.date || 'N/A')}</p>
+        <p><strong>Venue:</strong> ${escapeHtml(event.venue || 'N/A')}</p>
+        <p>Please review this request in the admin dashboard.</p>
       </div>
     `,
   });

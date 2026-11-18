@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchUser, updateUserProfile, removeUserAvatar, changeUserPassword, checkUsernameAvailability } from '../api/api';
+import { fetchUser, updateUserProfile, removeUserAvatar, changeUserPassword, checkUsernameAvailability, confirmAdminEmailChangePassword, initiateAdminEmailChange, verifyAdminEmailChange } from '../api/api';
 import '../styles/my-account.css';
 
 function isValidPhilippinePhone(phone) {
@@ -50,6 +50,10 @@ export default function MyAccount() {
   const [saving, setSaving] = useState(false);
   const [usernameAvail, setUsernameAvail] = useState({ status: 'idle', message: '' });
   const [avatarSaving, setAvatarSaving] = useState(false);
+  const [adminEmailCodeSent, setAdminEmailCodeSent] = useState(false);
+  const [adminEmailCode, setAdminEmailCode] = useState('');
+  const [adminEmailPassword, setAdminEmailPassword] = useState('');
+  const [adminEmailPasswordConfirmed, setAdminEmailPasswordConfirmed] = useState(false);
   const fileInputRef = useRef(null);
 
   const isAdmin = typeof authUser?.id === 'string' && authUser.id.startsWith('ADMIN-');
@@ -103,6 +107,10 @@ export default function MyAccount() {
     setShowCurrent(false);
     setShowNew(false);
     setUsernameAvail({ status: 'idle', message: '' });
+    setAdminEmailCodeSent(false);
+    setAdminEmailCode('');
+    setAdminEmailPassword('');
+    setAdminEmailPasswordConfirmed(false);
   };
 
   // ── Avatar: save immediately on file pick ─────────────────────────────────
@@ -147,6 +155,7 @@ export default function MyAccount() {
 
   const handleSave = async () => {
     if (editField === 'username' && usernameAvail.status === 'taken') return;
+    if (editField === 'email' && isAdmin && !adminEmailPasswordConfirmed) return;
     setSaving(true);
     try {
       if (editField === 'password') {
@@ -172,10 +181,17 @@ export default function MyAccount() {
           }
         }
         if (editField === 'email') {
-          const trimmed = fieldValue.trim();
-          if (!trimmed || !trimmed.includes('@')) {
+          const trimmed = fieldValue.trim().toLowerCase();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
             showMsg('Please enter a valid email address.', 'error');
             setSaving(false);
+            return;
+          }
+          if (isAdmin) {
+            await initiateAdminEmailChange(trimmed, adminEmailPassword);
+            setAdminEmailCode('');
+            setAdminEmailCodeSent(true);
+            showMsg(`Verification code sent to ${trimmed}.`);
             return;
           }
         }
@@ -188,6 +204,44 @@ export default function MyAccount() {
       }
     } catch (err) {
       showMsg(err.message || 'Unable to save changes.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConfirmAdminEmailPassword = async () => {
+    if (!adminEmailPassword) {
+      showMsg('Enter your current password first.', 'error');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await confirmAdminEmailChangePassword(adminEmailPassword);
+      setAdminEmailPasswordConfirmed(true);
+    } catch (err) {
+      showMsg(err.message || 'Unable to confirm current password.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleVerifyAdminEmail = async () => {
+    if (!/^\d{6}$/.test(adminEmailCode.trim())) {
+      showMsg('Enter the 6-digit verification code.', 'error');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const result = await verifyAdminEmailChange(adminEmailCode.trim());
+      const updatedUser = { ...user, ...result.user };
+      setUser(updatedUser);
+      setAuthUser({ ...authUser, ...result.user });
+      showMsg('Admin email updated and verified successfully.');
+      closeModal();
+    } catch (err) {
+      showMsg(err.message || 'Unable to verify the new email address.', 'error');
     } finally {
       setSaving(false);
     }
@@ -242,9 +296,23 @@ export default function MyAccount() {
                 <div key={field} className="info-row">
                   <div className="info-left">
                     <span className="info-label">{field === 'username' ? 'Username' : field === 'phone' ? 'Phone Number' : 'Email Address'}</span>
-                    <span className="info-value">{user[field] || <em style={{ opacity: 0.45 }}>Not set</em>}</span>
+                    <span className="info-value">
+                      {user[field] || <em style={{ opacity: 0.45 }}>Not set</em>}
+                      {isAdmin && field === 'email' && (
+                        <small style={{ display: 'block', color: user.emailVerified ? 'var(--accent-green, #2a9d5c)' : 'var(--accent-red, #e05)' }}>
+                          {user.emailVerified ? 'Verified' : 'Not verified'}
+                        </small>
+                      )}
+                    </span>
                   </div>
-                  <button className="pill-btn" onClick={() => { setEditField(field); setFieldValue(field === 'phone' ? (user[field] || '') : (user[field] || '')); }}>
+                  <button className="pill-btn" onClick={() => {
+                    setEditField(field);
+                    setFieldValue(user[field] || '');
+                    setAdminEmailCodeSent(false);
+                    setAdminEmailCode('');
+                    setAdminEmailPassword('');
+                    setAdminEmailPasswordConfirmed(false);
+                  }}>
                     Edit
                   </button>
                 </div>
@@ -339,6 +407,19 @@ export default function MyAccount() {
                     </button>
                   </div>
                 </>
+              ) : editField === 'email' && isAdmin && !adminEmailPasswordConfirmed ? (
+                <>
+                  <label className="m-label">Current Password</label>
+                  <input
+                    className="field-input"
+                    type="password"
+                    autoFocus
+                    value={adminEmailPassword}
+                    onChange={(e) => setAdminEmailPassword(e.target.value)}
+                    placeholder="Enter your current password to continue"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </>
               ) : (
                 <>
                   <label className="m-label">
@@ -346,11 +427,12 @@ export default function MyAccount() {
                   </label>
                   <input
                     className={`field-input${editField === 'username' && usernameAvail.status === 'taken' ? ' field-input--error' : ''}`}
-                    type={editField === 'phone' ? 'tel' : 'text'}
-                    inputMode={editField === 'phone' ? 'numeric' : undefined}
+                    type={editField === 'phone' ? 'tel' : editField === 'email' ? 'email' : 'text'}
+                    inputMode={editField === 'phone' ? 'numeric' : editField === 'email' ? 'email' : undefined}
                     pattern={editField === 'phone' ? '09[0-9]{9}' : undefined}
                     value={fieldValue}
                     autoFocus
+                    disabled={editField === 'email' && isAdmin && adminEmailCodeSent}
                     onChange={(e) => {
                       let val = e.target.value;
                       if (editField === 'phone') {
@@ -374,16 +456,71 @@ export default function MyAccount() {
                   )}
                 </>
               )}
+              {editField === 'email' && isAdmin && adminEmailCodeSent && (
+                <>
+                  <p className="account-field-status">
+                    Enter the 6-digit code sent to {fieldValue.trim().toLowerCase()}. Your current email remains active until verification succeeds.
+                  </p>
+                  <label className="m-label">Verification Code</label>
+                  <input
+                    className="field-input"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={adminEmailCode}
+                    autoFocus
+                    onChange={(e) => setAdminEmailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                  <button
+                    className="pill-btn"
+                    type="button"
+                    onClick={() => {
+                      setAdminEmailCodeSent(false);
+                      setAdminEmailCode('');
+                    }}
+                  >
+                    Change email address
+                  </button>
+                </>
+              )}
               <div className="m-actions">
                 <button className="m-btn-cancel" type="button" onClick={closeModal}>Cancel</button>
                 <button
                   className="m-btn-save"
                   type="button"
-                  onClick={handleSave}
-                  disabled={saving || (editField === 'username' && usernameAvail.status === 'taken')}
-                  style={{ opacity: saving || (editField === 'username' && usernameAvail.status === 'taken') ? 0.5 : 1 }}
+                  onClick={
+                    editField === 'email' && isAdmin
+                      ? !adminEmailPasswordConfirmed
+                        ? handleConfirmAdminEmailPassword
+                        : adminEmailCodeSent
+                          ? handleVerifyAdminEmail
+                          : handleSave
+                      : handleSave
+                  }
+                  disabled={
+                    saving
+                    || (editField === 'username' && usernameAvail.status === 'taken')
+                    || (editField === 'email' && isAdmin && !adminEmailPasswordConfirmed && !adminEmailPassword)
+                    || (editField === 'email' && isAdmin && adminEmailCodeSent && adminEmailCode.length !== 6)
+                  }
+                  style={{
+                    opacity: saving
+                      || (editField === 'username' && usernameAvail.status === 'taken')
+                      || (editField === 'email' && isAdmin && !adminEmailPasswordConfirmed && !adminEmailPassword)
+                      || (editField === 'email' && isAdmin && adminEmailCodeSent && adminEmailCode.length !== 6)
+                      ? 0.5 : 1,
+                  }}
                 >
-                  {saving ? 'Saving…' : 'Save'}
+                  {saving
+                    ? 'Saving…'
+                    : editField === 'email' && isAdmin
+                      ? !adminEmailPasswordConfirmed
+                        ? 'Continue'
+                        : adminEmailCodeSent
+                          ? 'Verify & Update'
+                          : 'Send Verification Code'
+                      : 'Save'}
                 </button>
               </div>
             </div>

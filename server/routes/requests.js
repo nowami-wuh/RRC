@@ -1,6 +1,6 @@
 import express from 'express';
 import { execute, parseJson, query, safeJson } from '../db.js';
-import { sendRequestConfirmationEmail } from '../mailer.js';
+import { sendAdminNewRequestEmail, sendRequestConfirmationEmail } from '../mailer.js';
 import { parseEquipmentList, validateEquipmentStock, reserveEquipmentStock, releaseEquipmentStock } from '../inventoryHelpers.js';
 
 const router = express.Router();
@@ -419,14 +419,45 @@ router.post('/', async (req, res) => {
       );
     } catch (_) {}
 
-    // Send confirmation email to the customer (best-effort)
+    let customer = null;
     try {
-      const customerRows = await query('SELECT email FROM customers WHERE public_id = ? LIMIT 1', [customerId]);
-      if (customerRows[0]?.email) {
-        await sendRequestConfirmationEmail(customerRows[0].email, newRequest);
+      const customerRows = await query('SELECT username, email FROM customers WHERE public_id = ? LIMIT 1', [customerId]);
+      customer = customerRows[0] || null;
+    } catch (emailErr) {
+      console.error(`Failed to load customer email for request ${requestCode}:`, emailErr.message);
+    }
+
+    if (customer?.email) {
+      try {
+        await sendRequestConfirmationEmail(customer.email, newRequest);
+      } catch (emailErr) {
+        console.error(`Failed to send customer confirmation for ${requestCode}:`, emailErr.message);
+      }
+    }
+
+    try {
+      const adminRows = await query("SELECT email FROM admins WHERE email_verified = 1 AND email IS NOT NULL AND TRIM(email) <> ''");
+      const adminEmails = [...new Set(adminRows
+        .map(({ email }) => String(email || '').trim().toLowerCase())
+        .filter(Boolean))];
+      if (adminEmails.length === 0) {
+        console.error(`No admin email recipient configured for new request ${requestCode}.`);
+      } else {
+        const adminRequest = {
+          ...newRequest,
+          customerName: customer?.username || 'Unknown',
+          customerEmail: customer?.email || '',
+        };
+        await Promise.all(adminEmails.map(async (email) => {
+          try {
+            await sendAdminNewRequestEmail(email, adminRequest);
+          } catch (emailErr) {
+            console.error(`Failed to email admin about new request ${requestCode}:`, emailErr.message);
+          }
+        }));
       }
     } catch (emailErr) {
-      console.error('Failed to send confirmation email:', emailErr.message);
+      console.error(`Failed to load admin email recipients for ${requestCode}:`, emailErr.message);
     }
 
     res.status(201).json({ request: newRequest });

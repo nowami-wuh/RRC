@@ -102,11 +102,8 @@ async function sendPendingRequestReminder(request, businessDays) {
   }
 
   try {
-    const admins = await query('SELECT email FROM admins WHERE email IS NOT NULL AND email <> ""');
+    const admins = await query("SELECT email FROM admins WHERE email_verified = 1 AND email IS NOT NULL AND email <> ''");
     const adminEmails = admins.map(({ email }) => email);
-    if (adminEmails.length === 0 && process.env.EMAIL_USER) {
-      adminEmails.push(process.env.EMAIL_USER);
-    }
     if (adminEmails.length === 0) {
       console.error(`No admin email recipient configured for pending request ${request.request_code}.`);
     }
@@ -149,11 +146,8 @@ async function notifyExpiredRequest(request, reason) {
   }
 
   try {
-    const admins = await query('SELECT email FROM admins WHERE email IS NOT NULL AND email <> ""');
+    const admins = await query("SELECT email FROM admins WHERE email_verified = 1 AND email IS NOT NULL AND email <> ''");
     const adminEmails = admins.map(({ email }) => email);
-    if (adminEmails.length === 0 && process.env.EMAIL_USER) {
-      adminEmails.push(process.env.EMAIL_USER);
-    }
     if (adminEmails.length === 0) {
       console.error(`No admin email recipient configured for expired request ${request.request_code}.`);
     }

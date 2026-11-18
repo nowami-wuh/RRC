@@ -150,6 +150,27 @@ export function updateUserProfile(userId, profile) {
   });
 }
 
+export function confirmAdminEmailChangePassword(currentPassword) {
+  return request('/user/admin-email-change/confirm-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword }),
+  });
+}
+
+export function initiateAdminEmailChange(email, currentPassword) {
+  return request('/user/admin-email-change/initiate', {
+    method: 'POST',
+    body: JSON.stringify({ email, currentPassword }),
+  });
+}
+
+export function verifyAdminEmailChange(code) {
+  return request('/user/admin-email-change/verify', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
 export function removeUserAvatar(userId) {
   return updateUserProfile(userId, { removeAvatar: true });
 }

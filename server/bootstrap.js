@@ -61,10 +61,23 @@ export async function ensureDatabaseSchema() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       username VARCHAR(100) NOT NULL UNIQUE,
       email VARCHAR(255) UNIQUE,
+      email_verified TINYINT(1) NOT NULL DEFAULT 0,
       full_name VARCHAR(150) NOT NULL,
       avatar LONGTEXT NULL,
       password_hash VARCHAR(255) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await addColumnIfMissing('ALTER TABLE admins ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER email');
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS admin_email_verifications (
+      admin_id INT PRIMARY KEY,
+      email VARCHAR(255) NOT NULL,
+      code VARCHAR(6) NOT NULL,
+      attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_admin_email_verifications_email (email)
     )
   `);
 

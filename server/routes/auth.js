@@ -73,6 +73,7 @@ function buildAdminUser(row) {
     id: `ADMIN-${row.id}`,
     username: row.username,
     email: row.email,
+    emailVerified: Number(row.email_verified) === 1,
     fullName: row.full_name,
     avatar: row.avatar || null,
     role: 'admin',
