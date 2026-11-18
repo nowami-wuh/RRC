@@ -119,7 +119,7 @@ export default function AdminLayout() {
   const isChatPage = location.pathname === '/admin/inquiries';
 
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell${isChatPage ? ' chat-admin-shell' : ''}`}>
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="sidebar-brand">

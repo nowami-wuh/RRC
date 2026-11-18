@@ -5309,9 +5309,9 @@ body {
         width: 100%;
         min-width: 100%;
         max-width: 100%;
-        height: calc(100vh - var(--admin-top-offset));
-        min-height: calc(100vh - var(--admin-top-offset));
-        max-height: calc(100vh - var(--admin-top-offset));
+        height: 100%;
+        min-height: 0;
+        max-height: 100%;
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -5405,9 +5405,9 @@ body {
 @media (max-width: 400px) {
     /* --- Admin inquiries / chat mobile override --- */
     .admin-inquiries-shell.mobile {
-        height: calc(100vh - var(--admin-top-offset)) !important;
-        min-height: calc(100vh - var(--admin-top-offset)) !important;
-        max-height: calc(100vh - var(--admin-top-offset)) !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        max-height: 100% !important;
         overflow: hidden !important;
         display: flex !important;
         flex-direction: column !important;
@@ -6451,5 +6451,101 @@ body {
     .requests-admin-page .bc-vals span:nth-child(3) {
         grid-column: auto !important;
         text-align: right !important;
+    }
+}
+
+@media (max-width: 780px) {
+    .admin-shell.chat-admin-shell {
+        height: 100vh;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .admin-shell.chat-admin-shell > .main-content.chat-layout {
+        flex: 1 1 0;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile {
+        flex: 1 1 auto;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        height: 100%;
+        min-height: 0;
+        max-height: 100%;
+        overflow: hidden;
+    }
+
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .conv-panel,
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .chat-panel {
+        flex: 1 1 0;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        min-height: 0;
+        max-height: none;
+        overflow: hidden;
+    }
+
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .conv-panel {
+        border-right: 0;
+        border-bottom: 1.5px solid #e0e6f0;
+    }
+
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .conv-panel.mobile-hidden,
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .chat-panel.mobile-hidden {
+        display: none !important;
+    }
+
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .chat-active {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .chat-messages {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .chat-header {
+        flex-shrink: 0;
+        gap: 8px;
+        padding: 8px 12px;
+        overflow: hidden;
+    }
+
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .mobile-back-btn {
+        display: flex;
+        flex: 0 0 34px;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        padding: 4px;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--dark-blue);
+    }
+
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .chat-header-actions {
+        flex-shrink: 0;
+        gap: 2px;
+    }
+
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .chat-header-actions .chat-action-btn.booking-icon,
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .chat-header-actions .chat-action-btn.info-icon,
+    .admin-shell.chat-admin-shell .admin-inquiries-shell.mobile .chat-header-actions .chat-action-btn.delete-icon {
+        display: none;
     }
 }
