@@ -113,16 +113,7 @@ async function ensureTables() {
   } catch (error) {
     if (error.code !== 'ER_DUP_FIELDNAME') throw error;
   }
-  try {
-    await execute('ALTER TABLE requests ADD COLUMN status_updated_at TIMESTAMP NULL DEFAULT NULL AFTER service_agreement_accepted');
-  } catch (error) {
-    if (error.code !== 'ER_DUP_FIELDNAME') throw error;
-  }
-  await execute(`
-    UPDATE requests
-    SET status_updated_at = CURRENT_TIMESTAMP
-    WHERE status_updated_at IS NULL AND LOWER(status) IN ('approved', 'awaitingpayment')
-  `);
+  await ensureRequestStatusUpdatedAtColumn();
 
   await execute(`
     CREATE TABLE IF NOT EXISTS notifications (
@@ -478,6 +469,19 @@ async function seedReferenceData() {
       ],
     );
   }
+}
+
+export async function ensureRequestStatusUpdatedAtColumn() {
+  try {
+    await execute('ALTER TABLE requests ADD COLUMN status_updated_at TIMESTAMP NULL DEFAULT NULL AFTER service_agreement_accepted');
+  } catch (error) {
+    if (error.code !== 'ER_DUP_FIELDNAME') throw error;
+  }
+  await execute(`
+    UPDATE requests
+    SET status_updated_at = CURRENT_TIMESTAMP
+    WHERE status_updated_at IS NULL AND LOWER(status) IN ('approved', 'awaitingpayment')
+  `);
 }
 
 export async function bootstrapDatabase() {

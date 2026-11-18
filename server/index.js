@@ -13,7 +13,7 @@ import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
 import debugRoutes from './routes/debug.js';
 import aboutRoutes from './routes/about.js';
-import { bootstrapDatabase } from './bootstrap.js';
+import { bootstrapDatabase, ensureRequestStatusUpdatedAtColumn } from './bootstrap.js';
 import { query } from './db.js';
 import { verifyMailer } from './mailer.js';
 import { startRequestExpiryJob } from './requestExpiry.js';
@@ -192,7 +192,11 @@ const startServer = () => {
 
 if (String(process.env.SKIP_DATABASE_BOOTSTRAP).toLowerCase() === 'true') {
   console.log('Database bootstrap skipped by configuration.');
-  startServer();
+  ensureRequestStatusUpdatedAtColumn()
+    .catch((error) => {
+      console.error('Request status timestamp migration failed:', error.message);
+    })
+    .finally(startServer);
 } else {
   bootstrapDatabase().catch((error) => {
     console.warn('MySQL bootstrap skipped:', error.message);
