@@ -211,7 +211,7 @@ export default function LoginSignup() {
 
     setFormData((prev) => ({ ...prev, loginUsername: username, loginPassword: '' }));
     setFieldErrors({});
-    setError('This email is already registered. Log in using the username shown below.');
+    setError('This email is already registered. Your username is prefilled so please enter your password to log in.');
     setSuccessMessage('');
     setMode('login');
     return true;
