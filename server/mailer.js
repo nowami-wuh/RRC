@@ -296,12 +296,51 @@ export async function sendAdminRequestExpiryEmail(email, request) {
   await sendMail({
     to: email,
     subject: `RRC Lights & Sounds – Request ${id} Automatically Denied`,
-    text: `Request ${id} for ${event.title || 'an event'} was automatically denied after 5 business days without the required action.\n\n${denialReason}`,
+    text: `Request ${id} for ${event.title || 'an event'} was automatically denied.\n\nReason: ${denialReason}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 10px;">
         <h2 style="color: #38629B; text-align: center;">RRC Lights &amp; Sounds</h2>
-        <p>Request <strong>${escapeHtml(id)}</strong> for <strong>${escapeHtml(event.title || 'an event')}</strong> was automatically denied after 5 business days without the required action.</p>
-        <p>${escapeHtml(denialReason)}</p>
+        <p>Request <strong>${escapeHtml(id)}</strong> for <strong>${escapeHtml(event.title || 'an event')}</strong> was automatically denied.</p>
+        <p><strong>Reason:</strong> ${escapeHtml(denialReason)}</p>
+        <p>This is an automated message. Please do not reply.</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendCustomerPendingRequestReminderEmail(email, request) {
+  const { id, event = {}, businessDays } = request;
+  const message = `Your request has been waiting for admin review for ${businessDays} business day${businessDays === 1 ? '' : 's'}. If your event is approaching, please contact the admin through chat. Requests without admin action are automatically denied after 5 business days.`;
+  await sendMail({
+    to: email,
+    subject: `RRC Lights & Sounds – Request ${id} Is Still Awaiting Review`,
+    text: `Your request ${id} for ${event.title || 'your event'} is still awaiting admin review.\n\n${message}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #38629B; text-align: center;">RRC Lights &amp; Sounds</h2>
+        <p>Your request <strong>${escapeHtml(id)}</strong> for <strong>${escapeHtml(event.title || 'your event')}</strong> is still awaiting admin review.</p>
+        <p>${escapeHtml(message)}</p>
+        <p>Please sign in and use chat to contact the admin if your event is approaching or you need an update.</p>
+        <p>This is an automated message. Please do not reply.</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendAdminPendingRequestReminderEmail(email, request) {
+  const { id, event = {}, customerName, businessDays } = request;
+  const message = `Request ${id} for ${event.title || 'an event'} has been pending for ${businessDays} business day${businessDays === 1 ? '' : 's'} and still needs admin action. It will be automatically denied after 5 business days if it remains pending.`;
+  await sendMail({
+    to: email,
+    subject: `RRC Lights & Sounds – Action Needed for Request ${id}`,
+    text: `${message}\nCustomer: ${customerName || 'Unknown'}\nEvent date: ${event.date || 'N/A'}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #38629B; text-align: center;">RRC Lights &amp; Sounds</h2>
+        <p>${escapeHtml(message)}</p>
+        <p><strong>Customer:</strong> ${escapeHtml(customerName || 'Unknown')}</p>
+        <p><strong>Event date:</strong> ${escapeHtml(event.date || 'N/A')}</p>
+        <p>Please review this request in the admin dashboard and confirm or reject it.</p>
         <p>This is an automated message. Please do not reply.</p>
       </div>
     `,

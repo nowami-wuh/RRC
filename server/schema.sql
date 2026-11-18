@@ -71,6 +71,14 @@ CREATE TABLE IF NOT EXISTS request_payments (
   INDEX idx_request_payments_status (status)
 );
 
+CREATE TABLE IF NOT EXISTS request_reminders (
+  request_code VARCHAR(40) NOT NULL,
+  pending_since DATETIME NOT NULL,
+  business_day TINYINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (request_code, pending_since, business_day)
+);
+
 CREATE TABLE IF NOT EXISTS chat_messages (
   id INT AUTO_INCREMENT PRIMARY KEY,
   sender_role VARCHAR(20) NOT NULL,
