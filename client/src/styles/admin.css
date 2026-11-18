@@ -4604,7 +4604,9 @@ body {
 .requests-admin-page #pkgArrow { transition: transform 0.2s; flex-shrink: 0; }
 .requests-admin-page .pkg-dropdown-menu { display: none; position: relative; background: white; border: 1.5px solid #ddd; border-top: none; border-radius: 0 0 6px 6px; overflow: hidden; }
 .requests-admin-page .pkg-dropdown-menu.open { display: block; }
-.requests-admin-page .pkg-option { padding: 11px 22px; font-size: 14px; color: var(--text-dark); cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+.requests-admin-page .pkg-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 22px; font-size: 14px; color: var(--text-dark); cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+.requests-admin-page .pkg-option-name { text-transform: uppercase; }
+.requests-admin-page .pkg-option-price { margin-left: auto; white-space: nowrap; }
 .requests-admin-page .pkg-option:last-child { border-bottom: none; }
 .requests-admin-page .pkg-option:hover { background: #f5f7fb; }
 .requests-admin-page .pkg-option.selected { background: #e8f0fb; font-family: 'Garet Heavy', sans-serif; color: var(--dark-blue); }

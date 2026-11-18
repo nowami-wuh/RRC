@@ -1264,6 +1264,7 @@ export default function AdminRequests() {
       id: item.id,
       name: item.name,
       code: getPackageCode(item.name),
+      price: item.price,
     }))
     .filter((item) => item.code);
   const anyOperatorRequired = categories.some((cat) => currentEquipment[cat].some((item) => getInventoryItem(item.name)?.requiresAuth || getInventoryItem(item.name)?.operatorRequired));
@@ -1552,7 +1553,8 @@ export default function AdminRequests() {
                       ) : (
                         packageOptions.map((pkg) => (
                           <div key={pkg.id} className={`pkg-option ${selectedBooking.booking.package === pkg.code ? 'selected' : ''}`} onClick={() => selectPackage(pkg.code)}>
-                            {pkg.name}
+                            <span className="pkg-option-name">{pkg.name}</span>
+                            <span className="pkg-option-price">{peso(pkg.price)}</span>
                           </div>
                         ))
                       )}
