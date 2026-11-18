@@ -1,4 +1,5 @@
 import { execute, parseJson, query } from './db.js';
+import { hasEventEnded } from './eventStatus.js';
 import { releaseEquipmentStock, parseEquipmentList } from './inventoryHelpers.js';
 import {
   sendAdminPendingRequestReminderEmail,
@@ -184,12 +185,21 @@ export async function expireStaleRequests() {
       FROM requests r
       LEFT JOIN customers c ON c.public_id = r.customer_public_id
       LEFT JOIN request_payments p ON p.request_code = r.request_code
-      WHERE LOWER(r.status) IN ('pending', 'approved', 'awaitingpayment')
+      WHERE LOWER(r.status) IN ('pending', 'approved', 'awaitingpayment', 'upcoming', 'confirmed', 'paid')
     `);
 
     for (const request of requests) {
       const currentStatus = String(request.status || '').toLowerCase();
-      if (currentStatus === 'pending') {
+      if (['upcoming', 'confirmed', 'paid'].includes(currentStatus)) {
+        const event = parseJson(request.event_json, {});
+        if (hasEventEnded(event)) {
+          await execute(
+            `UPDATE requests SET status = 'completed', status_updated_at = CURRENT_TIMESTAMP
+             WHERE request_code = ? AND status = ?`,
+            [request.request_code, request.status],
+          );
+        }
+      } else if (currentStatus === 'pending') {
         const event = parseJson(request.event_json, {});
         const pendingSince = request.status_updated_at || request.created_at;
         const elapsedBusinessDays = getElapsedBusinessDays(pendingSince);

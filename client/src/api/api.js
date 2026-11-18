@@ -281,7 +281,6 @@ export function updateAdminInventoryItem(itemCode, payload) {
 export function createAdminInventoryItem(payload) {
   return request('/admin/inventory', {
     method: 'POST',
-    body: JSON.stringify(payload),
   });
 }
 

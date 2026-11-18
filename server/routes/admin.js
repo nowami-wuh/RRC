@@ -1,5 +1,6 @@
 import express from 'express';
 import { execute, parseJson, query, safeJson } from '../db.js';
+import { hasEventEnded } from '../eventStatus.js';
 import { sendRequestStatusEmail, sendChatReplyEmail } from '../mailer.js';
 import {
   attachInventoryAvailability,
@@ -46,46 +47,26 @@ function formatEventTime(start, end) {
   return `${formatTime12Hour(start)} - ${formatTime12Hour(end)}`;
 }
 
-function getEventEndDate(value) {
-  if (!value) return null;
-  const text = String(value).trim();
-  const rangeMatch = text.match(/^([A-Za-z]+)\s+\d{1,2}\s*[-–]\s*(\d{1,2}),?\s+(\d{4})$/);
-  const dateText = rangeMatch
-    ? `${rangeMatch[1]} ${rangeMatch[2]}, ${rangeMatch[3]}`
-    : text;
-  const parsedDate = new Date(dateText);
-  if (Number.isNaN(parsedDate.getTime())) return null;
-  return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
-}
-
-function hasEventEnded(value) {
-  const eventEndDate = getEventEndDate(value);
-  if (!eventEndDate) return false;
-
-  const today = new Date();
-  const localToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return eventEndDate < localToday;
-}
-
 async function completePastEvents(rows) {
   const eligibleStatuses = new Set(['upcoming', 'confirmed', 'paid']);
   const expiredRequests = rows.filter((row) => (
     eligibleStatuses.has(String(row.status || '').toLowerCase())
-    && (() => {
-      const event = parseJson(row.event_json, {});
-      return hasEventEnded(event.endDate || event.date);
-    })()
+    && hasEventEnded(parseJson(row.event_json, {}))
   ));
 
-  await Promise.all(expiredRequests.map((row) => (
-    execute('UPDATE requests SET status = ? WHERE request_code = ? AND status = ?', [
-      'completed',
-      row.request_code,
-      row.status,
-    ])
-  )));
+  const completedCodes = await Promise.all(expiredRequests.map(async (row) => {
+    const result = await execute(
+      'UPDATE requests SET status = ?, status_updated_at = CURRENT_TIMESTAMP WHERE request_code = ? AND status = ?',
+      [
+        'completed',
+        row.request_code,
+        row.status,
+      ],
+    );
+    return result.affectedRows ? row.request_code : null;
+  }));
 
-  return expiredRequests.map((row) => row.request_code);
+  return completedCodes.filter(Boolean);
 }
 
 function formatRequest(row) {

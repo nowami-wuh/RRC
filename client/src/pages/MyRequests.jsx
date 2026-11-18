@@ -725,16 +725,20 @@ export default function MyRequests() {
 
   // ── Data Loading ─────────────────────────────────────────────────────────────
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback((showLoading = true) => {
     if (!user?.id) { setLoading(false); setError('Please sign in to view your requests.'); return; }
-    setLoading(true);
+    if (showLoading) setLoading(true);
     fetchRequests(user.id)
       .then((data) => { setRequests(data.requests || []); })
       .catch(() => setError('Unable to load requests.'))
-      .finally(() => setLoading(false));
+      .finally(() => { if (showLoading) setLoading(false); });
   }, [user?.id]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+    const intervalId = window.setInterval(() => loadData(false), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [loadData]);
 
   useEffect(() => {
     fetchAboutInfo()
