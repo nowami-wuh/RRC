@@ -4295,8 +4295,14 @@ body {
 .requests-admin-page .bc-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
     margin-bottom: 10px;
+}
+.requests-admin-page .bc-id-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
 }
 .requests-admin-page .bc-id-label {
     font-family: 'Garet Heavy', sans-serif;
@@ -4308,7 +4314,6 @@ body {
     font-style: italic;
     font-size: 15px;
     color: var(--text-dark);
-    margin-left: 8px;
 }
 .requests-admin-page .type-badge {
     display: inline-flex;
@@ -4319,7 +4324,6 @@ body {
     letter-spacing: 0.5px;
     padding: 3px 10px;
     border-radius: 20px;
-    margin-left: 12px;
     vertical-align: middle;
 }
 .requests-admin-page .type-badge.booking { background: #e8f0fb; color: var(--dark-blue); border: 1px solid #c4d7f0; }
@@ -4334,6 +4338,7 @@ body {
     cursor: pointer;
     font-family: 'Garet', sans-serif;
     transition: color 0.2s;
+    margin-left: auto;
 }
 .requests-admin-page .bc-view-link:hover { color: #2d4a73; }
 .requests-admin-page .bc-cols {
@@ -6386,27 +6391,42 @@ body {
     }
 
     .requests-admin-page .bc-top {
-        flex-direction: row !important;
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "id id"
+            "tag action";
         align-items: center;
-        flex-wrap: wrap;
         gap: 8px;
     }
 
-    .requests-admin-page .bc-top > div {
+    .requests-admin-page .bc-id-row {
+        grid-area: id;
         display: flex;
+        width: 100%;
         min-width: 0;
         align-items: center;
-        flex-wrap: wrap;
-        gap: 6px;
+        justify-content: space-between;
+        gap: 8px;
     }
 
-    .requests-admin-page .bc-id-value,
+    .requests-admin-page .bc-id-value {
+        min-width: 0;
+        margin-left: 0;
+        overflow-wrap: anywhere;
+        text-align: right;
+    }
+
     .requests-admin-page .type-badge {
+        grid-area: tag;
+        justify-self: start;
         margin-left: 0;
     }
 
     .requests-admin-page .bc-view-link {
-        margin-left: auto;
+        grid-area: action;
+        justify-self: end;
+        margin-left: 0;
     }
 
     .requests-admin-page .bc-cols,

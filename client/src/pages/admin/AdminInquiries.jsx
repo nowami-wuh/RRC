@@ -1171,7 +1171,7 @@ export default function AdminInquiries() {
                   <div><strong>Phone:</strong> {infoData.phone || '—'}</div>
                   {activeBookingRequest && (
                     <div>
-                      <strong>Booking Request:</strong>{' '}
+                      <strong>Request:</strong>{' '}
                       <button
                         type="button"
                         className="chat-request-link"

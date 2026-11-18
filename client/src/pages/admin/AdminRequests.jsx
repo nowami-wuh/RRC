@@ -1358,13 +1358,13 @@ export default function AdminRequests() {
                     onContextMenu={(event) => event.preventDefault()}
                   >
                     <div className="bc-top">
-                      <div>
+                      <div className="bc-id-row">
                         <span className="bc-id-label">{booking.requestType === 'rent' ? 'REQUEST ID' : 'BOOKING ID'}</span>
                         <span className="bc-id-value">{booking.id}</span>
-                        <span className={`type-badge ${booking.requestType === 'rent' ? 'rent' : 'booking'}`}>
-                          {booking.requestType === 'rent' ? 'RENT' : 'BOOKING'}
-                        </span>
                       </div>
+                      <span className={`type-badge ${booking.requestType === 'rent' ? 'rent' : 'booking'}`}>
+                        {booking.requestType === 'rent' ? 'RENT' : 'BOOKING'}
+                      </span>
                       <button className="bc-view-link" onClick={() => openDetail(booking.id)}>
                         View Details
                       </button>

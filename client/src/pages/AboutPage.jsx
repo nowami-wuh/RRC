@@ -279,7 +279,7 @@ export default function AboutPage() {
                       <label className="edit-label">Account Name</label>
                       <input type="text" className="edit-input" placeholder="Enter account holder name" value={method.bank_account_name} onChange={(e) => updatePaymentMethod(index, 'bank_account_name', e.target.value)} />
                     </div>
-                    <div className="edit-field-group">
+                    <div className="edit-field-group payment-qr-field">
                       <label className="edit-label" htmlFor={`payment-qr-upload-${index}`}>QR Image (PNG, JPEG, or WEBP; max 2 MB)</label>
                       <input id={`payment-qr-upload-${index}`} type="file" className="edit-input" accept="image/png,image/jpeg,image/webp" onChange={(e) => handleQrUpload(e, index)} />
                       {method.qr && (
@@ -355,7 +355,10 @@ export default function AboutPage() {
                 <h3 className="contact-title">Payment Information</h3>
                 <div className="payment-method-display-list">
                   {getPaymentMethods(aboutData).map((method, index) => (
-                    <div className="payment-method-display" key={`about-payment-${index}`}>
+                    <div
+                      className={`payment-method-display${method.qr ? ' has-qr' : ''}${method.bank_name || method.bank_account_number || method.bank_account_name ? ' has-account-details' : ''}`}
+                      key={`about-payment-${index}`}
+                    >
                       {method.label && <h4>{method.label}</h4>}
                       {method.qr && <div className="payment-qr-wrap"><img className="payment-qr" src={method.qr} alt={`${method.label || 'Payment'} QR code`} /><span className="contact-text">Scan to pay</span></div>}
                       {(method.bank_name || method.bank_account_number || method.bank_account_name) && (
