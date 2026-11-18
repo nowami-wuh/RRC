@@ -349,6 +349,12 @@ router.post('/', async (req, res) => {
       title: payload.title,
       venue: payload.venue,
       ...(requestType === 'book' ? { pax: payload.pax } : {}),
+      ...(requestType === 'book' ? {
+        address: String(payload.address || '').trim(),
+        ...(String(payload.packageSuggestion || '').trim()
+          ? { packageSuggestion: String(payload.packageSuggestion).trim() }
+          : {}),
+      } : {}),
       date: payload.date,
       ...(requestType === 'book'
         ? { endDate: payload.endDate || (timeToMinutes(payload.timeEnd) < timeToMinutes(payload.timeStart) ? getNextDateString(payload.date) : payload.date) }

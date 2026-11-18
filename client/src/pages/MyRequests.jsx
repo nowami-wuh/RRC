@@ -290,8 +290,6 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   const mobilization = Number(b.mobilization) || 0;
   const deliveryFee  = Number(b.deliveryFee) || 0;
   const extensionHrs = Number(b.durationExtensionHours ?? b.extensionHours) || 0;
-  const hasBookingDuration = b.durationBaseHours != null || b.durationBaseFee != null || extensionHrs > 0;
-  const durationBaseFee = hasBookingDuration ? (Number(b.durationBaseFee) || 4000) : 0;
   const extensionAmt = Number(b.durationExtensionFee ?? b.extensionFee) || extensionHrs * (Number(b.extensionRate) || 2500);
   const extensionRate = Number(b.extensionRate) || (extensionHrs > 0 ? extensionAmt / extensionHrs : 2500);
   const downpayment  = Number(b.downpayment)  || 0;
@@ -299,8 +297,8 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
   const isApproved = ['approved', 'awaitingpayment'].includes(status?.toLowerCase());
 
   const effectiveBase = promoApplied && promoPrice > 0 ? promoPrice : basePrice;
-  const total = effectiveBase + addonsTotal + mobilization + deliveryFee + durationBaseFee + extensionAmt;
-  const requiredDownpayment = Number(b.downpaymentAmount) || total * 0.2;
+  const total = effectiveBase + addonsTotal + mobilization + deliveryFee + extensionAmt;
+  const requiredDownpayment = total * 0.2;
   const balance = Boolean(b.fullyPaid) ? 0 : total - downpayment;
   const packageLabel = pkg?.name && !/undefined/i.test(String(pkg.name))
     ? pkg.name
@@ -324,14 +322,13 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
       <div className="billing-section-label">Billing Details</div>
       <div className="billing-box">
         {basePrice > 0 && (
-          <div className="billing-row">
-            <span className="billing-label">
-              {packageLabel} — Base Price
+          <div className="billing-row billing-row-details">
+            <span className="billing-label">Equipment Amount</span>
+            <span className="billing-detail">{packageLabel}</span>
+            <span className="billing-value">
               {promoApplied && promoPrice > 0 && (
                 <span className="billing-promo-tag">PROMO</span>
               )}
-            </span>
-            <span className="billing-value">
               {promoApplied && promoPrice > 0 ? (
                 <>
                   <span className="billing-strike">{formatCurrency(basePrice)}</span>
@@ -359,18 +356,16 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
             <span className="billing-value">{formatCurrency(deliveryFee)}</span>
           </div>
         )}
-        {hasBookingDuration && (
-          <div className="billing-row">
-            <span className="billing-label">
-              Booking Duration (up to {Number(b.durationBaseHours) || 4} hours)
-            </span>
-            <span className="billing-value">{formatCurrency(durationBaseFee)}</span>
-          </div>
-        )}
         {extensionHrs > 0 && (
-          <div className="billing-row">
-            <span className="billing-label">Extension ({extensionHrs} hr{extensionHrs > 1 ? 's' : ''} × {formatCurrency(extensionRate)})</span>
-            <span className="billing-value">{formatCurrency(extensionAmt)}</span>
+          <div className="billing-row billing-row-details">
+            <span className="billing-label">Booking Duration Extension</span>
+            <span className="billing-detail">
+              {extensionHrs} hour{extensionHrs === 1 ? '' : 's'} beyond {Number(b.durationBaseHours) || 4} hours
+            </span>
+            <span className="billing-value-with-detail">
+              <span className="billing-value">{formatCurrency(extensionAmt)}</span>
+              <small>{formatCurrency(extensionRate)} per hour</small>
+            </span>
           </div>
         )}
 
@@ -501,6 +496,11 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
                     : ev.venue}
                 </span>
               </div>
+              {req.type === 'book' && ev.address && (
+                <div className="event-address">
+                  Landmark / full address: <strong>{ev.address}</strong>
+                </div>
+              )}
             </div>
             {req.type !== 'rent' && ev.pax && (
               <div className="event-pax">
@@ -508,6 +508,17 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
               </div>
             )}
           </div>
+
+          {req.type === 'book' && (ev.packageSuggestion || ev.packageSuggestionReason) && (
+            <div className="package-preference-note">
+              {ev.packageSuggestion && (
+                <div>Customer package suggestion: <strong>{ev.packageSuggestion}</strong></div>
+              )}
+              {ev.packageSuggestionReason && (
+                <div>Admin recommendation note: {ev.packageSuggestionReason}</div>
+              )}
+            </div>
+          )}
 
           {/* Banners */}
           {isPending && (

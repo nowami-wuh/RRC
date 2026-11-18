@@ -348,29 +348,26 @@ function getDurationSettings(pricingPackages) {
   );
   const baseHoursMatch = String(durationItem?.subtitle || '').match(/[\d.]+/);
   const rateMatch = String(extensionItem?.subtitle || '').replace(/,/g, '').match(/[\d.]+/);
-  const graceMatch = String(extensionItem?.subtitle || '').match(/after\s+(\d+(?:\.\d+)?)\s*minutes?/i);
   return {
     baseMinutes: Math.round((Number(baseHoursMatch?.[0]) || 4) * 60),
     baseHours: Number(baseHoursMatch?.[0]) || 4,
-    baseFee: Number(durationItem?.price) > 0 ? Number(durationItem.price) : 4000,
-    extensionRate: Number(rateMatch?.[0]) || 2500,
-    graceMinutes: Number(graceMatch?.[1]) || 30,
+    extensionRate: Number(extensionItem?.price) || Number(rateMatch?.[0]) || 2500,
   };
 }
 
 function getDurationExtension(booking, pricingPackages) {
-  if (booking.requestType !== 'booking') return { eventHours: 0, baseFee: 0, hours: 0, fee: 0 };
+  const { baseMinutes, baseHours, extensionRate } = getDurationSettings(pricingPackages);
+  if (booking.requestType !== 'booking') return { eventHours: 0, baseHours, hours: 0, fee: 0, rate: extensionRate };
   const start = timeToMinutes(booking.eventDetails?.timeStart);
   const end = timeToMinutes(booking.eventDetails?.timeEnd);
-  if (start === null || end === null) return { eventHours: 0, baseFee: 0, hours: 0, fee: 0 };
+  if (start === null || end === null) return { eventHours: 0, baseHours, hours: 0, fee: 0, rate: extensionRate };
 
-  const { baseMinutes, baseFee, extensionRate, graceMinutes } = getDurationSettings(pricingPackages);
   const durationMinutes = (end >= start ? end : end + 24 * 60) - start;
   const excessMinutes = durationMinutes - baseMinutes;
-  const hours = excessMinutes > graceMinutes ? Math.ceil((excessMinutes - graceMinutes) / 60) : 0;
+  const hours = excessMinutes > 0 ? Math.ceil(excessMinutes / 60) : 0;
   return {
     eventHours: durationMinutes / 60,
-    baseFee,
+    baseHours,
     hours,
     fee: hours * extensionRate,
     rate: extensionRate,
@@ -466,9 +463,13 @@ export default function AdminRequests() {
               timeStart: req.event?.timeStart || '',
               timeEnd: req.event?.timeEnd || '',
               venue: req.event?.venue || '',
+              address: req.event?.address || '',
               pax: req.event?.pax ?? null,
               deliveryMethod: req.event?.deliveryMethod || 'pickup',
             },
+            eventData: req.event || {},
+            packageSuggestion: req.event?.packageSuggestion || '',
+            packageSuggestionReason: req.event?.packageSuggestionReason || '',
             package: getPackageCode(req.package?.name) || null,
             equipment: req.equipment || {},
             billing: req.billing || {},
@@ -656,6 +657,7 @@ export default function AdminRequests() {
     if (extra.package !== undefined) apiPayload.package = extra.package;
     if (extra.equipment !== undefined) apiPayload.equipment = extra.equipment;
     if (extra.billing !== undefined) apiPayload.billing = extra.billing;
+    if (extra.event !== undefined) apiPayload.event = extra.event;
     if (extra.reason !== undefined) apiPayload.denialReason = extra.reason;
     let persistedStatus = getStatusCategory(newStatus);
     let persistedExtra = extra;
@@ -936,12 +938,23 @@ export default function AdminRequests() {
       'Approve Booking',
       `Approve booking ${selectedBooking.booking.id}? The client will be notified to settle the downpayment, and this will move to Approved (awaiting payment).`,
       () => {
+        const booking = selectedBooking.booking;
+        const suggestedPackageCode = getPackageCode(booking.packageSuggestion).toUpperCase();
+        const selectedPackageCode = String(booking.package || '').trim().toUpperCase();
+        const packageSuggestionReason = suggestedPackageCode && suggestedPackageCode !== selectedPackageCode
+          ? String(booking.packageSuggestionReason || '').trim()
+          : '';
         moveBooking(selectedBooking.booking.id, 'approved', {
           package: {
-            name: `PACKAGE ${selectedBooking.booking.package}`,
+            name: `PACKAGE ${booking.package}`,
             groups: packageGroups,
             packageCost: billingBreakdown.equipAmt,
           },
+          event: {
+            ...(booking.eventData || {}),
+            packageSuggestionReason,
+          },
+          packageSuggestionReason,
           equipment: cloneData(currentEquipment),
           billing: {
             basePrice: billingBreakdown.equipAmt,
@@ -954,14 +967,11 @@ export default function AdminRequests() {
             deliveryFee: billingBreakdown.deliveryFee,
             durationExtensionHours: billingBreakdown.durationExtensionHours,
             durationExtensionFee: billingBreakdown.durationExtensionFee,
-            durationBaseFee: billingBreakdown.durationBaseFee,
             durationBaseHours: billingBreakdown.durationBaseHours,
             bookingDurationHours: billingBreakdown.bookingDurationHours,
             extensionHours: billingBreakdown.durationExtensionHours,
             extensionFee: billingBreakdown.durationExtensionFee,
-            extensionRate: billingBreakdown.durationExtensionHours > 0
-              ? billingBreakdown.durationExtensionFee / billingBreakdown.durationExtensionHours
-              : 0,
+            extensionRate: billingBreakdown.durationExtensionRate,
             total: billingBreakdown.total,
             downpaymentAmount: billingBreakdown.total * 0.2,
             promoApplied: Boolean(selectedBooking.booking.promoApplied),
@@ -1217,10 +1227,10 @@ export default function AdminRequests() {
       mobFee: 0,
       deliveryFee: 0,
       addonFee: 0,
-      durationBaseFee: 0,
       durationBaseHours: 4,
       durationExtensionFee: 0,
       durationExtensionHours: 0,
+      durationExtensionRate: 2500,
       bookingDurationHours: 0,
       total: 0,
     };
@@ -1238,18 +1248,17 @@ export default function AdminRequests() {
       ? Number(booking.billing?.addonsTotal ?? booking.billing?.addonFee ?? booking.addonFee) || 0
       : selectedAddonFee;
     const durationExtension = getDurationExtension(booking, pricingPackages);
-    const durationSettings = getDurationSettings(pricingPackages);
-    const total = equipAmt + mobFee + deliveryFee + addonFee + durationExtension.baseFee + durationExtension.fee;
+    const total = equipAmt + mobFee + deliveryFee + addonFee + durationExtension.fee;
     return {
       equipAmt,
       promoPrice,
       mobFee,
       deliveryFee,
       addonFee,
-      durationBaseFee: durationExtension.baseFee,
-      durationBaseHours: durationSettings.baseHours,
+      durationBaseHours: durationExtension.baseHours,
       durationExtensionFee: durationExtension.fee,
       durationExtensionHours: durationExtension.hours,
+      durationExtensionRate: durationExtension.rate,
       bookingDurationHours: durationExtension.eventHours,
       total,
     };
@@ -1257,6 +1266,11 @@ export default function AdminRequests() {
 
   const isEditable = selectedBooking?.status === 'pending';
   const isRentBooking = selectedBooking?.booking.requestType === 'rent';
+  const suggestedPackageCode = getPackageCode(selectedBooking?.booking.packageSuggestion).toUpperCase();
+  const selectedPackageCode = String(selectedBooking?.booking.package || '').trim().toUpperCase();
+  const packageSuggestionMismatch = Boolean(
+    suggestedPackageCode && selectedPackageCode && suggestedPackageCode !== selectedPackageCode,
+  );
   const categories = Object.keys(currentEquipment);
   const packageOptions = pricingPackages
     .filter((item) => String(item.section || '').toLowerCase() === 'cosupplier')
@@ -1433,7 +1447,16 @@ export default function AdminRequests() {
                     </p>
                   )}
                   {!isRentBooking && <p>{selectedBooking ? `Venue: ${selectedBooking.booking.eventDetails.venue}` : '—'}</p>}
+                  {!isRentBooking && selectedBooking?.booking.eventDetails.address && (
+                    <p>Landmark / full address: {selectedBooking.booking.eventDetails.address}</p>
+                  )}
                   {!isRentBooking && <p>{selectedBooking ? `Pax: ${selectedBooking.booking.eventDetails.pax}` : '—'}</p>}
+                  {!isRentBooking && selectedBooking?.booking.packageSuggestion && (
+                    <p>Customer package suggestion: {selectedBooking.booking.packageSuggestion}</p>
+                  )}
+                  {!isRentBooking && selectedBooking?.booking.packageSuggestionReason && (
+                    <p>Admin package recommendation note: {selectedBooking.booking.packageSuggestionReason}</p>
+                  )}
                   {selectedBooking?.booking.rentDuration && <p>{selectedBooking.booking.rentDuration}</p>}
                   <p id="dRequirements" style={{ display: selectedBooking?.booking.additionalRequirements ? 'block' : 'none' }}>
                     {selectedBooking?.booking.additionalRequirements ? `Additional Requirements: ${selectedBooking.booking.additionalRequirements}` : '—'}
@@ -1554,11 +1577,38 @@ export default function AdminRequests() {
                         packageOptions.map((pkg) => (
                           <div key={pkg.id} className={`pkg-option ${selectedBooking.booking.package === pkg.code ? 'selected' : ''}`} onClick={() => selectPackage(pkg.code)}>
                             <span className="pkg-option-name">{pkg.name}</span>
-                            <span className="pkg-option-price">{peso(pkg.price)}</span>
+                            <span className="pkg-option-price">
+                              <span>(</span>
+                              <span>{peso(pkg.price)}</span>
+                              <span>)</span>
+                            </span>
                           </div>
                         ))
                       )}
                     </div>
+                  </div>
+                )}
+                {!isRentBooking && selectedBooking.booking.packageSuggestion && (
+                  <div className="package-suggestion-note">
+                    Customer preference: <strong>{selectedBooking.booking.packageSuggestion}</strong>. The admin will make the final package selection.
+                  </div>
+                )}
+                {isEditable && !isRentBooking && packageSuggestionMismatch && (
+                  <div className="package-decision-reason">
+                    <label className="m-label" htmlFor="package-decision-reason">
+                      Reason for recommending a different package (optional)
+                    </label>
+                    <textarea
+                      id="package-decision-reason"
+                      className="m-input m-textarea"
+                      rows="2"
+                      placeholder="Explain why another package is a better fit, if needed."
+                      value={selectedBooking.booking.packageSuggestionReason || ''}
+                      onChange={(event) => updateBooking(selectedBooking.booking.id, (booking) => ({
+                        ...booking,
+                        packageSuggestionReason: event.target.value,
+                      }))}
+                    />
                   </div>
                 )}
 
@@ -1627,8 +1677,15 @@ export default function AdminRequests() {
             {selectedBooking && activeSection === 'billing' && ['pending', 'approved', 'upcoming', 'completed'].includes(selectedBooking.status) && (
               <div className="section-content" id="billingSection">
                 <div className="billing-table">
-                  <div className="billing-row">
+                  <div className="billing-row billing-row-details">
                     <span className="billing-label">Equipment Amount</span>
+                    <span className="billing-detail">
+                      {isRentBooking
+                        ? 'Rental equipment'
+                        : selectedBooking.booking.package
+                          ? `PACKAGE ${selectedBooking.booking.package}`
+                          : 'Package not selected'}
+                    </span>
                     {isRentBooking && selectedBooking.status === 'pending' ? (
                       <input
                         type="number"
@@ -1677,20 +1734,16 @@ export default function AdminRequests() {
                     <span className="billing-label">Add-On Fee</span>
                     <span className="billing-val">{peso(billingBreakdown.addonFee)}</span>
                   </div>
-                  {!isRentBooking && (
-                    <div className="billing-row">
-                      <span className="billing-label">
-                        Booking Duration (up to {billingBreakdown.durationBaseHours} hours)
-                      </span>
-                      <span className="billing-val">{peso(billingBreakdown.durationBaseFee)}</span>
-                    </div>
-                  )}
                   {billingBreakdown.durationExtensionFee > 0 && (
-                    <div className="billing-row">
-                      <span className="billing-label">
-                        Duration Extension ({billingBreakdown.durationExtensionHours} hour{billingBreakdown.durationExtensionHours === 1 ? '' : 's'})
+                    <div className="billing-row billing-row-details">
+                      <span className="billing-label">Booking Duration Extension</span>
+                      <span className="billing-detail">
+                        {billingBreakdown.durationExtensionHours} hour{billingBreakdown.durationExtensionHours === 1 ? '' : 's'} beyond {billingBreakdown.durationBaseHours} hours
                       </span>
-                      <span className="billing-val">{peso(billingBreakdown.durationExtensionFee)}</span>
+                      <span className="billing-val-with-detail">
+                        <span className="billing-val">{peso(billingBreakdown.durationExtensionFee)}</span>
+                        <small>{peso(billingBreakdown.durationExtensionRate)} per hour</small>
+                      </span>
                     </div>
                   )}
                   <div className="billing-divider" />

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { createRequest, fetchAboutInfo, fetchInventory } from '../api/api';
+import { createRequest, fetchAboutInfo, fetchInventory, fetchPackages } from '../api/api';
 import { formatDisplayDate, timeToMinutes } from '../utils/dateTime';
 import '../styles/make-request.css';
 
@@ -12,7 +12,7 @@ function generateId(prefix = 'BK') {
   return `${prefix}-${random()}${random()}${number}`;
 }
 
-const EMPTY_FORM = { title: '', venue: '', pax: '', date: '', timeStart: '', timeEnd: '' };
+const EMPTY_FORM = { title: '', venue: '', address: '', packageSuggestion: '', pax: '', date: '', timeStart: '', timeEnd: '' };
 const DEFAULT_SERVICE_AGREEMENT = 'By submitting a booking request, I confirm that the event details I provided are accurate. I understand that this request is subject to RRC availability and admin approval; submitting it does not confirm the booking. RRC will confirm the package, price, payment schedule, and event arrangements with me. I agree to coordinate with RRC and follow the final agreed terms.';
 
 const MARINDUQUE_LOCATIONS = {
@@ -73,6 +73,9 @@ export default function MakeRequest() {
   const [bookAdditional, setBookAdditional] = useState('');
   const [rentAdditional, setRentAdditional] = useState('');
   const [rentDeliveryMethod, setRentDeliveryMethod] = useState('pickup');
+  const [bookingPackages, setBookingPackages] = useState([]);
+  const [bookingPackagesLoading, setBookingPackagesLoading] = useState(true);
+  const [bookingPackagesError, setBookingPackagesError] = useState('');
 
   // Generated IDs
   const [bookingId, setBookingId] = useState(() => generateId('BK'));
@@ -143,6 +146,26 @@ export default function MakeRequest() {
       })
       .catch((err) => setAgreementLoadError(err.message || 'Unable to load the service agreement.'))
       .finally(() => setAgreementLoading(false));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetchPackages()
+      .then((data) => {
+        if (active) {
+          const packages = Array.isArray(data?.packages) ? data.packages : [];
+          setBookingPackages(packages
+            .filter((item) => String(item.section || '').toLowerCase() === 'cosupplier'));
+        }
+      })
+      .catch((err) => {
+        if (active) setBookingPackagesError(err.message || 'Unable to load package suggestions.');
+      })
+      .finally(() => {
+        if (active) setBookingPackagesLoading(false);
+      });
+
+    return () => { active = false; };
   }, []);
 
   // All flat inventory items (for lookup)
@@ -282,6 +305,10 @@ export default function MakeRequest() {
       ...(type === 'book' ? { pax: form.pax } : {}),
       date: form.date,
       ...(overnight ? { endDate: getNextDateString(form.date) } : {}),
+      ...(type === 'book' ? {
+        address: form.address,
+        packageSuggestion: form.packageSuggestion,
+      } : {}),
       timeStart: form.timeStart,
       timeEnd: form.timeEnd,
       additional,
@@ -447,6 +474,39 @@ export default function MakeRequest() {
           </datalist>
         </div>
       </div>
+      {formKey === 'book' && (
+        <>
+          <div className="field-row">
+            <label className="field-label" htmlFor="book-address">Landmark / Full Address</label>
+            <input
+              id="book-address"
+              className="field-input"
+              type="text"
+              placeholder="Street address, building, or nearby landmark (optional)"
+              value={formValues.address || ''}
+              onChange={(event) => setForm((previous) => ({ ...previous, address: event.target.value }))}
+            />
+          </div>
+          <div className="field-row">
+            <label className="field-label" htmlFor="book-package-suggestion">Package Suggestion</label>
+            <select
+              id="book-package-suggestion"
+              className="field-input"
+              value={formValues.packageSuggestion || ''}
+              onChange={(event) => setForm((previous) => ({ ...previous, packageSuggestion: event.target.value }))}
+            >
+              <option value="">No preference</option>
+              {bookingPackagesLoading && <option disabled>Loading packages...</option>}
+              {bookingPackages.map((pkg) => (
+                <option key={pkg.id} value={pkg.name}>{pkg.name}</option>
+              ))}
+            </select>
+          </div>
+          {bookingPackagesError && (
+            <div className="field-help">Package suggestions are temporarily unavailable. You can still submit your request.</div>
+          )}
+        </>
+      )}
       </div>
   );
 
@@ -482,7 +542,7 @@ export default function MakeRequest() {
 
             <div className="form-section-note">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-              The admin will select the appropriate package for your event based on the details you provide.
+              You may suggest a package, but the admin will confirm the best fit or recommend a different option.
             </div>
 
             <p className="form-instruction"><em>Kindly fill out the following event details.</em></p>

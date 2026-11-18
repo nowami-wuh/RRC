@@ -4606,7 +4606,10 @@ body {
 .requests-admin-page .pkg-dropdown-menu.open { display: block; }
 .requests-admin-page .pkg-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 22px; font-size: 14px; color: var(--text-dark); cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
 .requests-admin-page .pkg-option-name { text-transform: uppercase; }
-.requests-admin-page .pkg-option-price { margin-left: auto; white-space: nowrap; }
+.requests-admin-page .pkg-option-price { display: grid; grid-template-columns: 12px 1fr 12px; min-width: 170px; margin-left: auto; color: var(--dark-blue); white-space: nowrap; }
+.requests-admin-page .pkg-option-price > :first-child,
+.requests-admin-page .pkg-option-price > :last-child { text-align: center; }
+.requests-admin-page .pkg-option-price > :nth-child(2) { text-align: right; }
 .requests-admin-page .pkg-option:last-child { border-bottom: none; }
 .requests-admin-page .pkg-option:hover { background: #f5f7fb; }
 .requests-admin-page .pkg-option.selected { background: #e8f0fb; font-family: 'Garet Heavy', sans-serif; color: var(--dark-blue); }
@@ -4736,8 +4739,19 @@ body {
     font-size: 15px;
     color: var(--text-dark);
 }
+.requests-admin-page .billing-row.billing-row-details {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+}
 .requests-admin-page .billing-label { color: var(--text-dark); }
+.requests-admin-page .billing-detail { color: var(--text-gray); font-size: 12px; text-align: center; }
 .requests-admin-page .billing-val { font-family: 'Garet Heavy', sans-serif; }
+.requests-admin-page .billing-val-with-detail { display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; }
+.requests-admin-page .billing-val-with-detail small { color: var(--text-gray); font-size: 11px; font-family: 'Garet', sans-serif; }
+.requests-admin-page .package-suggestion-note { padding: 10px 12px; background: #f0f5ff; border: 1px solid #c8d8ff; border-radius: 6px; color: var(--text-dark); font-size: 13px; }
+.requests-admin-page .package-decision-reason { margin: 0 0 12px; }
 .requests-admin-page .billing-fee-input {
     width: 120px;
     padding: 7px 9px;
@@ -5504,6 +5518,15 @@ body {
         align-items: stretch !important;
         gap: 6px !important;
     }
+    .requests-admin-page .billing-row.billing-row-details {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 4px 10px !important;
+    }
+    .requests-admin-page .billing-row-details .billing-label { grid-column: 1; grid-row: 1; }
+    .requests-admin-page .billing-row-details .billing-detail { grid-column: 1; grid-row: 2; text-align: left; }
+    .requests-admin-page .billing-row-details .billing-val-with-detail,
+    .requests-admin-page .billing-row-details > input { grid-column: 2; grid-row: 1 / span 2; justify-self: end; }
     .billing-row input {
         width: 100% !important;
         text-align: left !important;
