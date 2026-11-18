@@ -44,7 +44,7 @@ export default function PackageRate() {
   }
 
   return (
-    <div className="main-content">
+    <div className="main-content package-rate-page">
       {/* ── Top Tabs ── */}
       <div className="top-tabs">
         <button
@@ -228,12 +228,27 @@ export default function PackageRate() {
             <div className="misc-card">
               <div className="misc-card-header">Miscellaneous</div>
               <div className="misc-rows">
-                {miscItems.map((pkg) => (
-                  <div key={pkg.id || pkg.name} className="misc-row">
-                    <span className="misc-row-name">{pkg.name}</span>
-                    <span className="misc-row-value">{pkg.subtitle}</span>
-                  </div>
-                ))}
+                {miscItems.map((pkg) => {
+                  const extensionRate = pkg.name === 'Booking Duration Extension'
+                    ? String(pkg.subtitle || '').match(/^([\d,]+(?:\.\d+)?)\s+per hour\b(.*)$/i)
+                    : null;
+                  return (
+                    <div key={pkg.id || pkg.name} className="misc-row">
+                      <span className="misc-row-name">{pkg.name}</span>
+                      <span className={`misc-row-value${extensionRate ? ' duration-extension-rate' : ''}`}>
+                        {extensionRate ? (
+                          <>
+                            <span className="duration-extension-amount">{extensionRate[1]}</span>
+                            <span className="duration-extension-unit">per hour</span>
+                            {extensionRate[2].trim() && (
+                              <span className="duration-extension-note">{extensionRate[2].trim()}</span>
+                            )}
+                          </>
+                        ) : pkg.subtitle}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

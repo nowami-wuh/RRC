@@ -407,7 +407,7 @@ export default function MakeRequest() {
             className="field-input venue-barangay-input"
             type="text"
             list={`${formKey}-barangay-options`}
-            placeholder={venueLocation[formKey].city ? 'Start typing barangay...' : 'Select a city first'}
+            placeholder={venueLocation[formKey].city ? 'Start typing barangay...' : 'Select a location first'}
             value={venueLocation[formKey].barangay}
             disabled={!venueLocation[formKey].city}
             onChange={(event) => {
