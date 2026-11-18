@@ -238,6 +238,11 @@ const packageEquipment = {
 
 const packageBaseCost = { A: 4000, B: 8000, C: 15000, D: 28000 };
 
+function getPackageCode(name) {
+  const match = String(name || '').trim().match(/^PACKAGE\s+(.+)$/i);
+  return match ? match[1].trim() : '';
+}
+
 const defaultMobilizationFees = {
   boac: 1500,
   gasan: 2000,
@@ -463,7 +468,7 @@ export default function AdminRequests() {
               pax: req.event?.pax ?? null,
               deliveryMethod: req.event?.deliveryMethod || 'pickup',
             },
-            package: req.package?.name?.replace('PACKAGE ', '') || null,
+            package: getPackageCode(req.package?.name) || null,
             equipment: req.equipment || {},
             billing: req.billing || {},
             payment: req.payment || null,
@@ -616,8 +621,8 @@ export default function AdminRequests() {
       nextEquipment = normalizeEquipmentGroups(booking.equipment);
     } else if (hasSavedEquipment) {
       nextEquipment = cloneData(booking.equipment);
-    } else if (booking.package && packageEquipment[booking.package]) {
-      nextEquipment = cloneData(packageEquipment[booking.package]);
+    } else if (booking.package) {
+      nextEquipment = getPackageEquipment(booking.package);
     }
 
     setDetailState({ bookingId: id, status: result.status });
@@ -1236,6 +1241,14 @@ export default function AdminRequests() {
   const isEditable = selectedBooking?.status === 'pending';
   const isRentBooking = selectedBooking?.booking.requestType === 'rent';
   const categories = Object.keys(currentEquipment);
+  const packageOptions = pricingPackages
+    .filter((item) => String(item.section || '').toLowerCase() === 'cosupplier')
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      code: getPackageCode(item.name),
+    }))
+    .filter((item) => item.code);
   const anyOperatorRequired = categories.some((cat) => currentEquipment[cat].some((item) => getInventoryItem(item.name)?.requiresAuth || getInventoryItem(item.name)?.operatorRequired));
 
   return (
@@ -1515,11 +1528,15 @@ export default function AdminRequests() {
                       <span>{selectedBooking.booking.package ? `Package ${selectedBooking.booking.package}` : 'Select Package'}</span>
                     </button>
                     <div className={`pkg-dropdown-menu ${pkgDropdownOpen ? 'open' : ''}`}>
-                      {['A', 'B', 'C', 'D'].map((pkg) => (
-                        <div key={pkg} className={`pkg-option ${selectedBooking.booking.package === pkg ? 'selected' : ''}`} onClick={() => selectPackage(pkg)}>
-                          Package {pkg}
-                        </div>
-                      ))}
+                      {packageOptions.length === 0 ? (
+                        <div className="pkg-option">No packages available</div>
+                      ) : (
+                        packageOptions.map((pkg) => (
+                          <div key={pkg.id} className={`pkg-option ${selectedBooking.booking.package === pkg.code ? 'selected' : ''}`} onClick={() => selectPackage(pkg.code)}>
+                            {pkg.name}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
