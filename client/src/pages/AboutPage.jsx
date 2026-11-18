@@ -140,6 +140,8 @@ export default function AboutPage() {
     }));
   };
 
+  const paymentMethods = getPaymentMethods(aboutData);
+
   return (
     <div className="about-page-container">
       {isAdmin && (
@@ -307,10 +309,35 @@ export default function AboutPage() {
         </div>
       ) : (
         <div className="about-content">
-          <div className="about-text-card">
-            <p className="about-description">
-              {aboutData.description}
-            </p>
+          <div className="about-main-column">
+            <div className="about-text-card">
+              <p className="about-description">
+                {aboutData.description}
+              </p>
+            </div>
+            {paymentMethods.length > 0 && (
+              <section className="payment-info-card">
+                <h3 className="contact-title">Payment Information</h3>
+                <div className="payment-method-display-list">
+                  {paymentMethods.map((method, index) => (
+                    <div
+                      className={`payment-method-display${method.qr ? ' has-qr' : ''}${method.bank_name || method.bank_account_number || method.bank_account_name ? ' has-account-details' : ''}`}
+                      key={`about-payment-${index}`}
+                    >
+                      {method.label && <h4>{method.label}</h4>}
+                      {method.qr && <div className="payment-qr-wrap"><img className="payment-qr" src={method.qr} alt={`${method.label || 'Payment'} QR code`} /><span className="contact-text">Scan to pay</span></div>}
+                      {(method.bank_name || method.bank_account_number || method.bank_account_name) && (
+                        <div className="payment-details">
+                          {method.bank_name && <p><strong>Bank / Wallet:</strong> {method.bank_name}</p>}
+                          {method.bank_account_number && <p><strong>Account Number:</strong> {method.bank_account_number}</p>}
+                          {method.bank_account_name && <p><strong>Account Name:</strong> {method.bank_account_name}</p>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
           <div className="contact-card">
             <h3 className="contact-title">Contact Us</h3>
@@ -349,30 +376,6 @@ export default function AboutPage() {
                 <span className="contact-text">{aboutData.location}</span>
               </div>
             </div>
-            {getPaymentMethods(aboutData).length > 0 && (
-              <>
-                <div className="contact-divider" />
-                <h3 className="contact-title">Payment Information</h3>
-                <div className="payment-method-display-list">
-                  {getPaymentMethods(aboutData).map((method, index) => (
-                    <div
-                      className={`payment-method-display${method.qr ? ' has-qr' : ''}${method.bank_name || method.bank_account_number || method.bank_account_name ? ' has-account-details' : ''}`}
-                      key={`about-payment-${index}`}
-                    >
-                      {method.label && <h4>{method.label}</h4>}
-                      {method.qr && <div className="payment-qr-wrap"><img className="payment-qr" src={method.qr} alt={`${method.label || 'Payment'} QR code`} /><span className="contact-text">Scan to pay</span></div>}
-                      {(method.bank_name || method.bank_account_number || method.bank_account_name) && (
-                        <div className="payment-details">
-                          {method.bank_name && <p><strong>Bank / Wallet:</strong> {method.bank_name}</p>}
-                          {method.bank_account_number && <p><strong>Account Number:</strong> {method.bank_account_number}</p>}
-                          {method.bank_account_name && <p><strong>Account Name:</strong> {method.bank_account_name}</p>}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
