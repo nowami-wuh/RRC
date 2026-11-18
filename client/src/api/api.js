@@ -17,6 +17,17 @@ async function request(path, options = {}) {
 
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401 && body.error === 'Authentication required.' && token) {
+      try {
+        const currentUser = JSON.parse(localStorage.getItem('rrc-auth-user') || 'null');
+        if (currentUser?.token === token) {
+          window.dispatchEvent(new Event('rrc:session-expired'));
+        }
+      } catch {
+        localStorage.removeItem('rrc-auth-user');
+      }
+    }
+
     const error = new Error(body.error || body.message || response.statusText || 'Request failed');
     error.status = response.status;
     error.code = body.code;

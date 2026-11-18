@@ -634,6 +634,23 @@ export default function LoginSignup() {
             <div className={`form-container ${mode === 'login' ? 'active' : ''}`}>
               <h2 className="form-title">{isAdminMode ? 'ADMIN LOGIN' : 'LOGIN'}</h2>
               <form onSubmit={handleLoginSubmit} noValidate>
+                {location.state?.sessionExpired && (
+                  <div
+                    role="status"
+                    style={{
+                      color: '#fff',
+                      backgroundColor: 'rgba(30, 63, 158, 0.55)',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      textAlign: 'center',
+                      fontSize: '14px',
+                      fontFamily: 'Garet',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Your session ended after a system refresh. For your security, please sign in again to continue.
+                  </div>
+                )}
                 <div className="input-wrapper">
                   <div className={`input-group ${fieldErrors.loginUsername ? 'error' : ''}`}>
                     <svg className="input-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>

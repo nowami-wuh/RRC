@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { touchPresence } from '../api/api';
 
 const AuthContext = createContext(null);
 const storageKey = 'rrc-auth-user';
 
 export function AuthProvider({ children }) {
+  const navigate = useNavigate();
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem(storageKey);
@@ -23,6 +25,21 @@ export function AuthProvider({ children }) {
     setUser(null);
     localStorage.removeItem(storageKey);
   };
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      const loginPath = user?.role === 'admin' ? '/admin/login' : '/login';
+      setUser(null);
+      localStorage.removeItem(storageKey);
+      navigate(loginPath, {
+        replace: true,
+        state: { sessionExpired: true },
+      });
+    };
+
+    window.addEventListener('rrc:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('rrc:session-expired', handleSessionExpired);
+  }, [navigate, user]);
 
   useEffect(() => {
     if (!user?.id) return undefined;
