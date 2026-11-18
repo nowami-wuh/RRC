@@ -417,7 +417,6 @@ export default function AdminRequests() {
   const [toast, setToast] = useState({ show: false, message: '', isError: false });
   const [showAddEquipModal, setShowAddEquipModal] = useState(false);
   const [newEquipSelection, setNewEquipSelection] = useState('');
-  const [newEquipQty, setNewEquipQty] = useState(1);
   const [addEquipError, setAddEquipError] = useState('');
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', action: null });
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -823,6 +822,7 @@ export default function AdminRequests() {
       const next = cloneData(prev);
       const item = next[cat]?.[idx];
       if (!item) return prev;
+      if (cat === 'ADD-ONS') return prev;
       if (isPackageEquipment(cat, item)) return prev;
       if (delta === 1 && getAvailableEquipmentQty(item.name) === 0) return prev;
       if (delta === 1) item.qty += 1;
@@ -848,7 +848,6 @@ export default function AdminRequests() {
 
   const openAddEquipmentModal = () => {
     setNewEquipSelection('');
-    setNewEquipQty(1);
     setAddEquipError('');
     setShowAddEquipModal(true);
   };
@@ -861,15 +860,9 @@ export default function AdminRequests() {
     if (!selectedBooking || selectedBooking.status !== 'pending') return;
 
     const name = newEquipSelection;
-    const qty = Number(newEquipQty);
 
     if (!name) {
       setAddEquipError('Please select a configured add-on.');
-      return;
-    }
-
-    if (!qty || qty < 1) {
-      setAddEquipError('Quantity must be at least 1.');
       return;
     }
 
@@ -879,27 +872,30 @@ export default function AdminRequests() {
       return;
     }
 
-    const available = getAvailableEquipmentQty(name);
-    if (available !== null && qty > available) {
-      setAddEquipError(`Only ${available} ${available === 1 ? 'unit is' : 'units are'} available for ${name}.`);
+    const nextEquipment = cloneData(currentEquipment);
+    const cat = 'ADD-ONS';
+    const existing = nextEquipment[cat]?.find((item) =>
+      String(item.name || '').trim().toLowerCase() === name.trim().toLowerCase(),
+    );
+    if (existing) {
+      setAddEquipError(`${name} is already included. Remove it first if you want to add it again.`);
       return;
     }
 
-    const nextEquipment = cloneData(currentEquipment);
-    const cat = 'ADD-ONS';
-    if (!nextEquipment[cat]) nextEquipment[cat] = [];
-    const existing = nextEquipment[cat].find((item) => item.name === name);
-    if (existing) {
-      existing.qty += qty;
-    } else {
-      nextEquipment[cat].push({
-        name,
-        qty,
-        unit: 'item',
-        price: configuredAddon.price,
-        promoPrice: configuredAddon.promo,
-      });
+    const available = getAvailableEquipmentQty(name);
+    if (available !== null && available < 1) {
+      setAddEquipError(`No units are available for ${name}.`);
+      return;
     }
+
+    if (!nextEquipment[cat]) nextEquipment[cat] = [];
+    nextEquipment[cat].push({
+      name,
+      qty: 1,
+      unit: 'item',
+      price: configuredAddon.price,
+      promoPrice: configuredAddon.promo,
+    });
 
     setCurrentEquipment(nextEquipment);
     updateBooking(selectedBooking.booking.id, (booking) => ({ ...booking, equipment: cloneData(nextEquipment) }));
@@ -1629,13 +1625,14 @@ export default function AdminRequests() {
                           {currentEquipment[cat].map((item, idx) => {
                             const packageItem = isPackageEquipment(cat, item);
                             const rowEditable = isEditable && !packageItem;
+                            const quantityEditable = rowEditable && cat !== 'ADD-ONS';
                             return (
                               <div key={`${cat}-${idx}`} className={`equip-row ${rowEditable ? 'removable' : ''}`}>
                                 {rowEditable && (
                                   <button className="equip-remove-x" onClick={() => removeEquipmentItem(cat, idx)} title="Remove">&times;</button>
                                 )}
                                 <span>{item.name}</span>
-                                {rowEditable ? (
+                                {quantityEditable ? (
                                   <span className="qty-stepper">
                                     <button className="qty-btn" onClick={() => adjustEquipmentQty(cat, idx, -1)}>−</button>
                                     <span className="qty-val">{item.qty}</span>
@@ -1661,7 +1658,7 @@ export default function AdminRequests() {
                   {isEditable && (
                     <>
                       <button type="button" className="add-equip-btn" onClick={openAddEquipmentModal}>
-                        <em>Add Equipments</em> <span>+</span>
+                        <em>Add Add-on</em> <span>+</span>
                       </button>
                       {isRentBooking && anyOperatorRequired && <p className="operator-note">* This item requires an authorized operator. Our team will coordinate with the client.</p>}
                     </>
@@ -1678,14 +1675,16 @@ export default function AdminRequests() {
               <div className="section-content" id="billingSection">
                 <div className="billing-table">
                   <div className="billing-row billing-row-details">
-                    <span className="billing-label">Equipment Amount</span>
-                    <span className="billing-detail">
-                      {isRentBooking
-                        ? 'Rental equipment'
-                        : selectedBooking.booking.package
-                          ? `PACKAGE ${selectedBooking.booking.package}`
-                          : 'Package not selected'}
-                    </span>
+                    <div className="billing-row-copy">
+                      <span className="billing-label">Equipment Amount</span>
+                      <span className="billing-detail">
+                        {isRentBooking
+                          ? 'Rental equipment'
+                          : selectedBooking.booking.package
+                            ? `PACKAGE ${selectedBooking.booking.package}`
+                            : 'Package not selected'}
+                      </span>
+                    </div>
                     {isRentBooking && selectedBooking.status === 'pending' ? (
                       <input
                         type="number"
@@ -1736,10 +1735,12 @@ export default function AdminRequests() {
                   </div>
                   {billingBreakdown.durationExtensionFee > 0 && (
                     <div className="billing-row billing-row-details">
-                      <span className="billing-label">Booking Duration Extension</span>
-                      <span className="billing-detail">
-                        {billingBreakdown.durationExtensionHours} hour{billingBreakdown.durationExtensionHours === 1 ? '' : 's'} beyond {billingBreakdown.durationBaseHours} hours
-                      </span>
+                      <div className="billing-row-copy">
+                        <span className="billing-label">Booking Duration Extension</span>
+                        <span className="billing-detail">
+                          {billingBreakdown.durationExtensionHours} hour{billingBreakdown.durationExtensionHours === 1 ? '' : 's'} beyond {billingBreakdown.durationBaseHours} hours
+                        </span>
+                      </div>
                       <span className="billing-val-with-detail">
                         <span className="billing-val">{peso(billingBreakdown.durationExtensionFee)}</span>
                         <small>{peso(billingBreakdown.durationExtensionRate)} per hour</small>
@@ -1800,11 +1801,11 @@ export default function AdminRequests() {
         <div className="modal-overlay active">
           <div className="modal">
             <div className="modal-header">
-              <h2 className="modal-title">Add Equipment</h2>
+              <h2 className="modal-title">Add Configured Add-on</h2>
               <button type="button" className="modal-close" onClick={closeAddEquipmentModal}>&times;</button>
             </div>
             <div className="modal-body">
-              <label className="m-label">Equipment</label>
+              <label className="m-label">Configured Add-on</label>
               <select
                 className="m-input"
                 value={newEquipSelection}
@@ -1826,23 +1827,11 @@ export default function AdminRequests() {
               </select>
               <p className="m-hint">
                 {newEquipSelection && getAddOnCatalog().some((addon) => addon.name === newEquipSelection)
-                  ? `Configured add-on price will be included in the estimated bill.${getAvailableEquipmentQty(newEquipSelection) !== null
+                  ? `The listed quantity and price are already included in this add-on.${getAvailableEquipmentQty(newEquipSelection) !== null
                     ? ` ${getAvailableEquipmentQty(newEquipSelection)} available based on inventory.`
                     : ''}`
                   : ''}
               </p>
-
-              <label className="m-label" style={{ marginTop: '14px' }}>Quantity</label>
-              <input
-                type="number"
-                className="m-input"
-                min="1"
-                max={newEquipSelection && getAvailableEquipmentQty(newEquipSelection) !== null
-                  ? getAvailableEquipmentQty(newEquipSelection)
-                  : undefined}
-                value={newEquipQty}
-                onChange={(event) => setNewEquipQty(Number(event.target.value))}
-              />
 
               <p className="m-error">{addEquipError}</p>
 

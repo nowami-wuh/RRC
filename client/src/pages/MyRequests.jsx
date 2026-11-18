@@ -323,8 +323,10 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
       <div className="billing-box">
         {basePrice > 0 && (
           <div className="billing-row billing-row-details">
-            <span className="billing-label">Equipment Amount</span>
-            <span className="billing-detail">{packageLabel}</span>
+            <div className="billing-row-copy">
+              <span className="billing-label">Equipment Amount</span>
+              <span className="billing-detail">{packageLabel}</span>
+            </div>
             <span className="billing-value">
               {promoApplied && promoPrice > 0 && (
                 <span className="billing-promo-tag">PROMO</span>
@@ -358,10 +360,12 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
         )}
         {extensionHrs > 0 && (
           <div className="billing-row billing-row-details">
-            <span className="billing-label">Booking Duration Extension</span>
-            <span className="billing-detail">
-              {extensionHrs} hour{extensionHrs === 1 ? '' : 's'} beyond {Number(b.durationBaseHours) || 4} hours
-            </span>
+            <div className="billing-row-copy">
+              <span className="billing-label">Booking Duration Extension</span>
+              <span className="billing-detail">
+                {extensionHrs} hour{extensionHrs === 1 ? '' : 's'} beyond {Number(b.durationBaseHours) || 4} hours
+              </span>
+            </div>
             <span className="billing-value-with-detail">
               <span className="billing-value">{formatCurrency(extensionAmt)}</span>
               <small>{formatCurrency(extensionRate)} per hour</small>

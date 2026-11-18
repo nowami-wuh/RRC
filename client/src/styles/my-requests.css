@@ -697,10 +697,13 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: center;
 }
+.billing-row-copy { display: contents; }
 .billing-detail {
   color: var(--text-gray);
   font-size: 12px;
   text-align: center;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 .billing-value-with-detail {
   display: flex;
@@ -1276,10 +1279,29 @@
   .mr-modal-back,
   .mr-modal-confirm   { width: 100%; }
   .billing-row        { flex-direction: column; align-items: flex-start; gap: 2px; }
-  .billing-row.billing-row-details { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
-  .billing-row-details .billing-label { grid-column: 1; grid-row: 1; }
-  .billing-row-details .billing-detail { grid-column: 1; grid-row: 2; text-align: left; }
-  .billing-row-details .billing-value-with-detail { grid-column: 2; grid-row: 1 / span 2; }
+  .billing-row.billing-row-details {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 10px;
+    align-items: center;
+  }
+  .billing-row-details .billing-row-copy {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    align-self: stretch;
+  }
+  .billing-row-details .billing-detail { text-align: left; }
+  .billing-row-details > .billing-value,
+  .billing-row-details > .billing-value-with-detail {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    justify-self: end;
+  }
   .billing-value-with-detail { align-items: flex-end; }
   .package-preference-note { margin: 0 12px 14px; }
   .action-btn         { width: 100%; justify-content: center; }
