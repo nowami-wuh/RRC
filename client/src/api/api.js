@@ -242,6 +242,20 @@ export function fetchAdminInquiries() {
   return request('/admin/inquiries');
 }
 
+export function fetchAdminInquiryProfiles(customerIds) {
+  const ids = [...new Set(customerIds)];
+  const batches = [];
+  for (let index = 0; index < ids.length; index += 500) {
+    batches.push(ids.slice(index, index + 500));
+  }
+  if (batches.length === 0) return Promise.resolve([]);
+
+  return Promise.all(batches.map((customerIds) => request('/admin/inquiries/profiles', {
+    method: 'POST',
+    body: JSON.stringify({ customerIds }),
+  }))).then((responses) => responses.flatMap((response) => response.profiles || []));
+}
+
 export function sendAdminInquiryReply(message) {
   return request('/admin/inquiries', {
     method: 'POST',

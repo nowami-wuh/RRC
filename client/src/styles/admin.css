@@ -4733,8 +4733,10 @@ body {
 .requests-admin-page .btn-next:disabled { opacity: 0.4; cursor: not-allowed; }
 .requests-admin-page .billing-table { display: flex; flex-direction: column; }
 .requests-admin-page .billing-row {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
     padding: 10px 4px;
     font-size: 15px;
     color: var(--text-dark);
@@ -4764,6 +4766,14 @@ body {
     .requests-admin-page .billing-row.billing-row-details {
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 6px 10px !important;
+    }
+    .requests-admin-page .billing-row.billing-row-details > .billing-label {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    .requests-admin-page .billing-row.billing-row-details > .billing-detail {
+        grid-column: 1;
+        grid-row: 2;
     }
     .requests-admin-page .billing-row-details .billing-row-copy {
         grid-column: 1;

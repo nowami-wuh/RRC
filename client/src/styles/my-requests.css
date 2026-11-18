@@ -685,8 +685,9 @@
   gap: 8px;
 }
 .billing-row {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  justify-content: initial;
   align-items: center;
   font-size: 14px;
   color: var(--text-dark);
@@ -1284,6 +1285,14 @@
     gap: 4px 10px;
     align-items: center;
   }
+  .billing-row.billing-row-details > .billing-label {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .billing-row.billing-row-details > .billing-detail {
+    grid-column: 1;
+    grid-row: 2;
+  }
   .billing-row-details .billing-row-copy {
     grid-column: 1;
     grid-row: 1;
@@ -1296,6 +1305,7 @@
   }
   .billing-row-details .billing-detail { text-align: left; }
   .billing-row-details > .billing-value,
+  .billing-row-details > .billing-payment-action,
   .billing-row-details > .billing-value-with-detail {
     grid-column: 2;
     grid-row: 1;

@@ -23,6 +23,39 @@ function sanitizePhilippinePhone(value) {
   return digits;
 }
 
+async function prepareAvatar(file) {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Please select a valid image file.');
+  }
+
+  const image = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, 192 / Math.max(image.width, image.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Unable to process the selected image.');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.76));
+    if (!blob) throw new Error('Unable to process the selected image.');
+
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') resolve(reader.result);
+        else reject(new Error('Unable to read the processed image.'));
+      };
+      reader.onerror = () => reject(new Error('Unable to read the processed image.'));
+      reader.readAsDataURL(blob);
+    });
+  } finally {
+    image.close();
+  }
+}
+
 const EyeOpen = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
     <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
@@ -37,8 +70,8 @@ const EyeOff = () => (
 
 export default function MyAccount() {
   const { user: authUser, login: setAuthUser } = useAuth();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(authUser);
+  const [loading, setLoading] = useState(!authUser?.id);
   const [error, setError] = useState('');
   const [editField, setEditField] = useState(null);
   const [fieldValue, setFieldValue] = useState('');
@@ -65,7 +98,25 @@ export default function MyAccount() {
       return;
     }
 
-    fetchUser(authUser.id).then((data) => setUser(data.user)).catch(() => setError('Unable to load user.')).finally(() => setLoading(false));
+    let active = true;
+    setUser(authUser);
+    setError('');
+    setLoading(false);
+    fetchUser(authUser.id)
+      .then((data) => {
+        if (active) setUser(data.user);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error('Unable to refresh user profile:', err);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [authUser?.id]);
 
   // Debounced username availability check — only runs when editing username
@@ -118,24 +169,19 @@ export default function MyAccount() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const avatarData = reader.result;
-      setAvatarSaving(true);
-      try {
-        const updated = await updateUserProfile(authUser.id, { avatar: avatarData });
-        setUser(updated.user);
-        setAuthUser({ ...authUser, ...updated.user });
-        showMsg('Avatar updated successfully.');
-      } catch (err) {
-        showMsg(err.message || 'Failed to update avatar.', 'error');
-      } finally {
-        setAvatarSaving(false);
-        // Reset file input so the same file can be re-selected
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }
-    };
-    reader.readAsDataURL(file);
+    setAvatarSaving(true);
+    try {
+      const avatar = await prepareAvatar(file);
+      const updated = await updateUserProfile(authUser.id, { avatar });
+      setUser(updated.user);
+      setAuthUser({ ...authUser, ...updated.user });
+      showMsg('Avatar updated successfully.');
+    } catch (err) {
+      showMsg(err.message || 'Failed to update avatar.', 'error');
+    } finally {
+      setAvatarSaving(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleRemoveAvatar = async () => {

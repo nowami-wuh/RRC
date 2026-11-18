@@ -428,6 +428,34 @@ router.get('/inquiries', async (req, res) => {
   }
 });
 
+router.post('/inquiries/profiles', async (req, res) => {
+  const { customerIds } = req.body || {};
+  if (!Array.isArray(customerIds) || customerIds.length > 500
+    || customerIds.some((id) => typeof id !== 'string' || !id.trim() || id.length > 40)) {
+    return res.status(400).json({ error: 'A list of up to 500 valid customer IDs is required.' });
+  }
+
+  const ids = [...new Set(customerIds)];
+  if (ids.length === 0) return res.json({ profiles: [] });
+
+  try {
+    const placeholders = ids.map(() => '?').join(', ');
+    const rows = await query(
+      `SELECT public_id, username, avatar FROM customers WHERE public_id IN (${placeholders})`,
+      ids,
+    );
+    return res.json({
+      profiles: rows.map((row) => ({
+        id: row.public_id,
+        username: row.username,
+        avatar: row.avatar || null,
+      })),
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Unable to load customer profiles' });
+  }
+});
+
 router.patch('/inquiries/read', async (req, res) => {
   try {
     const payload = req.body || {};

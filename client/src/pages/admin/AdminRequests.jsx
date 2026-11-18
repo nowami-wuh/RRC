@@ -1726,8 +1726,11 @@ export default function AdminRequests() {
                     )}
                   </div>
                   {(!isRentBooking || selectedBooking.booking.eventDetails.deliveryMethod === 'delivery') && (
-                  <div className="billing-row">
+                  <div className="billing-row billing-row-details">
                     <span className="billing-label">{isRentBooking ? 'Delivery Fee' : 'Mobilization Fee'}</span>
+                    <span className="billing-detail">
+                      {isRentBooking ? 'Delivery to the event location' : 'Transportation and on-site setup'}
+                    </span>
                     {isRentBooking && selectedBooking.booking.eventDetails.deliveryMethod === 'delivery' && selectedBooking.status === 'pending' ? (
                       <input
                         type="number"
@@ -1747,8 +1750,11 @@ export default function AdminRequests() {
                     )}
                   </div>
                   )}
-                  <div className="billing-row">
+                  <div className="billing-row billing-row-details">
                     <span className="billing-label">Add-On Fee</span>
+                    <span className="billing-detail">
+                      {(currentEquipment['ADD-ONS'] || []).map((item) => item.name).filter(Boolean).join(', ') || 'Selected equipment add-ons'}
+                    </span>
                     <span className="billing-val">{peso(billingBreakdown.addonFee)}</span>
                   </div>
                   {billingBreakdown.durationExtensionFee > 0 && (
@@ -1766,8 +1772,9 @@ export default function AdminRequests() {
                     </div>
                   )}
                   <div className="billing-divider" />
-                  <div className="billing-row total-row">
+                  <div className="billing-row billing-row-details total-row">
                     <span className="billing-label">Total Amount Due</span>
+                    <span className="billing-detail">Equipment, fees, and duration charges combined</span>
                     <span className="billing-val">{peso(billingBreakdown.total)}</span>
                   </div>
                 </div>

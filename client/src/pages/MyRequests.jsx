@@ -341,20 +341,23 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
           </div>
         )}
         {addonsTotal > 0 && (
-          <div className="billing-row">
+          <div className="billing-row billing-row-details">
             <span className="billing-label">Equipment / Add-ons</span>
+            <span className="billing-detail">Selected extra equipment and services</span>
             <span className="billing-value">{formatCurrency(addonsTotal)}</span>
           </div>
         )}
         {mobilization > 0 && (
-          <div className="billing-row">
+          <div className="billing-row billing-row-details">
             <span className="billing-label">Mobilization Fee</span>
+            <span className="billing-detail">Transportation and on-site setup</span>
             <span className="billing-value">{formatCurrency(mobilization)}</span>
           </div>
         )}
         {deliveryFee > 0 && (
-          <div className="billing-row">
+          <div className="billing-row billing-row-details">
             <span className="billing-label">Delivery Fee</span>
+            <span className="billing-detail">Delivery to the event location</span>
             <span className="billing-value">{formatCurrency(deliveryFee)}</span>
           </div>
         )}
@@ -374,15 +377,17 @@ function BillingSection({ billing, pkg, status, payment, onSendReceipt }) {
         )}
 
         {total > 0 && (
-          <div className="billing-row total">
+          <div className="billing-row billing-row-details total">
             <span className="billing-label">Total Amount</span>
+            <span className="billing-detail">Equipment, fees, and duration charges combined</span>
             <span className="billing-value">{formatCurrency(total)}</span>
           </div>
         )}
 
         {isApproved && total > 0 && (
-          <div className="billing-row downpayment-required">
+          <div className="billing-row billing-row-details downpayment-required">
             <span className="billing-label">Downpayment Required</span>
+            <span className="billing-detail">20% of the total charge</span>
             <span className="billing-payment-action">
               <button
                 type="button"

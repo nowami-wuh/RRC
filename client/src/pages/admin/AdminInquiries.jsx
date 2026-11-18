@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { editAdminInquiryMessage, fetchAdminInquiries, fetchAdminRequests, sendAdminInquiryReply, fetchUser, fetchUserPresence, markConversationRead, deleteConversation, updateAdminRequest } from '../../api/api';
+import { editAdminInquiryMessage, fetchAdminInquiries, fetchAdminInquiryProfiles, fetchAdminRequests, sendAdminInquiryReply, fetchUser, fetchUserPresence, markConversationRead, deleteConversation, updateAdminRequest } from '../../api/api';
 import { formatTime12Hour } from '../../utils/dateTime';
 
 function getMessageDateHeader(createdAt, timeLabel) {
@@ -289,20 +289,14 @@ export default function AdminInquiries() {
     const profileIds = customerIds.filter((customerId) => !Object.prototype.hasOwnProperty.call(customerAvatars, customerId));
     if (profileIds.length === 0) return undefined;
 
-    Promise.all(profileIds.map((customerId) => fetchUser(customerId)))
-      .then((responses) => {
+    fetchAdminInquiryProfiles(profileIds)
+      .then((profiles) => {
         if (!active) return;
-        const users = responses
-          .map((response, index) => ({ id: profileIds[index], user: response?.user }))
-          .filter(({ user }) => user);
+        const users = profiles.map((profile) => ({ id: profile.id, user: profile }));
 
         setCustomerAvatars((prev) => users.reduce((next, { id, user }) => ({
           ...next,
           [id]: user.avatar || null,
-        }), prev));
-        setCustomerOnlineStatus((prev) => users.reduce((next, { id, user }) => ({
-          ...next,
-          [id]: Boolean(user.online),
         }), prev));
         setMessages((prev) => {
           let changed = false;
@@ -323,40 +317,6 @@ export default function AdminInquiries() {
       active = false;
     };
   }, [activeConv, customerAvatars, messages]);
-
-  useEffect(() => {
-    if (!activeConv) return undefined;
-
-    let active = true;
-    const refreshProfile = () => {
-      fetchUser(activeConv)
-        .then((response) => {
-          if (!active || !response?.user) return;
-          const user = response.user;
-          setCustomerAvatars((prev) => ({ ...prev, [activeConv]: user.avatar || null }));
-          if (user.username) {
-            setMessages((prev) => prev.map((message) => (
-              message.customerPublicId === activeConv
-                && message.senderRole === 'customer'
-                && message.senderName !== user.username
-                ? { ...message, senderName: user.username }
-                : message
-            )));
-          }
-        })
-        .catch(() => {});
-    };
-
-    refreshProfile();
-    const interval = window.setInterval(refreshProfile, 5000);
-    window.addEventListener('focus', refreshProfile);
-
-    return () => {
-      active = false;
-      window.clearInterval(interval);
-      window.removeEventListener('focus', refreshProfile);
-    };
-  }, [activeConv]);
 
   // Presence is polled separately so status stays live without re-downloading avatars.
   useEffect(() => {
