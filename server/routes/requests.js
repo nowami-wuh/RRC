@@ -349,8 +349,8 @@ router.post('/', async (req, res) => {
       title: payload.title,
       venue: payload.venue,
       ...(requestType === 'book' ? { pax: payload.pax } : {}),
+      address: String(payload.address || '').trim(),
       ...(requestType === 'book' ? {
-        address: String(payload.address || '').trim(),
         ...(String(payload.packageSuggestion || '').trim()
           ? { packageSuggestion: String(payload.packageSuggestion).trim() }
           : {}),

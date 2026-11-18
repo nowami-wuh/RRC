@@ -500,7 +500,7 @@ function RequestCard({ req, isExpanded, isHighlighted, onToggle, onCancel, onNav
                     : ev.venue}
                 </span>
               </div>
-              {req.type === 'book' && ev.address && (
+              {ev.address && (
                 <div className="event-address">
                   Landmark / full address: <strong>{ev.address}</strong>
                 </div>

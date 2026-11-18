@@ -305,8 +305,8 @@ export default function MakeRequest() {
       ...(type === 'book' ? { pax: form.pax } : {}),
       date: form.date,
       ...(overnight ? { endDate: getNextDateString(form.date) } : {}),
+      address: form.address,
       ...(type === 'book' ? {
-        address: form.address,
         packageSuggestion: form.packageSuggestion,
       } : {}),
       timeStart: form.timeStart,
@@ -474,19 +474,19 @@ export default function MakeRequest() {
           </datalist>
         </div>
       </div>
+      <div className="field-row">
+        <label className="field-label" htmlFor={`${formKey}-address`}>Landmark / Full Address</label>
+        <input
+          id={`${formKey}-address`}
+          className="field-input"
+          type="text"
+          placeholder="Street address, building, or nearby landmark (optional)"
+          value={formValues.address || ''}
+          onChange={(event) => setForm((previous) => ({ ...previous, address: event.target.value }))}
+        />
+      </div>
       {formKey === 'book' && (
         <>
-          <div className="field-row">
-            <label className="field-label" htmlFor="book-address">Landmark / Full Address</label>
-            <input
-              id="book-address"
-              className="field-input"
-              type="text"
-              placeholder="Street address, building, or nearby landmark (optional)"
-              value={formValues.address || ''}
-              onChange={(event) => setForm((previous) => ({ ...previous, address: event.target.value }))}
-            />
-          </div>
           <div className="field-row">
             <label className="field-label" htmlFor="book-package-suggestion">Package Suggestion</label>
             <select
@@ -498,7 +498,7 @@ export default function MakeRequest() {
               <option value="">No preference</option>
               {bookingPackagesLoading && <option disabled>Loading packages...</option>}
               {bookingPackages.map((pkg) => (
-                <option key={pkg.id} value={pkg.name}>{pkg.name}</option>
+                <option key={pkg.id} value={pkg.name}>{pkg.name.toUpperCase()}</option>
               ))}
             </select>
           </div>

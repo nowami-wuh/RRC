@@ -1443,7 +1443,7 @@ export default function AdminRequests() {
                     </p>
                   )}
                   {!isRentBooking && <p>{selectedBooking ? `Venue: ${selectedBooking.booking.eventDetails.venue}` : '—'}</p>}
-                  {!isRentBooking && selectedBooking?.booking.eventDetails.address && (
+                  {selectedBooking?.booking.eventDetails.address && (
                     <p>Landmark / full address: {selectedBooking.booking.eventDetails.address}</p>
                   )}
                   {!isRentBooking && <p>{selectedBooking ? `Pax: ${selectedBooking.booking.eventDetails.pax}` : '—'}</p>}

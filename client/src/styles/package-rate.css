@@ -90,6 +90,7 @@
     display: inline-block;
     background: var(--dark-blue);
     color: white;
+    text-transform: uppercase;
     font-family: 'Garet Heavy', sans-serif;
     font-size: 16px; font-weight: 900;
     padding: 12px 26px;
