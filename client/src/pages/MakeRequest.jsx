@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { createRequest, fetchAboutInfo, fetchInventory } from '../api/api';
@@ -81,6 +81,7 @@ export default function MakeRequest() {
   // Inventory
   const [inventoryGroups, setInventoryGroups] = useState([]);
   const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [inventoryError, setInventoryError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEquipment, setSelectedEquipment] = useState({});
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -96,28 +97,41 @@ export default function MakeRequest() {
   const [agreementOpen, setAgreementOpen] = useState(false);
   const [agreementAccepted, setAgreementAccepted] = useState(false);
 
-  // Load inventory from DB
-  useEffect(() => {
-    fetchInventory()
-      .then((data) => {
-        // Group items by category
-        const grouped = {};
-        (data.items || []).forEach((item) => {
-          if (!grouped[item.category]) grouped[item.category] = [];
-          grouped[item.category].push(item);
-        });
-        const groups = Object.entries(grouped).map(([group, items]) => ({ group, items }));
-        setInventoryGroups(groups);
-        // Open all groups by default
-        const init = {};
-        groups.forEach(g => { init[g.group] = true; });
-        setOpenGroups(init);
-      })
-      .catch(() => {
-        setInventoryGroups([]);
-      })
-      .finally(() => setInventoryLoading(false));
+  const loadInventory = useCallback(async () => {
+    setInventoryLoading(true);
+    setInventoryError('');
+    try {
+      const data = await fetchInventory();
+      const grouped = {};
+      (Array.isArray(data?.items) ? data.items : []).forEach((item) => {
+        const category = String(item.category || 'Other');
+        if (!grouped[category]) grouped[category] = [];
+        grouped[category].push(item);
+      });
+      const groups = Object.entries(grouped).map(([group, items]) => ({ group, items }));
+      setInventoryGroups(groups);
+      const currentItems = new Map(groups.flatMap(({ items }) => items.map((item) => [item.id, item])));
+      setSelectedEquipment((previous) => Object.entries(previous).reduce((next, [id, quantity]) => {
+        const item = currentItems.get(id);
+        const available = Math.max(0, Number(item?.stock) || 0);
+        if (item && available > 0) next[id] = Math.min(quantity, available);
+        return next;
+      }, {}));
+      setOpenGroups((previous) => {
+        const next = {};
+        groups.forEach(({ group }) => { next[group] = previous[group] ?? true; });
+        return next;
+      });
+    } catch (err) {
+      setInventoryError(err.message || 'Unable to load equipment inventory.');
+    } finally {
+      setInventoryLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadInventory();
+  }, [loadInventory]);
 
   useEffect(() => {
     fetchAboutInfo()
@@ -142,7 +156,7 @@ export default function MakeRequest() {
     const q = searchTerm.toLowerCase().trim();
     if (!q) return inventoryGroups;
     return inventoryGroups
-      .map(g => ({ ...g, items: g.items.filter(i => i.name.toLowerCase().includes(q)) }))
+      .map(g => ({ ...g, items: g.items.filter(i => String(i.name || '').toLowerCase().includes(q)) }))
       .filter(g => g.items.length > 0);
   }, [searchTerm, inventoryGroups]);
 
@@ -181,6 +195,12 @@ export default function MakeRequest() {
     setOpenGroups(prev => ({ ...prev, [group]: !prev[group] }));
   };
 
+  const toggleEquipmentDropdown = () => {
+    const willOpen = !dropdownOpen;
+    setDropdownOpen(willOpen);
+    if (willOpen) loadInventory();
+  };
+
   const resetFormState = () => {
     setBookForm(EMPTY_FORM);
     setRentForm(EMPTY_FORM);
@@ -199,7 +219,6 @@ export default function MakeRequest() {
   const handleSubmit = async (type, hasAcceptedAgreement = false) => {
     const form = type === 'book' ? bookForm : rentForm;
     const additional = type === 'book' ? bookAdditional : rentAdditional;
-
     if (!user?.id) {
       setError('Please sign in before submitting a request.');
       return;
@@ -363,7 +382,9 @@ export default function MakeRequest() {
         </div>
       )}
       <div className="field-row venue-field-row">
-        <label className="field-label" htmlFor={`${formKey}-venue-barangay`}>Venue</label>
+        <label className="field-label" htmlFor={`${formKey}-venue-barangay`}>
+          {formKey === 'rent' ? 'Event / Pickup Location' : 'Venue'}
+        </label>
         <div className="venue-fields">
           <select
             className="field-input venue-city-input"
@@ -504,20 +525,15 @@ export default function MakeRequest() {
             <hr className="form-divider" />
 
             <p className="form-instruction"><em>Kindly fill out the following event details.</em></p>
-            <div className="field-row">
-              <label className="field-label">Fulfillment</label>
-              <div className="venue-fields">
+            <div className="rent-fulfillment-row">
+              <div className="rent-fulfillment-options">
                 <label className="field-choice">
                   <input
                     type="radio"
                     name="rent-delivery-method"
                     value="pickup"
                     checked={rentDeliveryMethod === 'pickup'}
-                    onChange={() => {
-                      setRentDeliveryMethod('pickup');
-                      setVenueLocation((previous) => ({ ...previous, rent: { city: '', barangay: '' } }));
-                      setRentForm((previous) => ({ ...previous, venue: '' }));
-                    }}
+                    onChange={() => setRentDeliveryMethod('pickup')}
                   />
                   Customer pickup
                 </label>
@@ -539,7 +555,7 @@ export default function MakeRequest() {
             <div className="equipment-dropdown-wrapper">
               <div
                 className="equipment-dropdown-header"
-                onClick={() => setDropdownOpen(v => !v)}
+                onClick={toggleEquipmentDropdown}
               >
                 <div>
                   <div>Select equipment for rent</div>
@@ -569,12 +585,25 @@ export default function MakeRequest() {
                     )}
                   </div>
 
-                  {inventoryLoading ? (
+                  {inventoryLoading && inventoryGroups.length === 0 ? (
                     <div className="equip-loading">Loading equipment...</div>
+                  ) : inventoryError && inventoryGroups.length === 0 ? (
+                    <div className="equip-load-error" role="alert">
+                      <span>{inventoryError}</span>
+                      <button type="button" onClick={loadInventory}>Try again</button>
+                    </div>
                   ) : filteredGroups.length === 0 ? (
-                    <div className="equip-no-results">No equipment matching your search.</div>
+                    <div className="equip-no-results">
+                      {inventoryError
+                        ? `Could not refresh inventory: ${inventoryError}`
+                        : searchTerm
+                          ? 'No equipment matching your search.'
+                          : 'No equipment is currently listed in inventory.'}
+                    </div>
                   ) : (
                     <div id="equipmentList">
+                      {inventoryLoading && <div className="equip-loading">Refreshing inventory...</div>}
+                      {inventoryError && <div className="equip-load-error" role="alert">{inventoryError}</div>}
                       {filteredGroups.map((group) => (
                         <div key={group.group}>
                           <div
@@ -585,23 +614,29 @@ export default function MakeRequest() {
                             <span className="equip-group-count">{group.items.length} items</span>
                             <span className={`equip-group-chevron ${openGroups[group.group] ? 'open' : ''}`}>▶</span>
                           </div>
-                          {openGroups[group.group] && group.items.map((item) => (
-                            <label
-                              key={item.id}
-                              className={`equipment-item ${selectedEquipment[item.id] ? 'checked' : ''} ${item.stock === 0 ? 'out-of-stock' : ''}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={Boolean(selectedEquipment[item.id])}
-                                onChange={() => item.stock > 0 && handleToggleEquipment(item)}
-                                disabled={item.stock === 0}
-                              />
-                              <span className="equipment-name">
-                                {item.name}
-                                {item.requiresAuth && <span className="equipment-auth-badge"> *</span>}
-                              </span>
-                            </label>
-                          ))}
+                          {openGroups[group.group] && group.items.map((item) => {
+                            const available = Math.max(0, Number(item.stock) || 0);
+                            return (
+                              <label
+                                key={item.id}
+                                className={`equipment-item ${selectedEquipment[item.id] ? 'checked' : ''} ${available === 0 ? 'out-of-stock' : ''}`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(selectedEquipment[item.id])}
+                                  onChange={() => available > 0 && handleToggleEquipment(item)}
+                                  disabled={available === 0}
+                                />
+                                <span className="equipment-name">
+                                  {item.name}
+                                  {item.requiresAuth && <span className="equipment-auth-badge"> *</span>}
+                                </span>
+                                <span className="equipment-stock">
+                                  {available} available
+                                </span>
+                              </label>
+                            );
+                          })}
                         </div>
                       ))}
                     </div>

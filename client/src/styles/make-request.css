@@ -204,6 +204,22 @@
   accent-color: var(--dark-blue);
 }
 
+.rent-fulfillment-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 10px;
+}
+
+.rent-fulfillment-options {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.rent-fulfillment-options .field-choice {
+  padding: 8px 12px;
+}
+
 .venue-city-input {
   cursor: pointer;
 }
@@ -442,6 +458,17 @@
   flex: 1;
 }
 
+.equipment-stock {
+  flex-shrink: 0;
+  color: #68758a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.equipment-item.out-of-stock .equipment-stock {
+  color: #a33;
+}
+
 .equipment-auth-badge {
   color: #cc2200;
   font-weight: 900;
@@ -456,6 +483,28 @@
   font-size: 14px;
   font-family: 'Garet', sans-serif;
   font-style: italic;
+}
+
+.equip-load-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  color: #a33;
+  font-size: 13px;
+  font-family: 'Garet', sans-serif;
+}
+
+.equip-load-error button {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: 1px solid #c8d3ff;
+  border-radius: 5px;
+  background: #fff;
+  color: var(--dark-blue);
+  cursor: pointer;
+  font: inherit;
 }
 
 /* ── Selected Equipment Section ─────────────────────────────────────────── */
