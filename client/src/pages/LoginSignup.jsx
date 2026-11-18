@@ -205,6 +205,18 @@ export default function LoginSignup() {
     setFieldErrors((prev) => ({ ...prev, [key]: '' }));
   };
 
+  const redirectToExistingCustomerLogin = (err) => {
+    const username = err.details?.username;
+    if (err.code !== 'EMAIL_TAKEN' || typeof username !== 'string' || !username) return false;
+
+    setFormData((prev) => ({ ...prev, loginUsername: username, loginPassword: '' }));
+    setFieldErrors({});
+    setError('This email is already registered. Log in using the username shown below.');
+    setSuccessMessage('');
+    setMode('login');
+    return true;
+  };
+
   // ── LOGIN ────────────────────────────────────────────────────────────────
   const handleLoginSubmit = async (event) => {
     event.preventDefault();
@@ -258,15 +270,17 @@ export default function LoginSignup() {
       setResendCooldown(60);
       setMode('verify_otp');
     } catch (err) {
-      if (err.code === 'USERNAME_TAKEN' || err.field === 'signupUsername') {
-        setFieldErrors((prev) => ({ ...prev, signupUsername: err.message }));
-        setUsernameAvailability({ status: 'taken', message: err.message });
-      } else if (err.field) {
-        setFieldErrors((prev) => ({ ...prev, [err.field]: err.message }));
-      } else {
-        setError(err.message);
+      if (!redirectToExistingCustomerLogin(err)) {
+        if (err.code === 'USERNAME_TAKEN' || err.field === 'signupUsername') {
+          setFieldErrors((prev) => ({ ...prev, signupUsername: err.message }));
+          setUsernameAvailability({ status: 'taken', message: err.message });
+        } else if (err.field) {
+          setFieldErrors((prev) => ({ ...prev, [err.field]: err.message }));
+        } else {
+          setError(err.message);
+        }
+        setSuccessMessage('');
       }
-      setSuccessMessage('');
     } finally {
       setIsSubmitting(false);
     }
@@ -303,9 +317,11 @@ export default function LoginSignup() {
       const result = await signupVerify(otpEmail, code);
       if (result.user) { signIn({ ...result.user, token: result.token }); navigate('/'); }
     } catch (err) {
-      setOtpError(err.message || 'Invalid or expired code.');
-      setOtpCode(['', '', '', '', '', '']);
-      signupOtpRefs.current[0]?.focus();
+      if (!redirectToExistingCustomerLogin(err)) {
+        setOtpError(err.message || 'Invalid or expired code.');
+        setOtpCode(['', '', '', '', '', '']);
+        signupOtpRefs.current[0]?.focus();
+      }
     } finally {
       setOtpLoading(false);
     }
@@ -321,7 +337,9 @@ export default function LoginSignup() {
       setOtpCode(['', '', '', '', '', '']);
       signupOtpRefs.current[0]?.focus();
     } catch (err) {
-      setOtpError(err.message || 'Failed to resend. Try again.');
+      if (!redirectToExistingCustomerLogin(err)) {
+        setOtpError(err.message || 'Failed to resend. Try again.');
+      }
     }
   };
 

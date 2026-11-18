@@ -121,16 +121,40 @@ async function isEmailTaken(email, options = { includePending: true }) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
 
   const queries = [
-    query('SELECT 1 FROM customers WHERE email = ? LIMIT 1', [normalizedEmail]),
-    query('SELECT 1 FROM admins WHERE email = ? LIMIT 1', [normalizedEmail]),
+    query('SELECT 1 FROM customers WHERE LOWER(email) = ? LIMIT 1', [normalizedEmail]),
+    query('SELECT 1 FROM admins WHERE LOWER(email) = ? LIMIT 1', [normalizedEmail]),
   ];
 
   if (includePending) {
-    queries.push(query('SELECT 1 FROM pending_registrations WHERE email = ? LIMIT 1', [normalizedEmail]));
+    queries.push(query('SELECT 1 FROM pending_registrations WHERE LOWER(email) = ? LIMIT 1', [normalizedEmail]));
   }
 
   const [customerRows, adminRows, pendingRows] = await Promise.all(queries);
   return customerRows.length > 0 || adminRows.length > 0 || (includePending && pendingRows.length > 0);
+}
+
+async function emailTakenResponse(email, res) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const customerRows = await query(
+    'SELECT username FROM customers WHERE LOWER(email) = ? LIMIT 1',
+    [normalizedEmail],
+  );
+
+  return res.status(409).json({
+    error: 'Email address is already registered.',
+    code: 'EMAIL_TAKEN',
+    field: 'signupEmail',
+    ...(customerRows[0] ? { username: customerRows[0].username } : {}),
+  });
+}
+
+async function respondToDuplicateEmail(error, email, res) {
+  if (error.code !== 'ER_DUP_ENTRY' || !(await isEmailTaken(email, { includePending: false }))) {
+    return false;
+  }
+
+  await emailTakenResponse(email, res);
+  return true;
 }
 
 function shouldBypassEmailVerification() {
@@ -320,17 +344,18 @@ router.post('/signup', async (req, res) => {
   }
 
   if (await isEmailTaken(email)) {
-    return res.status(409).json({
-      error: 'Email address is already registered.',
-      code: 'EMAIL_TAKEN',
-      field: 'signupEmail',
-    });
+    return emailTakenResponse(email, res);
   }
 
-  const passwordHash = await hashPassword(password);
-  const newUser = await createCustomerAccount({ username, email, phone: contact, passwordHash });
-
-  return res.status(201).json({ user: newUser, token: createSession(newUser) });
+  try {
+    const passwordHash = await hashPassword(password);
+    const newUser = await createCustomerAccount({ username, email, phone: contact, passwordHash });
+    return res.status(201).json({ user: newUser, token: createSession(newUser) });
+  } catch (error) {
+    if (await respondToDuplicateEmail(error, email, res)) return;
+    console.error('Signup Error:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
 });
 
 router.post('/signup-initiate', async (req, res) => {
@@ -385,11 +410,7 @@ router.post('/signup-initiate', async (req, res) => {
 
     const emailTaken = await isEmailTaken(email, { includePending: !bypassVerification });
     if (emailTaken) {
-      return res.status(409).json({
-        error: 'Email address is already registered.',
-        code: 'EMAIL_TAKEN',
-        field: 'signupEmail',
-      });
+      return emailTakenResponse(email, res);
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -428,13 +449,14 @@ router.post('/signup-initiate', async (req, res) => {
 
     return res.json({ success: true, message: 'Verification code sent to your email.' });
   } catch (error) {
+    if (await respondToDuplicateEmail(error, email, res)) return;
     console.error('Signup Initiate Error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
 router.post('/signup-verify', async (req, res) => {
-  const email = String(req.body.email || '').trim();
+  const email = String(req.body.email || '').trim().toLowerCase();
   const code = String(req.body.code || '').trim();
 
   if (!email || !code) {
@@ -442,6 +464,11 @@ router.post('/signup-verify', async (req, res) => {
   }
 
   try {
+    if (await isEmailTaken(email, { includePending: false })) {
+      await execute('DELETE FROM pending_registrations WHERE LOWER(email) = ?', [email]);
+      return emailTakenResponse(email, res);
+    }
+
     const rows = await query('SELECT * FROM pending_registrations WHERE email = ? LIMIT 1', [email]);
     const reg = rows[0];
 
@@ -468,6 +495,7 @@ router.post('/signup-verify', async (req, res) => {
     queueSignupConfirmationEmail(reg.email, reg.username);
     return res.status(201).json({ user: newUser, token: createSession(newUser) });
   } catch (error) {
+    if (await respondToDuplicateEmail(error, email, res)) return;
     console.error('Signup Verify Error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
