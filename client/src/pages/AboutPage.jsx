@@ -309,12 +309,12 @@ export default function AboutPage() {
         </div>
       ) : (
         <div className="about-content">
-          <div className="about-main-column">
-            <div className="about-text-card">
-              <p className="about-description">
-                {aboutData.description}
-              </p>
-            </div>
+          <div className="about-text-card">
+            <p className="about-description">
+              {aboutData.description}
+            </p>
+          </div>
+          <div className="about-details-row">
             {paymentMethods.length > 0 && (
               <section className="payment-info-card">
                 <h3 className="contact-title">Payment Information</h3>
