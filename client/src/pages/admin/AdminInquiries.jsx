@@ -324,6 +324,40 @@ export default function AdminInquiries() {
     };
   }, [activeConv, customerAvatars, messages]);
 
+  useEffect(() => {
+    if (!activeConv) return undefined;
+
+    let active = true;
+    const refreshProfile = () => {
+      fetchUser(activeConv)
+        .then((response) => {
+          if (!active || !response?.user) return;
+          const user = response.user;
+          setCustomerAvatars((prev) => ({ ...prev, [activeConv]: user.avatar || null }));
+          if (user.username) {
+            setMessages((prev) => prev.map((message) => (
+              message.customerPublicId === activeConv
+                && message.senderRole === 'customer'
+                && message.senderName !== user.username
+                ? { ...message, senderName: user.username }
+                : message
+            )));
+          }
+        })
+        .catch(() => {});
+    };
+
+    refreshProfile();
+    const interval = window.setInterval(refreshProfile, 5000);
+    window.addEventListener('focus', refreshProfile);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshProfile);
+    };
+  }, [activeConv]);
+
   // Presence is polled separately so status stays live without re-downloading avatars.
   useEffect(() => {
     const customerIds = [...new Set([
