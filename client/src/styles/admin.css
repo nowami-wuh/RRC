@@ -6378,3 +6378,58 @@ body {
         display: block !important;
     }
 }
+
+@media (max-width: 768px) {
+    .requests-admin-page .booking-card {
+        min-width: 0;
+        padding: 14px 12px;
+    }
+
+    .requests-admin-page .bc-top {
+        flex-direction: row !important;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .requests-admin-page .bc-top > div {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .requests-admin-page .bc-id-value,
+    .requests-admin-page .type-badge {
+        margin-left: 0;
+    }
+
+    .requests-admin-page .bc-view-link {
+        margin-left: auto;
+    }
+
+    .requests-admin-page .bc-cols,
+    .requests-admin-page .bc-vals {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 6px;
+    }
+
+    .requests-admin-page .bc-cols span,
+    .requests-admin-page .bc-vals span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .requests-admin-page .bc-cols span:nth-child(2),
+    .requests-admin-page .bc-vals span:nth-child(2) {
+        grid-column: auto !important;
+        text-align: center !important;
+    }
+
+    .requests-admin-page .bc-cols span:nth-child(3),
+    .requests-admin-page .bc-vals span:nth-child(3) {
+        grid-column: auto !important;
+        text-align: right !important;
+    }
+}
