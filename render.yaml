@@ -35,3 +35,5 @@ services:
         value: "false"
       - key: CORS_ORIGINS
         value: https://rrc-client.vercel.app
+      - key: GOOGLE_CLIENT_ID
+        sync: false

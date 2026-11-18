@@ -6,6 +6,7 @@
   "scripts": {
     "build": "echo 'Server dependencies are ready'",
     "start": "node index.js",
+    "test": "node test.js",
     "dev": "nodemon --watch . --ext js,env --exec node index.js"
   },
   "dependencies": {

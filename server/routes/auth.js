@@ -1,10 +1,61 @@
 import express from 'express';
+import { randomBytes } from 'node:crypto';
 import { sendVerificationEmail, sendSignupConfirmationEmail } from '../mailer.js';
 import { execute, query } from '../db.js';
 import { createSession } from '../authMiddleware.js';
 import { hashPassword, verifyPassword } from '../passwords.js';
 
 const router = express.Router();
+
+function googleAuthError(status, message, code) {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  return error;
+}
+
+async function verifyGoogleToken(token) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    throw googleAuthError(503, 'Google sign-in is not configured.', 'GOOGLE_AUTH_NOT_CONFIGURED');
+  }
+
+  const tokenInfoUrl = new URL('https://oauth2.googleapis.com/tokeninfo');
+  tokenInfoUrl.searchParams.set('id_token', token);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  let response;
+  try {
+    response = await fetch(tokenInfoUrl, { signal: controller.signal });
+  } catch {
+    throw googleAuthError(502, 'Unable to verify the Google credential. Please try again.', 'GOOGLE_VERIFICATION_UNAVAILABLE');
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  let claims;
+  try {
+    claims = await response.json();
+  } catch {
+    throw googleAuthError(502, 'Google returned an invalid verification response.', 'GOOGLE_VERIFICATION_UNAVAILABLE');
+  }
+
+  if (!claims
+    || typeof claims !== 'object'
+    || !response.ok
+    || claims.aud !== clientId
+    || !claims.sub
+    || !claims.email
+    || ![true, 'true'].includes(claims.email_verified)) {
+    return null;
+  }
+
+  return {
+    email: String(claims.email).trim().toLowerCase(),
+    avatar: typeof claims.picture === 'string' ? claims.picture : null,
+  };
+}
 
 function buildCustomerUser(row) {
   return {
@@ -85,12 +136,12 @@ function shouldBypassEmailVerification() {
   return String(process.env.SKIP_EMAIL_VERIFICATION).toLowerCase() === 'true';
 }
 
-async function createCustomerAccount({ username, email, phone, passwordHash }) {
+async function createCustomerAccount({ username, email, phone, passwordHash, avatar = null }) {
   const publicId = `RRC-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 10)}`;
 
   await execute(
-    'INSERT INTO customers (public_id, username, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)',
-    [publicId, username, email, phone, passwordHash],
+    'INSERT INTO customers (public_id, username, email, phone, avatar, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
+    [publicId, username, email, phone, avatar, passwordHash],
   );
 
   return {
@@ -154,6 +205,71 @@ router.post('/login', async (req, res) => {
 
   const profile = role === 'admin' ? buildAdminUser(user) : buildCustomerUser(user);
   return res.json({ user: profile, token: createSession(profile) });
+});
+
+router.post('/google', async (req, res) => {
+  const body = req.body || {};
+  const token = typeof body.token === 'string' ? body.token.trim() : '';
+  if (!token) {
+    return res.status(400).json({ error: 'Google credential token is required.', field: 'token' });
+  }
+
+  try {
+    const identity = await verifyGoogleToken(token);
+    if (!identity) {
+      return res.status(401).json({ error: 'Invalid Google credential.' });
+    }
+
+    const customerRows = await query('SELECT * FROM customers WHERE email = ? LIMIT 1', [identity.email]);
+    if (customerRows.length > 0) {
+      const profile = buildCustomerUser(customerRows[0]);
+      return res.json({ user: profile, token: createSession(profile) });
+    }
+
+    const username = typeof body.username === 'string' ? body.username.trim() : '';
+    const contact = typeof body.contact === 'string' ? body.contact.trim() : '';
+    if (!isValidUsername(username)) {
+      return res.status(400).json({
+        error: 'Username must be 1-11 characters (letters, numbers, underscore, hyphen only).',
+        code: 'INVALID_USERNAME_FORMAT',
+        field: 'signupUsername',
+      });
+    }
+    if (!isValidPhilippinePhone(contact)) {
+      return res.status(400).json({
+        error: 'Invalid Philippine phone number. Use format 09XXXXXXXXX (11 digits).',
+        code: 'INVALID_PHONE_FORMAT',
+        field: 'signupContact',
+      });
+    }
+    if (await isUsernameTaken(username)) {
+      return res.status(409).json({
+        error: 'Username is already taken.',
+        code: 'USERNAME_TAKEN',
+        field: 'signupUsername',
+      });
+    }
+    if (await isEmailTaken(identity.email)) {
+      return res.status(409).json({ error: 'Email address is already registered.', code: 'EMAIL_TAKEN' });
+    }
+
+    const passwordHash = await hashPassword(randomBytes(32).toString('hex'));
+    const user = await createCustomerAccount({
+      username,
+      email: identity.email,
+      phone: contact,
+      avatar: identity.avatar,
+      passwordHash,
+    });
+    const profile = { ...user, avatar: identity.avatar || null };
+    return res.status(201).json({ user: profile, token: createSession(profile) });
+  } catch (error) {
+    console.error('Google Sign-in Error:', error);
+    return res.status(error.status || 500).json({
+      error: error.message || 'Internal server error',
+      ...(error.code ? { code: error.code } : {}),
+    });
+  }
 });
 
 router.post('/signup', async (req, res) => {
@@ -425,6 +541,73 @@ router.post('/reset-verify', async (req, res) => {
   } catch (error) {
     console.error('Reset Verify Error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+router.post('/google-verify-reset', async (req, res) => {
+  const body = req.body || {};
+  const token = typeof body.token === 'string' ? body.token.trim() : '';
+  if (!token) {
+    return res.status(400).json({ error: 'Google credential token is required.', field: 'token' });
+  }
+
+  try {
+    const identity = await verifyGoogleToken(token);
+    if (!identity) {
+      return res.status(401).json({ error: 'Invalid Google credential.' });
+    }
+
+    const rows = await query('SELECT 1 FROM customers WHERE email = ? LIMIT 1', [identity.email]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No customer account is registered with this Google account.' });
+    }
+
+    return res.json({ success: true, email: identity.email });
+  } catch (error) {
+    console.error('Google Password Reset Verification Error:', error);
+    return res.status(error.status || 500).json({
+      error: error.message || 'Internal server error',
+      ...(error.code ? { code: error.code } : {}),
+    });
+  }
+});
+
+router.post('/google-reset-password', async (req, res) => {
+  const body = req.body || {};
+  const token = typeof body.token === 'string' ? body.token.trim() : '';
+  const password = typeof body.password === 'string' ? body.password : '';
+
+  if (!token || !password) {
+    return res.status(400).json({ error: 'Google credential token and new password are required.' });
+  }
+  if (!isStrongPassword(password)) {
+    return res.status(400).json({
+      error: 'Password must be at least 8 characters long and include uppercase, lowercase, and numbers.',
+    });
+  }
+
+  try {
+    const identity = await verifyGoogleToken(token);
+    if (!identity) {
+      return res.status(401).json({ error: 'Invalid Google credential.' });
+    }
+
+    const rows = await query('SELECT 1 FROM customers WHERE email = ? LIMIT 1', [identity.email]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No customer account is registered with this Google account.' });
+    }
+
+    const passwordHash = await hashPassword(password);
+    await execute('UPDATE customers SET password_hash = ? WHERE email = ?', [passwordHash, identity.email]);
+    await execute('DELETE FROM password_resets WHERE email = ?', [identity.email]);
+
+    return res.json({ success: true, message: 'Password has been reset successfully.' });
+  } catch (error) {
+    console.error('Google Password Reset Error:', error);
+    return res.status(error.status || 500).json({
+      error: error.message || 'Internal server error',
+      ...(error.code ? { code: error.code } : {}),
+    });
   }
 });
 
