@@ -1,7 +1,7 @@
-import bcrypt from 'bcrypt';
 import express from 'express';
 import { execute, query } from '../db.js';
 import { isUserOnline } from '../authMiddleware.js';
+import { hashPassword, verifyPassword } from '../passwords.js';
 
 const router = express.Router();
 
@@ -188,12 +188,12 @@ router.post('/password', async (req, res) => {
 
       const rows = await query('SELECT password_hash FROM admins WHERE id = ? LIMIT 1', [adminId]);
       if (!rows[0]) return res.status(404).json({ error: 'Admin not found' });
-      const valid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+      const valid = await verifyPassword(currentPassword, rows[0].password_hash);
       if (!valid) {
         return res.status(401).json({ error: 'Current password is incorrect.' });
       }
 
-      const passwordHash = await bcrypt.hash(newPassword, 10);
+      const passwordHash = await hashPassword(newPassword);
       await execute('UPDATE admins SET password_hash = ? WHERE id = ?', [passwordHash, adminId]);
       return res.json({ user: { id: userId } });
     }
@@ -201,12 +201,12 @@ router.post('/password', async (req, res) => {
     // Customer — verify current password
     const rows = await query('SELECT password_hash FROM customers WHERE public_id = ? LIMIT 1', [userId]);
     if (!rows[0]) return res.status(404).json({ error: 'User not found' });
-    const valid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    const valid = await verifyPassword(currentPassword, rows[0].password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Current password is incorrect.' });
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await hashPassword(newPassword);
     await execute('UPDATE customers SET password_hash = ? WHERE public_id = ?', [passwordHash, userId]);
     return res.json({ user: { id: userId } });
   } catch (error) {

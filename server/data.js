@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import { BCRYPT_SALT_ROUNDS } from './passwords.js';
 
 const defaultPassword = 'password123';
 
@@ -8,7 +9,7 @@ export const sampleUsers = [
     username: 'testuser',
     email: 'test@example.com',
     contact: '09171234567',
-    passwordHash: bcrypt.hashSync(defaultPassword, 10),
+    passwordHash: bcrypt.hashSync(defaultPassword, BCRYPT_SALT_ROUNDS),
   },
 ];
 

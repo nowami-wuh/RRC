@@ -188,7 +188,10 @@
 
 .package-rate-page .equip-name { min-width: 0; overflow-wrap: anywhere; }
 .package-rate-page .qty-val {
+    display: block;
+    width: 100%;
     min-width: 0;
+    box-sizing: border-box;
     white-space: nowrap;
     font-size: 14px;
     font-family: 'Garet Heavy', sans-serif;

@@ -1,5 +1,5 @@
-import bcrypt from 'bcrypt';
 import { execute, query, safeJson } from './db.js';
+import { hashPassword } from './passwords.js';
 
 async function ensureTables() {
   await execute(`
@@ -231,7 +231,7 @@ async function ensureTables() {
 async function seedAuthData() {
   const adminRows = await query('SELECT 1 FROM admins LIMIT 1');
   if (adminRows.length === 0 && process.env.ADMIN_BOOTSTRAP_USERNAME && process.env.ADMIN_BOOTSTRAP_PASSWORD) {
-    const authPasswordHash = await bcrypt.hash(process.env.ADMIN_BOOTSTRAP_PASSWORD, 12);
+    const authPasswordHash = await hashPassword(process.env.ADMIN_BOOTSTRAP_PASSWORD);
     await execute(
       'INSERT INTO admins (username, email, full_name, password_hash) VALUES (?, ?, ?, ?)',
       [process.env.ADMIN_BOOTSTRAP_USERNAME, process.env.ADMIN_BOOTSTRAP_EMAIL || '', process.env.ADMIN_BOOTSTRAP_FULL_NAME || 'RRC Admin', authPasswordHash],

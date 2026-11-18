@@ -1,8 +1,8 @@
 import express from 'express';
-import bcrypt from 'bcrypt';
 import { sendVerificationEmail, sendSignupConfirmationEmail } from '../mailer.js';
 import { execute, query } from '../db.js';
 import { createSession } from '../authMiddleware.js';
+import { hashPassword, verifyPassword } from '../passwords.js';
 
 const router = express.Router();
 
@@ -147,8 +147,7 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const passwordHash = role === 'admin' ? user.password_hash : user.password_hash;
-  const valid = await bcrypt.compare(password, passwordHash);
+  const valid = await verifyPassword(password, user.password_hash);
   if (!valid) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
@@ -211,7 +210,7 @@ router.post('/signup', async (req, res) => {
     });
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await hashPassword(password);
   const newUser = await createCustomerAccount({ username, email, phone: contact, passwordHash });
 
   return res.status(201).json({ user: newUser, token: createSession(newUser) });
@@ -277,7 +276,7 @@ router.post('/signup-initiate', async (req, res) => {
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await hashPassword(password);
 
     if (bypassVerification) {
       const newUser = await createCustomerAccount({ username, email, phone: contact, passwordHash });
@@ -417,7 +416,7 @@ router.post('/reset-verify', async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired verification code.' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await hashPassword(password);
     await execute('UPDATE customers SET password_hash = ? WHERE email = ?', [passwordHash, email]);
 
     await execute('DELETE FROM password_resets WHERE email = ?', [email]);
