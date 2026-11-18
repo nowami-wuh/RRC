@@ -400,6 +400,8 @@ export default function AdminRequests() {
   const [bookings, setBookings] = useState(createEmptyBookings);
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [requestsLoadError, setRequestsLoadError] = useState('');
+  const [packagesLoadError, setPackagesLoadError] = useState('');
+  const [inventoryLoadError, setInventoryLoadError] = useState('');
   const [pricingPackages, setPricingPackages] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
   const [currentStatus, setCurrentStatus] = useState('pending');
@@ -426,17 +428,14 @@ export default function AdminRequests() {
 
   // Populate the page from persisted requests; never expose sample bookings as actionable data.
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       fetchAdminRequests(),
       fetchAdminPackages(),
-      fetchAdminInventory().catch(() => ({ items: [] })),
-    ])
-      .then(([data, packageData, inventoryData]) => {
-        setPricingPackages(packageData.packages || []);
-        setInventoryItems(inventoryData.items || []);
-        const apiRequests = data.requests || [];
+      fetchAdminInventory(),
+    ]).then(([requestsResult, packagesResult, inventoryResult]) => {
+      if (requestsResult.status === 'fulfilled') {
         const next = createEmptyBookings();
-        apiRequests.forEach((req) => {
+        (requestsResult.value.requests || []).forEach((req) => {
           const category = getStatusCategory(req.status);
           if (!next[category]) next[category] = [];
 
@@ -484,11 +483,24 @@ export default function AdminRequests() {
           next[category].unshift(formattedReq);
         });
         setBookings(next);
-      })
-      .catch((error) => {
-        setRequestsLoadError(error.message || 'Unable to load requests.');
-      })
-      .finally(() => setRequestsLoading(false));
+      } else {
+        setRequestsLoadError(requestsResult.reason.message || 'Unable to load requests.');
+      }
+
+      if (packagesResult.status === 'fulfilled') {
+        setPricingPackages(packagesResult.value.packages || []);
+      } else {
+        setPackagesLoadError(packagesResult.reason.message || 'Unable to load packages.');
+      }
+
+      if (inventoryResult.status === 'fulfilled') {
+        setInventoryItems(inventoryResult.value.items || []);
+      } else {
+        setInventoryLoadError(inventoryResult.reason.message || 'Unable to load inventory.');
+      }
+
+      setRequestsLoading(false);
+    });
   }, []);
 
   // Listen for searchId from location state (navigated from calendar or inquiry)
@@ -1319,6 +1331,12 @@ export default function AdminRequests() {
               </select>
             </div>
             <div className="booking-list">
+              {packagesLoadError && (
+                <p className="empty-msg" role="alert">Package details unavailable: {packagesLoadError}</p>
+              )}
+              {inventoryLoadError && (
+                <p className="empty-msg" role="alert">Inventory unavailable: {inventoryLoadError}</p>
+              )}
               {requestsLoading ? (
                 <p className="empty-msg">Loading requests…</p>
               ) : requestsLoadError ? (
