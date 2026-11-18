@@ -13,8 +13,12 @@ import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
 import debugRoutes from './routes/debug.js';
 import aboutRoutes from './routes/about.js';
-import { bootstrapDatabase, ensureRequestStatusUpdatedAtColumn } from './bootstrap.js';
-import { query } from './db.js';
+import {
+  assertRequestStatusSchema,
+  bootstrapDatabase,
+  ensureDatabaseSchema,
+} from './bootstrap.js';
+import { closeDatabasePool, query } from './db.js';
 import { verifyMailer } from './mailer.js';
 import { startRequestExpiryJob } from './requestExpiry.js';
 import { requireAuth, requireAdmin, scopeCustomerRequest } from './authMiddleware.js';
@@ -39,6 +43,7 @@ app.use(cors({
 app.get('/healthz', async (_req, res) => {
   try {
     await query('SELECT 1');
+    await assertRequestStatusSchema();
     res.status(200).json({ ok: true });
   } catch (error) {
     console.error('Health check failed:', error.message);
@@ -190,15 +195,26 @@ const startServer = () => {
   });
 };
 
-if (String(process.env.SKIP_DATABASE_BOOTSTRAP).toLowerCase() === 'true') {
-  console.log('Database bootstrap skipped by configuration.');
-  ensureRequestStatusUpdatedAtColumn()
-    .catch((error) => {
-      console.error('Request status timestamp migration failed:', error.message);
-    })
-    .finally(startServer);
-} else {
-  bootstrapDatabase().catch((error) => {
-    console.warn('MySQL bootstrap skipped:', error.message);
-  }).finally(startServer);
+const skipDatabaseSeeding = String(process.env.SKIP_DATABASE_BOOTSTRAP).toLowerCase() === 'true';
+
+async function initializeServer() {
+  try {
+    if (skipDatabaseSeeding) {
+      console.log('Database seeding skipped by configuration; ensuring schema is current.');
+      await ensureDatabaseSchema();
+    } else {
+      await bootstrapDatabase();
+    }
+    startServer();
+  } catch (error) {
+    console.error('Server startup aborted: database schema initialization failed:', error.message);
+    try {
+      await closeDatabasePool();
+    } catch (closeError) {
+      console.error('Unable to close the database pool after startup failure:', closeError.message);
+    }
+    process.exitCode = 1;
+  }
 }
+
+initializeServer();

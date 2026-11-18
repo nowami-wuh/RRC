@@ -1,7 +1,29 @@
 import { execute, query, safeJson } from './db.js';
 import { hashPassword } from './passwords.js';
 
-async function ensureTables() {
+async function addColumnIfMissing(sql) {
+  try {
+    await execute(sql);
+  } catch (error) {
+    if (error.code !== 'ER_DUP_FIELDNAME') throw error;
+  }
+}
+
+export async function assertRequestStatusSchema() {
+  const rows = await query(
+    `SELECT 1
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'requests'
+       AND COLUMN_NAME = 'status_updated_at'
+     LIMIT 1`,
+  );
+  if (rows.length === 0) {
+    throw new Error('Database schema is missing requests.status_updated_at.');
+  }
+}
+
+export async function ensureDatabaseSchema() {
   await execute(`
     CREATE TABLE IF NOT EXISTS customers (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -106,14 +128,15 @@ async function ensureTables() {
   `);
 
   // Safe migrations for existing tables
-  try { await execute(`ALTER TABLE requests ADD COLUMN billing_json LONGTEXT NULL AFTER equipment_json`); } catch (_) {}
-  try { await execute(`ALTER TABLE requests ADD COLUMN denial_reason TEXT NULL AFTER billing_json`); } catch (_) {}
-  try {
-    await execute('ALTER TABLE requests ADD COLUMN service_agreement_accepted TINYINT(1) NOT NULL DEFAULT 0 AFTER additional_notes');
-  } catch (error) {
-    if (error.code !== 'ER_DUP_FIELDNAME') throw error;
-  }
-  await ensureRequestStatusUpdatedAtColumn();
+  await addColumnIfMissing('ALTER TABLE requests ADD COLUMN billing_json LONGTEXT NULL AFTER equipment_json');
+  await addColumnIfMissing('ALTER TABLE requests ADD COLUMN denial_reason TEXT NULL AFTER billing_json');
+  await addColumnIfMissing('ALTER TABLE requests ADD COLUMN service_agreement_accepted TINYINT(1) NOT NULL DEFAULT 0 AFTER additional_notes');
+  await addColumnIfMissing('ALTER TABLE requests ADD COLUMN status_updated_at TIMESTAMP NULL DEFAULT NULL AFTER service_agreement_accepted');
+  await execute(`
+    UPDATE requests
+    SET status_updated_at = CURRENT_TIMESTAMP
+    WHERE status_updated_at IS NULL AND LOWER(status) IN ('approved', 'awaitingpayment')
+  `);
 
   await execute(`
     CREATE TABLE IF NOT EXISTS notifications (
@@ -143,34 +166,14 @@ async function ensureTables() {
     )
   `);
 
-  // Migrate existing table: add customer_public_id column if missing
-  try {
-    await execute(`ALTER TABLE chat_messages ADD COLUMN customer_public_id VARCHAR(40) NULL AFTER sender_name`);
-  } catch (e) {
-    // Column already exists — safe to ignore
-  }
-
-  // Migrate existing table: add is_read column for chat messages
-  try {
-    await execute(`ALTER TABLE chat_messages ADD COLUMN is_read TINYINT(1) NOT NULL DEFAULT 0 AFTER customer_public_id`);
-  } catch (e) {
-    // Column already exists — safe to ignore
-  }
-
-  // Migrate existing table: add reply_to_json column for message replies
-  try {
-    await execute(`ALTER TABLE chat_messages ADD COLUMN reply_to_json LONGTEXT NULL AFTER time_label`);
-  } catch (e) {
-    // Column already exists — safe to ignore
-  }
-
-  try { await execute(`ALTER TABLE chat_messages ADD COLUMN original_text LONGTEXT NULL AFTER time_label`); } catch (_) {}
-  try { await execute(`ALTER TABLE chat_messages ADD COLUMN edited_at TIMESTAMP NULL AFTER original_text`); } catch (_) {}
-  try { await execute(`ALTER TABLE request_payments ADD COLUMN receipt_image LONGTEXT NULL AFTER receipt_message_id`); } catch (_) {}
-
-  // Migrate existing tables: add avatar support for users and admins
-  try { await execute(`ALTER TABLE customers ADD COLUMN avatar LONGTEXT NULL AFTER phone`); } catch (_) {}
-  try { await execute(`ALTER TABLE admins ADD COLUMN avatar LONGTEXT NULL AFTER full_name`); } catch (_) {}
+  await addColumnIfMissing('ALTER TABLE chat_messages ADD COLUMN customer_public_id VARCHAR(40) NULL AFTER sender_name');
+  await addColumnIfMissing('ALTER TABLE chat_messages ADD COLUMN is_read TINYINT(1) NOT NULL DEFAULT 0 AFTER customer_public_id');
+  await addColumnIfMissing('ALTER TABLE chat_messages ADD COLUMN reply_to_json LONGTEXT NULL AFTER time_label');
+  await addColumnIfMissing('ALTER TABLE chat_messages ADD COLUMN original_text LONGTEXT NULL AFTER time_label');
+  await addColumnIfMissing('ALTER TABLE chat_messages ADD COLUMN edited_at TIMESTAMP NULL AFTER original_text');
+  await addColumnIfMissing('ALTER TABLE request_payments ADD COLUMN receipt_image LONGTEXT NULL AFTER receipt_message_id');
+  await addColumnIfMissing('ALTER TABLE customers ADD COLUMN avatar LONGTEXT NULL AFTER phone');
+  await addColumnIfMissing('ALTER TABLE admins ADD COLUMN avatar LONGTEXT NULL AFTER full_name');
 
   await execute(`
     CREATE TABLE IF NOT EXISTS inventory_items (
@@ -211,12 +214,9 @@ async function ensureTables() {
     ['bank_account_name', 'VARCHAR(255) NULL'],
     ['payment_methods', 'LONGTEXT NULL'],
   ]) {
-    try {
-      await execute(`ALTER TABLE about_info ADD COLUMN ${column} ${definition}`);
-    } catch (error) {
-      if (error.code !== 'ER_DUP_FIELDNAME') throw error;
-    }
+    await addColumnIfMissing(`ALTER TABLE about_info ADD COLUMN ${column} ${definition}`);
   }
+  await assertRequestStatusSchema();
 }
 
 async function seedAuthData() {
@@ -471,21 +471,8 @@ async function seedReferenceData() {
   }
 }
 
-export async function ensureRequestStatusUpdatedAtColumn() {
-  try {
-    await execute('ALTER TABLE requests ADD COLUMN status_updated_at TIMESTAMP NULL DEFAULT NULL AFTER service_agreement_accepted');
-  } catch (error) {
-    if (error.code !== 'ER_DUP_FIELDNAME') throw error;
-  }
-  await execute(`
-    UPDATE requests
-    SET status_updated_at = CURRENT_TIMESTAMP
-    WHERE status_updated_at IS NULL AND LOWER(status) IN ('approved', 'awaitingpayment')
-  `);
-}
-
 export async function bootstrapDatabase() {
-  await ensureTables();
+  await ensureDatabaseSchema();
   await seedAuthData();
   await seedReferenceData();
 }

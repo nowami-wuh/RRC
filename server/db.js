@@ -26,6 +26,10 @@ export async function execute(sql, params = []) {
   return result;
 }
 
+export async function closeDatabasePool() {
+  await pool.end();
+}
+
 export async function transaction(handler) {
   const connection = await pool.getConnection();
   try {
