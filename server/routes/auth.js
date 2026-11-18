@@ -335,16 +335,16 @@ router.post('/signup', async (req, res) => {
     });
   }
 
+  if (await isEmailTaken(email)) {
+    return emailTakenResponse(email, res);
+  }
+
   if (await isUsernameTaken(username)) {
     return res.status(409).json({
       error: 'Username is already taken.',
       code: 'USERNAME_TAKEN',
       field: 'signupUsername',
     });
-  }
-
-  if (await isEmailTaken(email)) {
-    return emailTakenResponse(email, res);
   }
 
   try {
@@ -399,6 +399,11 @@ router.post('/signup-initiate', async (req, res) => {
   try {
     const bypassVerification = shouldBypassEmailVerification();
 
+    const emailTaken = await isEmailTaken(email, { includePending: !bypassVerification });
+    if (emailTaken) {
+      return emailTakenResponse(email, res);
+    }
+
     const usernameTaken = await isUsernameTaken(username, { includePending: !bypassVerification });
     if (usernameTaken) {
       return res.status(409).json({
@@ -406,11 +411,6 @@ router.post('/signup-initiate', async (req, res) => {
         code: 'USERNAME_TAKEN',
         field: 'signupUsername',
       });
-    }
-
-    const emailTaken = await isEmailTaken(email, { includePending: !bypassVerification });
-    if (emailTaken) {
-      return emailTakenResponse(email, res);
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();

@@ -251,7 +251,6 @@ export default function LoginSignup() {
     const pwStrength = getPasswordStrength(formData.signupPassword);
     if (!formData.signupPassword) errors.signupPassword = 'Password is required';
     else if (!pwStrength.strong) errors.signupPassword = pwStrength.label;
-    if (usernameAvailability.status === 'taken') errors.signupUsername = 'Username is already taken.';
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
     setIsSubmitting(true);
