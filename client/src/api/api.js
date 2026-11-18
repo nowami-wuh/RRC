@@ -128,7 +128,7 @@ export function markAllNotificationsRead(customerId) {
 
 
 export function fetchPackages() {
-  return request('/packages');
+  return request('/packages', { cache: 'no-store' });
 }
 
 export function fetchUser(userId) {
@@ -258,7 +258,7 @@ export function deleteAdminInventoryItem(itemCode) {
 
 
 export function fetchAdminPackages() {
-  return request('/admin/packages');
+  return request('/admin/packages', { cache: 'no-store' });
 }
 
 export function updateAdminPackage(id, payload) {

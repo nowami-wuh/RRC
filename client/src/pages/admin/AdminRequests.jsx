@@ -415,6 +415,7 @@ export default function AdminRequests() {
   const [cancelingRequestId, setCancelingRequestId] = useState(null);
   const [activeSection, setActiveSection] = useState('approval');
   const [pkgDropdownOpen, setPkgDropdownOpen] = useState(false);
+  const [packagesRefreshing, setPackagesRefreshing] = useState(false);
   const [currentEquipment, setCurrentEquipment] = useState({});
   const [toast, setToast] = useState({ show: false, message: '', isError: false });
   const [showAddEquipModal, setShowAddEquipModal] = useState(false);
@@ -796,6 +797,22 @@ export default function AdminRequests() {
     }));
     setCurrentEquipment(nextEquipment);
     setPkgDropdownOpen(false);
+  };
+
+  const togglePackageDropdown = async () => {
+    const shouldOpen = !pkgDropdownOpen;
+    setPkgDropdownOpen(shouldOpen);
+    if (!shouldOpen) return;
+
+    setPackagesRefreshing(true);
+    try {
+      const packageData = await fetchAdminPackages();
+      setPricingPackages(Array.isArray(packageData.packages) ? packageData.packages : []);
+    } catch (error) {
+      showToastMessage(error.message || 'Unable to refresh packages.', true);
+    } finally {
+      setPackagesRefreshing(false);
+    }
   };
 
   const adjustEquipmentQty = (cat, idx, delta) => {
@@ -1523,12 +1540,14 @@ export default function AdminRequests() {
               <div className="section-content" id="approvalSection">
                 {!isRentBooking && (
                   <div className="pkg-dropdown-wrap">
-                    <button className={`pkg-dropdown-btn ${pkgDropdownOpen ? 'open' : ''}`} onClick={() => setPkgDropdownOpen((prev) => !prev)}>
+                    <button className={`pkg-dropdown-btn ${pkgDropdownOpen ? 'open' : ''}`} onClick={togglePackageDropdown}>
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" id="pkgArrow"><path d="M8 5v14l11-7z" /></svg>
                       <span>{selectedBooking.booking.package ? `Package ${selectedBooking.booking.package}` : 'Select Package'}</span>
                     </button>
                     <div className={`pkg-dropdown-menu ${pkgDropdownOpen ? 'open' : ''}`}>
-                      {packageOptions.length === 0 ? (
+                      {packagesRefreshing ? (
+                        <div className="pkg-option">Loading packages…</div>
+                      ) : packageOptions.length === 0 ? (
                         <div className="pkg-option">No packages available</div>
                       ) : (
                         packageOptions.map((pkg) => (
