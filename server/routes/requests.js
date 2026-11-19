@@ -6,7 +6,7 @@ import { parseEquipmentList, validateEquipmentStock, reserveEquipmentStock, rele
 
 const router = express.Router();
 
-function isFutureDate(value) {
+function isCurrentOrFutureDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
 
   const parsedDate = new Date(`${value}T00:00:00.000Z`);
@@ -20,7 +20,7 @@ function isFutureDate(value) {
     String(today.getMonth() + 1).padStart(2, '0'),
     String(today.getDate()).padStart(2, '0'),
   ].join('-');
-  return value > localToday;
+  return value >= localToday;
 }
 
 function timeToMinutes(value) {
@@ -308,8 +308,8 @@ router.post('/', async (req, res) => {
     if (requestType === 'book' && !/^\d+$/.test(String(payload.pax))) {
       return res.status(400).json({ error: 'Number of guests must be a whole, non-negative number.' });
     }
-    if (!isFutureDate(payload.date)) {
-      return res.status(400).json({ error: 'Please choose a future event date.' });
+    if (!isCurrentOrFutureDate(payload.date)) {
+      return res.status(400).json({ error: 'Please choose today or a future event date.' });
     }
     if (requestType === 'book') {
       const startMinutes = timeToMinutes(payload.timeStart);

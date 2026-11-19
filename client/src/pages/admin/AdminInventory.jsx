@@ -46,7 +46,7 @@ const buildSummary = (items) => {
       row.total++;
       if (u.condition === 'Inoperational' || u.condition === 'Inoperative') row.inoperational++;
       else row.operational++;
-      if (u.inUse) row.inUse++;
+      if ((item.inUseUnitIds || []).includes(u.id)) row.inUse++;
     });
   });
   return Object.values(map);
@@ -545,7 +545,7 @@ export default function AdminInventory() {
                                 </td>
                                 <td className="inv-unit-id-cell">
                                   {u.name || u.id}
-                                  {u.inUse && (
+                                  {(item.inUseUnitIds || []).includes(u.id) && (
                                     <span className="inv-in-use-badge">● In Use</span>
                                   )}
                                 </td>

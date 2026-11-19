@@ -513,16 +513,42 @@ router.post('/inquiries', async (req, res) => {
 
 router.get('/inventory', async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM inventory_items ORDER BY category ASC, id ASC');
+    const [rows, activeRequests] = await Promise.all([
+      query('SELECT * FROM inventory_items ORDER BY category ASC, id ASC'),
+      query(`SELECT equipment_json FROM requests
+        WHERE LOWER(status) IN ('pending', 'approved', 'awaitingpayment', 'upcoming', 'confirmed', 'paid', 'completed')`),
+    ]);
+    const inUseCounts = new Map();
+    activeRequests.forEach((request) => {
+      parseEquipmentList(request.equipment_json).forEach(({ itemCode, qty }) => {
+        inUseCounts.set(itemCode, (inUseCounts.get(itemCode) || 0) + qty);
+      });
+    });
+
     res.json({
-      items: rows.map((row) => ({
-        id: row.item_code,
-        category: row.category,
-        name: row.name,
-        stock: row.stock,
-        requiresAuth: Boolean(row.requires_auth),
-        notes: row.notes,
-      })),
+      items: rows.map((row) => {
+        const units = parseJson(row.notes, []);
+        let remainingInUse = inUseCounts.get(String(row.item_code)) || 0;
+        const inUseUnitIds = Array.isArray(units)
+          ? units.reduce((ids, unit) => {
+            if (remainingInUse > 0) {
+              ids.push(unit.id);
+              remainingInUse--;
+            }
+            return ids;
+          }, [])
+          : [];
+
+        return {
+          id: row.item_code,
+          category: row.category,
+          name: row.name,
+          stock: row.stock,
+          requiresAuth: Boolean(row.requires_auth),
+          notes: row.notes,
+          inUseUnitIds,
+        };
+      }),
     });
   } catch (error) {
     res.status(500).json({ error: error.message || 'Unable to load inventory' });

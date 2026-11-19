@@ -268,8 +268,8 @@ export default function MakeRequest() {
       setError('Please choose a city and select a valid barangay from the suggestions.');
       return;
     }
-    if (form.date <= getLocalDateString()) {
-      setError('Please choose a future event date.');
+    if (form.date < getLocalDateString()) {
+      setError('Please choose today or a future event date.');
       return;
     }
     if (type === 'rent' && selectedItems.length === 0) {
